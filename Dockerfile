@@ -8,7 +8,8 @@ RUN apt-get update \
 # root가 아닌 사용자로 실행한다.
 RUN useradd --system --uid 10001 app
 WORKDIR /app
-COPY target/*.jar app.jar
+# target에는 정적 분석 플러그인 jar도 생기므로 서비스 jar만 고른다
+COPY target/conversation-service-*.jar app.jar
 USER 10001
 EXPOSE 8080
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Djava.awt.headless=true", "-jar", "app.jar"]
