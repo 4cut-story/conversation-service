@@ -14,6 +14,8 @@ jobs:
     uses: 4cut-story/common/.github/workflows/java-service.yml@main
     with:
       app-name: conversation-service
+    secrets:
+      DEPLOY_REPO_TOKEN: ${{ secrets.DEPLOY_REPO_TOKEN }}
     permissions:
       contents: read
       packages: write
