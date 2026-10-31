@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: conversation-service
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fourcut?currentSchema=conversation}
+    username: ${DB_USERNAME:fourcut}
+    password: ${DB_PASSWORD:fourcut}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${DB_SCHEMA:conversation}
+  flyway:
+    default-schema: ${DB_SCHEMA:conversation}
+    schemas: ${DB_SCHEMA:conversation}
+    # 서비스마다 이력 테이블을 따로 둔다 (개발 DB는 여러 서비스가 스키마 하나를 함께 쓴다)
+    table: flyway_history_conversation
+    # 이미 테이블이 있는 스키마(Crowfoot v17 반영본)에서는 V1을 건너뛰고 이력만 만든다
+    baseline-on-migrate: true
+    baseline-version: 1
+
+storage:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  region: ${MINIO_REGION:us-east-1}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:4cut}
+
+server:
+  port: ${PORT:8082}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+pipeline:
+  lease-time: 90s
+  worker-seen-within: 60s
+  local-step-timeout: 5m
+
+scenario:
+  llm-model: ${LLM_MODEL:qwen3:8b}
+
+comic:
+  image-size: ${COMIC_IMAGE_SIZE:1024}
+  content-url: ${SERVICES_CONTENT_URL:http://localhost:8083}
