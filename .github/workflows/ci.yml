@@ -1,0 +1,21 @@
+# Spring 서비스 레포 .github/workflows/ci.yml 템플릿. conversation-service을 바꾼다.
+# 코드가 바뀔 때만 돈다. pom.xml이 생기기 전(스펙 단계)에는 돌지 않는다.
+name: ci
+
+on:
+  pull_request:
+    paths: [pom.xml, 'src/**', '.mvn/**', Dockerfile]
+  push:
+    branches: [main]
+    paths: [pom.xml, 'src/**', '.mvn/**', Dockerfile]
+
+jobs:
+  ci:
+    uses: 4cut-story/common/.github/workflows/java-service.yml@main
+    with:
+      app-name: conversation-service
+    secrets:
+      DEPLOY_REPO_TOKEN: ${{ secrets.DEPLOY_REPO_TOKEN }}
+    permissions:
+      contents: read
+      packages: write
