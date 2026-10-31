@@ -1,0 +1,57 @@
+package net.java21.fourcut.conversation.conversations;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import java.time.Instant;
+import java.util.UUID;
+
+/** 대화 API의 요청·응답 본문 (docs specs/001 contracts/public-api.md). */
+public final class ConversationApi {
+
+  private ConversationApi() {}
+
+  /**
+   * 대화 만들기.
+   *
+   * @param consent 함께 대화하는 사람들의 녹음 동의. true가 아니면 400 CONSENT_REQUIRED
+   * @param language ko, en. 없으면 자동 감지
+   */
+  public record CreateRequest(
+      @NotNull Conversation.Source source,
+      Boolean consent,
+      @Pattern(regexp = "ko|en") String language) {}
+
+  public record Created(UUID id, ConversationStatus status) {}
+
+  /** 녹음 조각 올리기 주소 요청. 조각은 0부터 59까지 (1분 조각 기준 최대 1시간). */
+  public record ChunkRequest(@NotNull @Min(0) Integer index, @NotBlank String contentType) {}
+
+  public record ChunkUpload(String putUrl, long expiresIn) {}
+
+  public record FinishRequest(@NotNull @Min(1) @Max(1000) Integer chunkCount) {}
+
+  public record Finished(ConversationStatus status) {}
+
+  /**
+   * 대화 진행 상태.
+   *
+   * @param stage 저장된 진행 단계. GPU를 기다리는 동안 status는 GPU_WAITING이 된다
+   * @param retries 지금까지 단계를 다시 시도한 횟수
+   * @param comicId 완성된 만화 ID (content-service 만화함)
+   */
+  public record View(
+      UUID id,
+      Conversation.Source source,
+      ConversationStatus status,
+      ConversationStatus stage,
+      int progress,
+      int retries,
+      String failureReason,
+      UUID comicId,
+      String language,
+      Integer durationSec,
+      Instant createdAt) {}
+}

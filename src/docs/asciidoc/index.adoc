@@ -1,0 +1,109 @@
+= conversation-service API
+:doctype: book
+:icons: font
+:toc: left
+:toclevels: 2
+
+대화 녹음 → 전사 → 장면 선택 → 콘티 → 그림 → 4컷 합성. 이 문서는 테스트(Spring REST Docs)가 만든 실제 요청·응답으로 만든다.
+
+* 사용자 API는 web → api-gateway를 거친다. 게이트웨이가 JWT를 검증해 `X-User-Id`를 붙인다. 남의 대화는 404.
+* GPU 워커 API(`/internal/gpu-jobs/**`)는 GPU PC의 워커가 게이트웨이를 거쳐 부른다. 게이트웨이가 `GPU_WORKER_TOKEN`을 확인한다.
+* 오류는 모두 `{error: {code, message, traceId}}` 형식이다 (docs `api-conventions.md`).
+
+== 대화
+
+=== 만들기
+녹음 전에 참여자 동의를 받는다 (FR-002).
+
+include::{snippets}/conversations-create/http-request.adoc[]
+include::{snippets}/conversations-create/request-fields.adoc[]
+include::{snippets}/conversations-create/http-response.adoc[]
+
+=== 녹음 조각 올리기 주소
+브라우저(HTTPS)는 MinIO(HTTP)에 바로 올릴 수 없으므로 web 서버가 조각을 받아 이 주소로 대신 올린다.
+
+include::{snippets}/conversations-chunk/http-request.adoc[]
+include::{snippets}/conversations-chunk/request-fields.adoc[]
+include::{snippets}/conversations-chunk/http-response.adoc[]
+
+조각 번호가 60 이상이면 `400 TOO_LONG`, 음성 형식이 아니면 `400 UNSUPPORTED_AUDIO`.
+
+=== 녹음 끝내고 처리 시작
+include::{snippets}/conversations-finish/http-request.adoc[]
+include::{snippets}/conversations-finish/request-fields.adoc[]
+include::{snippets}/conversations-finish/http-response.adoc[]
+
+=== 진행 상태
+web이 5초마다 부른다. GPU 워커가 60초 넘게 연락이 없으면 `status`가 `GPU_WAITING`이 되고, `stage`에 원래 단계가 남는다.
+
+include::{snippets}/conversations-get/http-request.adoc[]
+include::{snippets}/conversations-get/http-response.adoc[]
+include::{snippets}/conversations-get/response-fields.adoc[]
+
+GPU를 기다리는 중:
+
+include::{snippets}/conversations-get-waiting/http-response.adoc[]
+
+=== 장면 후보 (참고용)
+include::{snippets}/conversations-candidates/http-response.adoc[]
+include::{snippets}/conversations-candidates/response-fields.adoc[]
+
+=== 내 대화 목록 (최신순)
+include::{snippets}/conversations-list/http-request.adoc[]
+include::{snippets}/conversations-list/response-fields.adoc[]
+
+=== 지우기
+대화와 중간 결과(음성, 전사, 콘티, 그림)를 지운다. 완성된 만화는 content-service 만화함에서 따로 지운다.
+
+include::{snippets}/conversations-delete/http-request.adoc[]
+include::{snippets}/conversations-delete/http-response.adoc[]
+
+== GPU 워커 API
+워커가 작업을 가져가(풀링) 실행한다. 클러스터는 GPU PC를 부르지 않는다. 비어 있으면 2초부터 10초까지 늘려 가며 다시 묻는다.
+
+=== 작업 가져가기
+없으면 `204`.
+
+include::{snippets}/gpu-jobs-claim/http-request.adoc[]
+include::{snippets}/gpu-jobs-claim/request-fields.adoc[]
+include::{snippets}/gpu-jobs-claim/http-response.adoc[]
+include::{snippets}/gpu-jobs-claim/response-fields.adoc[]
+
+[cols="1,3,3"]
+|===
+|type |input |result
+
+|TRANSCRIBE
+|`{audioUrls: [GET 주소…], language?}`
+|`{segments: [{speaker, start, end, text}], language}`
+
+|LLM
+|`{model, system, prompt, jsonSchema, options: {num_ctx, temperature, seed}}` — Ollama `format`에 jsonSchema를 넣는다
+|`{content: "<모델이 낸 JSON 문자열>", evalCount}`
+
+|IMAGE
+|`{images: [{name, prompt, negativePrompt, seed, width, height, uploadUrl}]}` — PNG를 uploadUrl로 PUT
+|`{uploaded: [name…]}`
+|===
+
+=== heartbeat (30초마다)
+include::{snippets}/gpu-jobs-heartbeat/http-request.adoc[]
+include::{snippets}/gpu-jobs-heartbeat/http-response.adoc[]
+
+임대가 넘어갔거나 마감을 넘겼으면 `409 LEASE_LOST`. 워커는 그 작업을 버린다.
+
+include::{snippets}/gpu-jobs-lease-lost/http-response.adoc[]
+
+=== 결과 보고
+include::{snippets}/gpu-jobs-result/http-request.adoc[]
+include::{snippets}/gpu-jobs-result/request-fields.adoc[]
+
+=== 실패 보고
+include::{snippets}/gpu-jobs-fail/http-request.adoc[]
+include::{snippets}/gpu-jobs-fail/request-fields.adoc[]
+
+== 내부 API
+
+=== 탈퇴 정리 (auth-service)
+include::{snippets}/internal-user-data-delete/http-request.adoc[]
+include::{snippets}/internal-user-data-delete/http-response.adoc[]
