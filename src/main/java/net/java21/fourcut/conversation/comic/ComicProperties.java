@@ -13,9 +13,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("comic")
 public record ComicProperties(
     @DefaultValue("1024") int imageSize,
-    @DefaultValue(
-            "korean webtoon style, clean line art, soft flat colors, cute characters, simple background,"
-                + " no text, no speech bubbles")
+    @DefaultValue("korean webtoon style, clean line art, flat colors, simple background")
         String style,
     @DefaultValue(
             "text, letters, watermark, speech bubble, photo, realistic, nsfw, extra fingers, deformed")

@@ -52,7 +52,7 @@ class DrawHandler implements StepHandler {
     ComicScript script = scenarios.script(id);
     String cast =
         script.characters().stream()
-            .map(c -> "person " + c.speaker() + ": " + c.look())
+            .map(c -> "person " + c.speaker() + " with " + c.look())
             .collect(Collectors.joining("; "));
     long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt();
     ObjectNode payload = json.createObjectNode();
@@ -61,7 +61,8 @@ class DrawHandler implements StepHandler {
       ComicScript.Panel panel = script.panels().get(i);
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      image.put("prompt", properties.style() + ". " + cast + ". scene: " + panel.scene());
+      // SDXL의 CLIP은 앞 77토큰만 읽는다. 짧은 그림체 → 장면(행동) → 인물 외모 순으로 둬서 잘려도 장면은 남긴다.
+      image.put("prompt", properties.style() + ", " + panel.scene() + ". " + cast);
       image.put("negativePrompt", properties.negativePrompt());
       image.put("seed", seed);
       image.put("width", properties.imageSize());

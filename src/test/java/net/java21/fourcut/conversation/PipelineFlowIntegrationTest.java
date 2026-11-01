@@ -251,7 +251,7 @@ class PipelineFlowIntegrationTest {
               "role",
               roles[i],
               "scene",
-              "식당, 빈 접시 앞의 두 사람 " + (i + 1),
+              "person A pointing at an empty plate, restaurant " + (i + 1),
               "lines",
               List.of(
                   java.util.Map.of(
@@ -262,8 +262,8 @@ class PipelineFlowIntegrationTest {
         "접시 미스터리",
         "characters",
         List.of(
-            java.util.Map.of("speaker", "A", "look", "단발머리, 노란 후드티"),
-            java.util.Map.of("speaker", "B", "look", "안경, 파란 셔츠")),
+            java.util.Map.of("speaker", "A", "look", "short black hair, yellow hoodie"),
+            java.util.Map.of("speaker", "B", "look", "glasses, blue shirt")),
         "panels",
         list);
   }
@@ -492,6 +492,11 @@ class PipelineFlowIntegrationTest {
     String draw = claim();
     List<String> urls = JsonPath.read(draw, "$.input.images[*].uploadUrl");
     assertThat(urls).hasSize(4);
+    // CLIP은 앞 77토큰만 읽으므로 장면(행동)이 인물 외모보다 앞에 온다
+    assertThat((String) JsonPath.read(draw, "$.input.images[0].prompt"))
+        .startsWith("korean webtoon style")
+        .containsSubsequence(
+            "person A pointing at an empty plate", "person A with short black hair");
     for (String url : urls) {
       put(url, png());
     }
