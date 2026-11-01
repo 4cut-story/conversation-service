@@ -16,7 +16,7 @@ final class Prompts {
   static final int EXTRACT_MAX_TOKENS = 600;
 
   /** 콘티 JSON(컷 4개, 대사, 인물) 출력 상한. */
-  static final int SCRIPT_MAX_TOKENS = 1200;
+  static final int SCRIPT_MAX_TOKENS = 2000;
 
   static final String EXTRACT_SYSTEM =
       """

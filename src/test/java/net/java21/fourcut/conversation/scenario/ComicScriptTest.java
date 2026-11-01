@@ -78,8 +78,40 @@ class ComicScriptTest {
   @Test
   @DisplayName("장면 단어 겹침은 Jaccard로 잰다")
   void overlap() {
-    assertThat(ComicScript.overlap("a b c", "a b c")).isEqualTo(1.0);
-    assertThat(ComicScript.overlap("a b", "c d")).isZero();
+    assertThat(ComicScript.overlap("{A} eats cake, cafe", "{B} eats cake at the cafe"))
+        .isEqualTo(1.0);
+    assertThat(ComicScript.overlap("{A} runs, park", "{A} sleeps, room")).isZero();
     assertThat(ComicScript.overlap("", "a")).isZero();
+  }
+
+  @Test
+  @DisplayName("대사 화자를 가명으로 쓴 출력은 화자 표시로 바꿔 통과시킨다")
+  void normalized() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        0, new ComicScript.Panel("기", "wide", "{A} and {B} at table", List.of(line("민지", "배고파"))));
+    ComicScript s = script(cast(), ps);
+    assertThat(s.violation()).contains("화자");
+    ComicScript fixed = s.normalized();
+    assertThat(fixed.violation()).isNull();
+    assertThat(fixed.panels().get(0).lines().get(0).speaker()).isEqualTo("A");
+  }
+
+  @Test
+  @DisplayName("FR-005: 가명이 대화에 나온 실명과 같으면 원문에 없는 가명으로 바꾸고 대사·제목도 함께 바꾼다")
+  void fictionalNames() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        0,
+        new ComicScript.Panel("기", "wide", "{A} and {B} at table", List.of(line("B", "민지야 배고파"))));
+    ComicScript s = new ComicScript("민지의 치킨", cast(), ps, null, List.of());
+    String spoken = "어제 민지가 치킨을 먹었대. 하늘이도 봤어";
+    ComicScript fixed = s.withFictionalNames(spoken);
+    assertThat(fixed.displayNames()).containsEntry("A", "지우").containsEntry("B", "도윤");
+    assertThat(fixed.title()).isEqualTo("지우의 치킨");
+    assertThat(fixed.panels().get(0).lines().get(0).text()).isEqualTo("지우야 배고파");
+    assertThat(fixed.namesFoundIn(spoken)).isEmpty();
+    assertThat(fixed.violation()).isNull();
+    assertThat(s.withFictionalNames("상관없는 대화")).isSameAs(s);
   }
 }

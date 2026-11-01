@@ -1,7 +1,9 @@
 package net.java21.fourcut.conversation.scenario;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,7 +56,11 @@ public record ComicScript(
   public static final int MAX_LINES = 2;
 
   /** 두 컷의 장면 단어가 이만큼 겹치면 같은 그림으로 본다. */
-  static final double MAX_SCENE_OVERLAP = 0.7;
+  static final double MAX_SCENE_OVERLAP = 0.8;
+
+  /** 장면 겹침을 잴 때 빼는 흔한 단어. */
+  private static final Set<String> STOPWORDS =
+      Set.of("a", "an", "the", "and", "at", "in", "on", "of", "with", "to", "is", "are");
 
   static final Set<String> SHOTS = Set.of("wide", "medium", "close-up");
 
@@ -155,17 +161,113 @@ public record ComicScript(
   }
 
   private static Set<String> words(String s) {
-    return Arrays.stream(s.toLowerCase(Locale.ROOT).split("[^a-z0-9{}]+"))
-        .filter(w -> !w.isBlank())
+    return Arrays.stream(s.toLowerCase(Locale.ROOT).split("[^a-z0-9]+"))
+        .filter(w -> w.length() > 1 && !STOPWORDS.contains(w))
         .collect(Collectors.toSet());
   }
 
-  /** 대화 원문에 나온 가명. 실명과 겹칠 수 있어 콘티를 다시 만든다. */
+  /** 대화 원문에 나온 가명. 실명일 수 있다. */
   public List<String> namesFoundIn(String transcriptText) {
     return characters.stream()
         .map(Character::displayName)
         .filter(n -> !n.isBlank() && transcriptText.contains(n))
         .toList();
+  }
+
+  /** 대화에 나온 이름과 겹칠 때 대신 쓰는 성별 구분 없는 가명. */
+  static final List<String> SPARE_NAMES =
+      List.of("하늘", "지우", "유진", "해솔", "다온", "시온", "한결", "가온", "나래", "보람", "새봄", "이랑");
+
+  /**
+   * 가명이 대화 원문에 나오면(LLM이 대화 속 실명을 가명으로 쓴 경우) 원문에 없는 예비 가명으로 바꾼다. 대사와 제목에 그 이름이 있으면 함께 바꾼다. 다시 만들지 않고
+   * 코드로 고친다(qwen3는 같은 실명을 반복해서 고른다).
+   */
+  public ComicScript withFictionalNames(String transcriptText) {
+    List<String> clashes = namesFoundIn(transcriptText);
+    if (clashes.isEmpty()) {
+      return this;
+    }
+    Set<String> used = new HashSet<>(characters.stream().map(Character::displayName).toList());
+    Map<String, String> rename = new HashMap<>();
+    Iterator<String> spare =
+        SPARE_NAMES.stream()
+            .filter(n -> !transcriptText.contains(n) && !used.contains(n))
+            .iterator();
+    for (String old : clashes) {
+      if (spare.hasNext()) {
+        rename.put(old, spare.next());
+      }
+    }
+    List<Character> cast =
+        characters.stream()
+            .map(
+                c ->
+                    rename.containsKey(c.displayName())
+                        ? new Character(
+                            c.speaker(), rename.get(c.displayName()), c.persona(), c.look())
+                        : c)
+            .toList();
+    List<Panel> fixed =
+        panels.stream()
+            .map(
+                p ->
+                    new Panel(
+                        p.role(),
+                        p.shot(),
+                        p.scene(),
+                        p.lines() == null
+                            ? null
+                            : p.lines().stream()
+                                .map(l -> new Line(l.speaker(), replaceAll(l.text(), rename)))
+                                .toList()))
+            .toList();
+    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
+  }
+
+  private static String replaceAll(String text, Map<String, String> rename) {
+    if (text == null) {
+      return null;
+    }
+    String out = text;
+    for (Map.Entry<String, String> e : rename.entrySet()) {
+      out = out.replace(e.getKey(), e.getValue());
+    }
+    return out;
+  }
+
+  /** LLM이 자주 내는 작은 형식 차이를 맞춘다: 대사 화자를 가명("민지")으로 쓴 경우 화자 표시(A)로 바꾼다. 검증 전에 부른다. */
+  public ComicScript normalized() {
+    if (characters == null || panels == null) {
+      return this;
+    }
+    java.util.Map<String, String> byName = new java.util.HashMap<>();
+    for (Character c : characters) {
+      if (c.name() != null && !c.name().isBlank()) {
+        byName.put(c.name().strip(), c.speaker());
+      }
+    }
+    List<Panel> fixed =
+        panels.stream()
+            .map(
+                p ->
+                    new Panel(
+                        p.role(),
+                        p.shot(),
+                        p.scene(),
+                        p.lines() == null
+                            ? List.of()
+                            : p.lines().stream()
+                                .map(
+                                    l ->
+                                        new Line(
+                                            l.speaker() == null
+                                                ? null
+                                                : byName.getOrDefault(
+                                                    l.speaker().strip(), l.speaker().strip()),
+                                            l.text()))
+                                .toList()))
+            .toList();
+    return new ComicScript(title, characters, fixed, reviewed, nameWarnings);
   }
 
   ComicScript reviewedWith(List<String> warnings) {
