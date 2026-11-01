@@ -1,7 +1,9 @@
 package net.java21.fourcut.conversation.scenario;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -42,6 +44,7 @@ class ExtractHandler implements StepHandler {
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
     store.saveCandidates(id, List.of());
+    store.saveNames(id, Map.of());
     return nextWindow(context, transcripts.load(id), -1);
   }
 
@@ -57,8 +60,28 @@ class ExtractHandler implements StepHandler {
       }
     }
     store.saveCandidates(id, found);
+    Transcript transcript = transcripts.load(id);
+    store.saveNames(id, mergeNames(store.names(id), content.path("names"), transcript.speakers()));
     int window = context.jobPayload().path("window").asInt();
-    return nextWindow(context, transcripts.load(id), window);
+    return nextWindow(context, transcript, window);
+  }
+
+  /** 구간마다 찾은 실명을 합친다. 화자를 모르던 이름에 나중에 화자가 붙으면 채운다. */
+  static Map<String, String> mergeNames(
+      Map<String, String> known, JsonNode found, List<String> speakers) {
+    Map<String, String> names = new LinkedHashMap<>(known);
+    for (JsonNode n : found) {
+      String word = n.path("word").asString("").strip();
+      String speaker = n.path("speaker").asString("").strip();
+      if (word.length() < 2 || speakers.contains(word)) {
+        continue;
+      }
+      String who = speakers.contains(speaker) ? speaker : "";
+      if (!who.isEmpty() || !names.containsKey(word)) {
+        names.put(word, who.isEmpty() ? names.getOrDefault(word, "") : who);
+      }
+    }
+    return names;
   }
 
   private StepOutcome nextWindow(StepContext context, Transcript transcript, int after) {

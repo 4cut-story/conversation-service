@@ -145,4 +145,18 @@ class ComicScriptTest {
     assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("친구야 친구가 캡처했어");
     assertThat(s.title()).isEqualTo("친구의 복수");
   }
+
+  @Test
+  @DisplayName("FR-005: 대사를 하는 인물이 장면 설명에 없으면 그림에 나오도록 붙인다")
+  void speakersInScene() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        1,
+        new ComicScript.Panel(
+            "승", "medium", "{B} looks surprised", List.of(line("A", "예약했지"), line("B", "역시"))));
+    ComicScript fixed = script(cast(), ps).normalized();
+    assertThat(fixed.panels().get(1).scene()).isEqualTo("{B} looks surprised, {A} nearby");
+    assertThat(fixed.panels().get(0).scene()).isEqualTo(panels().get(0).scene());
+    assertThat(fixed.replaced(java.util.Map.of())).isSameAs(fixed);
+  }
 }

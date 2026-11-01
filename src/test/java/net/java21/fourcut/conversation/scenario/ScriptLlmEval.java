@@ -87,7 +87,7 @@ class ScriptLlmEval {
                 "FUNNY", 0, 34, "B의 셀카가 단톡방에 올라가 친구 프사가 된다", "당황하다 결국 마음에 들어하는 반전", 0.8, true)
             : new SceneCandidate(
                 "FUNNY", 0, 56, "B가 A의 치킨을 몰래 먹고 떡볶이라고 우기다 들킨다", "발뺌하다 들통나는 반전", 0.9, true);
-    String prompt = ScriptHandler.prompt(transcript, scene, 42);
+    String prompt = ScriptHandler.prompt(transcript, scene, 42, java.util.Map.of());
     HttpClient http = HttpClient.newHttpClient();
     int ok = 0;
     for (int seed = 1; seed <= runs; seed++) {

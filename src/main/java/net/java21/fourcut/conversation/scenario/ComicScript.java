@@ -1,7 +1,6 @@
 package net.java21.fourcut.conversation.scenario;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -246,14 +245,22 @@ public record ComicScript(
       if (word.length() < 2) {
         continue;
       }
-      rename.put(word, "친구");
+      rename.put(word, RealNames.UNKNOWN);
       if (word.length() > 2 && word.endsWith("이")) {
-        rename.put(word.substring(0, word.length() - 1) + "이", "친구");
-        rename.put(word.substring(0, word.length() - 1), "친구");
+        rename.put(word.substring(0, word.length() - 1), RealNames.UNKNOWN);
       }
     }
-    List<Panel> fixed =
-        mapLines(l -> new Line(l.speaker(), stripJson(replaceAll(l.text(), rename))));
+    ComicScript out = replaced(rename);
+    List<Panel> fixed = out.mapLines(l -> new Line(l.speaker(), stripJson(l.text())));
+    return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings);
+  }
+
+  /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
+  public ComicScript replaced(Map<String, String> rename) {
+    if (rename.isEmpty()) {
+      return this;
+    }
+    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
     return new ComicScript(replaceAll(title, rename), characters, fixed, reviewed, nameWarnings);
   }
 
@@ -278,19 +285,7 @@ public record ComicScript(
   }
 
   private static String replaceAll(String text, Map<String, String> rename) {
-    if (text == null) {
-      return null;
-    }
-    String out = text;
-    // 긴 단어부터 바꿔야 "지현이"가 "지현"보다 먼저 바뀐다
-    List<String> keys =
-        rename.keySet().stream()
-            .sorted(Comparator.comparingInt(String::length).reversed())
-            .toList();
-    for (String k : keys) {
-      out = out.replace(k, rename.get(k));
-    }
-    return out;
+    return RealNames.apply(text, rename);
   }
 
   /** LLM이 자주 내는 작은 형식 차이를 맞춘다: 대사 화자를 가명("민지")으로 쓴 경우 화자 표시(A)로 바꾼다. 검증 전에 부른다. */
@@ -312,7 +307,27 @@ public record ComicScript(
                         ? null
                         : byName.getOrDefault(l.speaker().strip(), l.speaker().strip()),
                     l.text()));
-    return new ComicScript(title, characters, fixed, reviewed, nameWarnings);
+    return new ComicScript(
+        title,
+        characters,
+        fixed.stream().map(ComicScript::withSpeakersInScene).toList(),
+        reviewed,
+        nameWarnings);
+  }
+
+  /** 대사가 있는 인물이 장면 설명에 없으면 그림에도 나오도록 붙인다("{B} looks surprised" + ", {A} nearby"). */
+  static Panel withSpeakersInScene(Panel p) {
+    if (p.scene() == null || p.lines() == null) {
+      return p;
+    }
+    StringBuilder scene = new StringBuilder(p.scene().strip());
+    p.lines().stream()
+        .map(Line::speaker)
+        .filter(sp -> sp != null && !sp.isBlank())
+        .distinct()
+        .filter(sp -> !scene.toString().contains("{" + sp + "}"))
+        .forEach(sp -> scene.append(", {").append(sp).append("} nearby"));
+    return new Panel(p.role(), p.shot(), scene.toString(), p.lines());
   }
 
   ComicScript reviewedWith(List<String> warnings) {
