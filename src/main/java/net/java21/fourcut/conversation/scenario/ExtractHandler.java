@@ -1,7 +1,9 @@
 package net.java21.fourcut.conversation.scenario;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -42,6 +44,7 @@ class ExtractHandler implements StepHandler {
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
     store.saveCandidates(id, List.of());
+    store.saveNames(id, List.of());
     return nextWindow(context, transcripts.load(id), -1);
   }
 
@@ -57,8 +60,23 @@ class ExtractHandler implements StepHandler {
       }
     }
     store.saveCandidates(id, found);
+    Transcript transcript = transcripts.load(id);
+    store.saveNames(
+        id, mergeNames(store.names(id), content.path("names"), ScriptHandler.spoken(transcript)));
     int window = context.jobPayload().path("window").asInt();
-    return nextWindow(context, transcripts.load(id), window);
+    return nextWindow(context, transcript, window);
+  }
+
+  /** 구간마다 찾은 실명을 합친다. 대화에 실제로 나오고 이름처럼 보이는 단어만 남긴다. */
+  static List<String> mergeNames(List<String> known, JsonNode found, String spokenText) {
+    Set<String> names = new LinkedHashSet<>(known);
+    for (JsonNode n : found) {
+      String word = n.asString("").strip();
+      if (RealNames.plausible(word, spokenText)) {
+        names.add(word);
+      }
+    }
+    return List.copyOf(names);
   }
 
   private StepOutcome nextWindow(StepContext context, Transcript transcript, int after) {

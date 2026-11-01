@@ -78,8 +78,87 @@ class ComicScriptTest {
   @Test
   @DisplayName("장면 단어 겹침은 Jaccard로 잰다")
   void overlap() {
-    assertThat(ComicScript.overlap("a b c", "a b c")).isEqualTo(1.0);
-    assertThat(ComicScript.overlap("a b", "c d")).isZero();
+    assertThat(ComicScript.overlap("{A} eats cake, cafe", "{B} eats cake at the cafe"))
+        .isEqualTo(1.0);
+    assertThat(ComicScript.overlap("{A} runs, park", "{A} sleeps, room")).isZero();
     assertThat(ComicScript.overlap("", "a")).isZero();
+  }
+
+  @Test
+  @DisplayName("대사 화자를 가명으로 쓴 출력은 화자 표시로 바꿔 통과시킨다")
+  void normalized() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        0, new ComicScript.Panel("기", "wide", "{A} and {B} at table", List.of(line("민지", "배고파"))));
+    ComicScript s = script(cast(), ps);
+    assertThat(s.violation()).contains("화자");
+    ComicScript fixed = s.normalized();
+    assertThat(fixed.violation()).isNull();
+    assertThat(fixed.panels().get(0).lines().get(0).speaker()).isEqualTo("A");
+  }
+
+  @Test
+  @DisplayName("FR-005: 가명이 대화에 나온 실명과 같으면 원문에 없는 가명으로 바꾸고 대사·제목도 함께 바꾼다")
+  void fictionalNames() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        0,
+        new ComicScript.Panel("기", "wide", "{A} and {B} at table", List.of(line("B", "민지야 배고파"))));
+    ComicScript s = new ComicScript("민지의 치킨", cast(), ps, null, List.of());
+    String spoken = "어제 민지가 치킨을 먹었대. 하늘이도 봤어";
+    ComicScript fixed = s.withFictionalNames(spoken);
+    assertThat(fixed.displayNames()).containsEntry("A", "지우").containsEntry("B", "도윤");
+    assertThat(fixed.title()).isEqualTo("지우의 치킨");
+    assertThat(fixed.panels().get(0).lines().get(0).text()).isEqualTo("지우야 배고파");
+    assertThat(fixed.namesFoundIn(spoken)).isEmpty();
+    assertThat(fixed.violation()).isNull();
+    assertThat(s.withFictionalNames("상관없는 대화")).isSameAs(s);
+  }
+
+  @Test
+  @DisplayName("FR-005: 코드로 정한 가명은 대화에 나온 이름을 피하고, LLM이 다른 이름을 내도 덮어쓴다")
+  void assignedNames() {
+    var names = CastNames.assign(List.of("A", "B"), "하늘이랑 지우가 왔어", 0);
+    assertThat(names.values()).doesNotContain("하늘", "지우").hasSize(2).doesNotHaveDuplicates();
+    assertThat(CastNames.assign(List.of("A", "B"), "", 7))
+        .isEqualTo(CastNames.assign(List.of("A", "B"), "", 7));
+    assertThat(CastNames.line(java.util.Map.of("A", "유진"))).isEqualTo("A=유진");
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(0, new ComicScript.Panel("기", "wide", "{A} at table", List.of(line("B", "민지야 안녕"))));
+    ComicScript s =
+        new ComicScript("t", cast(), ps, null, List.of())
+            .withNames(java.util.Map.of("A", "유진", "B", "해솔"));
+    assertThat(s.displayNames()).containsEntry("A", "유진").containsEntry("B", "해솔");
+    assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("유진야 안녕");
+    assertThat(s.withNames(java.util.Map.of())).isSameAs(s);
+  }
+
+  @Test
+  @DisplayName("FR-005: nameWarnings에 적힌 실명이 대사·제목에 남아 있으면 친구로 바꾸고 JSON 조각을 지운다")
+  void scrubbed() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        0,
+        new ComicScript.Panel(
+            "기", "wide", "{A} at table", List.of(line("A", "민수야 지현이가 예약 캡처했어}, {"))));
+    ComicScript s =
+        new ComicScript("지현의 복수", cast(), ps, null, List.of("민수", "지현이", "예약"))
+            .scrubbed(w -> RealNames.called(w, "민수야 지현아 예약했어"));
+    assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("친구야 친구가 예약 캡처했어");
+    assertThat(s.title()).isEqualTo("친구의 복수");
+  }
+
+  @Test
+  @DisplayName("FR-005: 대사를 하는 인물이 장면 설명에 없으면 그림에 나오도록 붙인다")
+  void speakersInScene() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        1,
+        new ComicScript.Panel(
+            "승", "medium", "{B} looks surprised", List.of(line("A", "예약했지"), line("B", "역시"))));
+    ComicScript fixed = script(cast(), ps).normalized();
+    assertThat(fixed.panels().get(1).scene()).isEqualTo("{B} looks surprised, {A} nearby");
+    assertThat(fixed.panels().get(0).scene()).isEqualTo(panels().get(0).scene());
+    assertThat(fixed.replaced(java.util.Map.of())).isSameAs(fixed);
   }
 }

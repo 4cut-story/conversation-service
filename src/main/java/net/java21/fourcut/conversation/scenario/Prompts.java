@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.2";
+  static final String VERSION = "2026-11-01.7";
 
   private Prompts() {}
 
@@ -16,7 +16,7 @@ final class Prompts {
   static final int EXTRACT_MAX_TOKENS = 600;
 
   /** 콘티 JSON(컷 4개, 대사, 인물) 출력 상한. */
-  static final int SCRIPT_MAX_TOKENS = 1200;
+  static final int SCRIPT_MAX_TOKENS = 2000;
 
   static final String EXTRACT_SYSTEM =
       """
@@ -24,18 +24,22 @@ final class Prompts {
       - kind: FUNNY(웃음, 반전, 엉뚱한 말) 또는 IMPORTANT(약속, 결정, 소식).
       - 최대 2개. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
       - start, end는 대화 시작부터의 초. 장면 길이는 30초~3분.
-      - summary 한 줄, reason 한 줄. 사람은 화자 표시(A, B…)로 쓴다.
+      - summary 한 줄, reason 한 줄. 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
+        준호는 → 준호). 직함·호칭(팀장, 사장님, 언니), 음식, 물건, 장소, 가게 이름은 넣지 않는다. 없으면 빈 목록.
       - score 0~1: 만화로 만들었을 때 재미·의미.
       - 대화와 같은 언어로 쓴다.
       """;
 
   static final String EXTRACT_SCHEMA =
       """
-      {"type":"object","required":["candidates"],"properties":{"candidates":{"type":"array","maxItems":2,
+      {"type":"object","required":["candidates","names"],"properties":{
+       "candidates":{"type":"array","maxItems":2,
        "items":{"type":"object","required":["kind","start","end","summary","reason","score"],
         "properties":{"kind":{"type":"string","enum":["FUNNY","IMPORTANT"]},"start":{"type":"number"},
          "end":{"type":"number"},"summary":{"type":"string"},"reason":{"type":"string"},
-         "score":{"type":"number","minimum":0,"maximum":1}}}}}}
+         "score":{"type":"number","minimum":0,"maximum":1}}}},
+       "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
   static final String SCRIPT_SYSTEM =
@@ -43,23 +47,30 @@ final class Prompts {
       대화 장면을 기-승-전-결 4컷 만화 콘티로 만든다.
 
       인물 (characters, 화자 A, B…마다 하나)
-      - name: 한국어 가명 2~3글자(예: 민지, 도윤). 대화에 나온 이름·별명과 겹치면 안 된다.
+      - name: 입력의 "인물 가명"을 그대로 쓴다.
       - persona: 이 장면에서 드러난 성격 한 줄(예: 먹는 데 진심인 친구).
-      - look: 그림용 영어 외모 6단어 이내, 성별·나이 명사로 시작(예: "girl, short black hair, yellow hoodie").
-        name과 성별이 어울리게 정한다. 실제 외모는 추측하지 않는다.
+      - look: 그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
+        때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young woman, long black hair, yellow hoodie").
+        실제 외모는 추측하지 않는다. 인물끼리 머리색·옷 색이 모두 달라야 한다.
 
       컷 (panels, 정확히 4개, role 순서 "기","승","전","결")
       - 네 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
         기: 장소와 인물 소개 / 승: 사건이 생김 / 전: 반전·감정이 가장 큰 순간 / 결: 결과·여운.
       - shot: wide, medium, close-up 중 하나. 기는 보통 wide, 전은 보통 close-up. 네 컷이 모두 같으면 안 된다.
       - scene: 그림 모델용 영어 12단어 이내. 인물은 {A}, {B}처럼 쓰고 동사 하나로 행동을 쓴 뒤 장소를 붙인다.
+        그 컷에서 대사를 하는 인물은 모두 scene에 넣는다.
+        장소는 대화 내용에 맞게 하나 정해 네 컷 모두 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
         예: "{A} drops ice cream, {B} gasps, park"
-      - lines: 컷당 0~2개, 한 문장 30자 이내. 실제 말투를 살려 짧게, 맞춤법을 맞춘다. speaker는 A, B…를 쓴다.
+      - lines: 컷당 0~2개, 한 문장 30자 이내. [장면 대화]에 있는 말만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
+        말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
+        길면 앞뒤를 잘라 줄인다.
+        speaker는 A, B…를 쓴다.
         text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
-      - 대사에 실명·별명·학교·회사 이름이 나오면 가명이나 "친구"로 바꾸고 원래 단어를 nameWarnings에 넣는다.
+      - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면
+        "도윤아"), 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기 전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
 
-      title은 20자 이내. 대사·제목·name·persona는 대화와 같은 언어로 쓴다.
+      title은 20자 이내이고 실명을 넣지 않는다. 대사·제목·persona는 대화와 같은 언어로 쓴다.
       """;
 
   static final String SCRIPT_SCHEMA =

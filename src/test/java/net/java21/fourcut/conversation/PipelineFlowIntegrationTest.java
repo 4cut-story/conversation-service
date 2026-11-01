@@ -515,9 +515,10 @@ class PipelineFlowIntegrationTest {
     assertThat((String) JsonPath.read(draw, "$.input.images[0].prompt"))
         .startsWith("simple cartoon")
         .containsSubsequence("wide shot", "(girl, short black hair, yellow hoodie) and (boy");
-    // 컷마다 시드가 달라 같은 구도가 반복되지 않는다
+    // 네 컷을 같은 시드로 그려 인물이 컷마다 바뀌지 않게 한다
     List<Number> seeds = JsonPath.read(draw, "$.input.images[*].seed");
-    assertThat(seeds.stream().map(Number::longValue).distinct()).hasSize(4);
+    assertThat(seeds).hasSize(4);
+    assertThat(seeds.stream().map(Number::longValue).distinct()).hasSize(1);
     assertThat((Integer) JsonPath.read(draw, "$.input.images[0].width")).isEqualTo(768);
     for (String url : urls) {
       put(url, png());

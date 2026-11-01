@@ -14,6 +14,11 @@ public class ScenarioStore {
   /** 저장 형식 {@code {candidates: [...]}}. 대화 API가 그대로 보여 준다. */
   record Candidates(List<SceneCandidate> candidates) {}
 
+  /** 저장 형식 {@code {names: ["민지", "준호"]}}. */
+  record RealNameList(List<String> names) {}
+
+  private static final String NAMES = "names.json";
+
   private final ObjectStorage storage;
   private final JsonMapper json;
 
@@ -31,6 +36,18 @@ public class ScenarioStore {
 
   String saveCandidates(String id, List<SceneCandidate> candidates) {
     return put(WorkKeys.candidates(id), new Candidates(candidates));
+  }
+
+  /** 장면 추출이 찾은 대화 속 실명. 콘티 입력에서 가명으로 바꾸는 데 쓴다. API에는 내보내지 않는다. */
+  List<String> names(String id) {
+    return storage
+        .get(WorkKeys.work(id, NAMES))
+        .map(b -> json.readValue(b, RealNameList.class).names())
+        .orElse(List.of());
+  }
+
+  void saveNames(String id, List<String> names) {
+    put(WorkKeys.work(id, NAMES), new RealNameList(names));
   }
 
   /** 검수까지 끝난 콘티. comic 모듈이 읽는다. */

@@ -13,9 +13,16 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("comic")
 public record ComicProperties(
     @DefaultValue("768") int imageSize,
-    @DefaultValue("simple cartoon, thick outlines, flat colors, plain background") String style,
-    @DefaultValue(
-            "text, letters, watermark, speech bubble, photo, realistic, 3d, detailed background,"
-                + " intricate, nsfw, extra fingers, deformed")
-        String negativePrompt,
-    @DefaultValue("http://localhost:8083") String contentUrl) {}
+    @DefaultValue(DEFAULT_STYLE) String style,
+    @DefaultValue(DEFAULT_NEGATIVE) String negativePrompt,
+    @DefaultValue("http://localhost:8083") String contentUrl) {
+
+  public static final int DEFAULT_IMAGE_SIZE = 768;
+
+  public static final String DEFAULT_STYLE =
+      "simple cartoon, thick outlines, flat colors, plain background";
+
+  public static final String DEFAULT_NEGATIVE =
+      "text, letters, watermark, speech bubble, photo, realistic, 3d, detailed background,"
+          + " intricate, nsfw, extra fingers, deformed";
+}

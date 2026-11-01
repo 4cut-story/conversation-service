@@ -3,6 +3,7 @@ package net.java21.fourcut.conversation.comic;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -57,8 +58,9 @@ class DrawHandler implements StepHandler {
       image.put("name", panelName(i));
       image.put("prompt", prompt(properties.style(), script, script.panels().get(i)));
       image.put("negativePrompt", properties.negativePrompt());
-      // 컷마다 시드를 달리해 같은 구도가 반복되지 않게 한다. 인물은 외모 문구로 맞춘다
-      image.put("seed", seed + i);
+      // 네 컷을 같은 시드로 그린다. 컷마다 시드를 달리하면 같은 외모 문구로도 인물 얼굴·옷 색이 컷마다 바뀌었다(GPU PC 3회차 비교).
+      // 구도는 컷마다 다른 장면·구도 문구로 달라진다
+      image.put("seed", seed);
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));
@@ -83,23 +85,33 @@ class DrawHandler implements StepHandler {
   }
 
   /**
-   * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾼다. 자리 표시가 없는
+   * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 인원 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾸고, 두 명
+   * 이상이면 "two people"을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"로 바꾼다. 자리 표시가 없는
    * 예전 콘티는 끝에 인물 외모를 붙인다.
    */
   static String prompt(String style, ComicScript script, ComicScript.Panel panel) {
     String scene = panel.scene().strip();
     boolean legacy = !scene.contains("{");
     StringBuilder cast = new StringBuilder();
+    int people = 0;
     for (ComicScript.Character c : script.characters()) {
+      String mark = "{" + c.speaker() + "}";
       if (legacy) {
         cast.append("; ").append(c.look().strip());
-      } else {
-        scene = scene.replace("{" + c.speaker() + "}", "(" + c.look().strip() + ")");
+      } else if (scene.contains(mark)) {
+        people++;
+        scene = scene.replace(mark, "(" + c.look().strip() + ")");
       }
     }
+    scene = UNKNOWN_MARK.matcher(scene).replaceAll("a friend");
     String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
-    return style + ", " + shot + scene + cast;
+    String count = people >= 2 ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " people, " : "";
+    return style + ", " + shot + count + scene + cast;
   }
+
+  private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
+
+  private static final List<String> COUNTS = List.of("one", "two", "three", "four");
 
   static String panelName(int index) {
     return "panel-" + (index + 1);
