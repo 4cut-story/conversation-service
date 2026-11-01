@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.scenario;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -9,6 +10,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
@@ -71,7 +73,7 @@ public record ComicScript(
     return characters.stream()
         .collect(
             Collectors.toMap(
-                Character::speaker, Character::displayName, (a, b) -> a, java.util.HashMap::new));
+                Character::speaker, Character::displayName, (a, b) -> a, HashMap::new));
   }
 
   /** 화자 표시 → 인물. */
@@ -197,22 +199,7 @@ public record ComicScript(
                   return new Character(c.speaker(), name, c.persona(), c.look());
                 })
             .toList();
-    List<Panel> fixed =
-        panels == null
-            ? null
-            : panels.stream()
-                .map(
-                    p ->
-                        new Panel(
-                            p.role(),
-                            p.shot(),
-                            p.scene(),
-                            p.lines() == null
-                                ? null
-                                : p.lines().stream()
-                                    .map(l -> new Line(l.speaker(), replaceAll(l.text(), rename)))
-                                    .toList()))
-                .toList();
+    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
   }
 
@@ -245,20 +232,7 @@ public record ComicScript(
                             c.speaker(), rename.get(c.displayName()), c.persona(), c.look())
                         : c)
             .toList();
-    List<Panel> fixed =
-        panels.stream()
-            .map(
-                p ->
-                    new Panel(
-                        p.role(),
-                        p.shot(),
-                        p.scene(),
-                        p.lines() == null
-                            ? null
-                            : p.lines().stream()
-                                .map(l -> new Line(l.speaker(), replaceAll(l.text(), rename)))
-                                .toList()))
-            .toList();
+    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
   }
 
@@ -279,26 +253,24 @@ public record ComicScript(
       }
     }
     List<Panel> fixed =
-        panels == null
-            ? null
-            : panels.stream()
-                .map(
-                    p ->
-                        new Panel(
-                            p.role(),
-                            p.shot(),
-                            p.scene(),
-                            p.lines() == null
-                                ? null
-                                : p.lines().stream()
-                                    .map(
-                                        l ->
-                                            new Line(
-                                                l.speaker(),
-                                                stripJson(replaceAll(l.text(), rename))))
-                                    .toList()))
-                .toList();
+        mapLines(l -> new Line(l.speaker(), stripJson(replaceAll(l.text(), rename))));
     return new ComicScript(replaceAll(title, rename), characters, fixed, reviewed, nameWarnings);
+  }
+
+  /** 모든 컷의 대사를 f로 바꾼 새 컷 목록. 컷이 없으면 빈 목록(검증에서 컷 수 위반이 된다). */
+  private List<Panel> mapLines(UnaryOperator<Line> f) {
+    if (panels == null) {
+      return List.of();
+    }
+    return panels.stream()
+        .map(
+            p ->
+                new Panel(
+                    p.role(),
+                    p.shot(),
+                    p.scene(),
+                    p.lines() == null ? null : p.lines().stream().map(f).toList()))
+        .toList();
   }
 
   private static String stripJson(String text) {
@@ -313,7 +285,7 @@ public record ComicScript(
     // 긴 단어부터 바꿔야 "지현이"가 "지현"보다 먼저 바뀐다
     List<String> keys =
         rename.keySet().stream()
-            .sorted(java.util.Comparator.comparingInt(String::length).reversed())
+            .sorted(Comparator.comparingInt(String::length).reversed())
             .toList();
     for (String k : keys) {
       out = out.replace(k, rename.get(k));
@@ -326,33 +298,20 @@ public record ComicScript(
     if (characters == null || panels == null) {
       return this;
     }
-    java.util.Map<String, String> byName = new java.util.HashMap<>();
+    Map<String, String> byName = new HashMap<>();
     for (Character c : characters) {
       if (c.name() != null && !c.name().isBlank()) {
         byName.put(c.name().strip(), c.speaker());
       }
     }
     List<Panel> fixed =
-        panels.stream()
-            .map(
-                p ->
-                    new Panel(
-                        p.role(),
-                        p.shot(),
-                        p.scene(),
-                        p.lines() == null
-                            ? List.of()
-                            : p.lines().stream()
-                                .map(
-                                    l ->
-                                        new Line(
-                                            l.speaker() == null
-                                                ? null
-                                                : byName.getOrDefault(
-                                                    l.speaker().strip(), l.speaker().strip()),
-                                            l.text()))
-                                .toList()))
-            .toList();
+        mapLines(
+            l ->
+                new Line(
+                    l.speaker() == null
+                        ? null
+                        : byName.getOrDefault(l.speaker().strip(), l.speaker().strip()),
+                    l.text()));
     return new ComicScript(title, characters, fixed, reviewed, nameWarnings);
   }
 
