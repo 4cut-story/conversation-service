@@ -248,7 +248,9 @@ class PipelineFlowIntegrationTest {
                 "relatable",
                 4,
                 "intro",
-                false)));
+                false,
+                "concept",
+                "ANIMALS")));
   }
 
   static java.util.Map<String, Object> script(int panels) {
@@ -520,6 +522,10 @@ class PipelineFlowIntegrationTest {
                     fieldWithPath("candidates[].relatable").description("공감 1~5").optional(),
                     fieldWithPath("candidates[].intro")
                         .description("인사·안부 같은 도입부면 true")
+                        .optional(),
+                    fieldWithPath("candidates[].concept")
+                        .type(JsonFieldType.STRING)
+                        .description("장면에 어울리는 그림 컨셉(추천). 대화에 컨셉을 고르지 않았으면 이 컨셉으로 그린다")
                         .optional(),
                     fieldWithPath("candidates[].selected").description("만화로 만든 장면이면 true"))));
 
