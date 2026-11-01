@@ -68,6 +68,36 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 장면 밖 대사는 버리고, 동물 컨셉은 인물마다 코드로 정한 다른 동물을 쓴다")
+  void sceneLinesAndAnimals() {
+    ComicScript s =
+        script(cast(), panels()).withLinesWhere(t -> SpokenLines.inside(t, List.of("누구야? 내 접시!")));
+    assertThat(s.panels().get(0).lines()).isEmpty();
+    assertThat(s.panels().get(2).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("누구야?");
+    ComicScript animals = s.withAnimals(List.of("fox", "bear"));
+    assertThat(animals.characters())
+        .extracting(ComicScript.Character::look)
+        .containsExactly("fox, bob hair, yellow hoodie", "bear, glasses, blue shirt");
+    assertThat(ScriptHandler.animals(3))
+        .startsWith("panda", "cat")
+        .hasSize(8)
+        .doesNotHaveDuplicates();
+  }
+
+  @Test
+  @DisplayName("FR-005: 같은 대사를 두 컷에 쓰면 위반이다")
+  void repeatedLine() {
+    var copy = new java.util.ArrayList<>(panels());
+    copy.set(
+        3,
+        new ComicScript.Panel(
+            "결", "medium", "{B} whistles, {A} chases him", List.of(line("A", "배고 프다"))));
+    assertThat(script(cast(), copy).violation()).contains("같은 대사");
+  }
+
+  @Test
   @DisplayName("가명이 대화 원문에 나오면 찾아낸다, 가명이 없는 예전 콘티는 화자 표시를 쓴다")
   void clashesAndFallback() {
     assertThat(script(cast(), panels()).namesFoundIn("어제 민지가 그랬잖아")).containsExactly("민지");

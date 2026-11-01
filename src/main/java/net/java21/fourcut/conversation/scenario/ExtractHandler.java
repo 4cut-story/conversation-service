@@ -52,18 +52,19 @@ class ExtractHandler implements StepHandler {
   public StepOutcome onResult(StepContext context, JsonNode result) {
     String id = context.conversation().publicId();
     JsonNode content = llm.content(result);
+    Transcript transcript = transcripts.load(id);
+    int window = context.jobPayload().path("window").asInt();
+    List<Transcript.Utterance> lines = TranscriptText.merge(part(transcript, window));
     List<SceneCandidate> found = new ArrayList<>(store.candidates(id));
     for (JsonNode node : content.path("candidates")) {
-      SceneCandidate c = llm.read(node, SceneCandidate.class);
+      SceneCandidate c = llm.read(SceneTimes.resolve(node, lines), SceneCandidate.class).scored();
       if (c.valid()) {
         found.add(c);
       }
     }
     store.saveCandidates(id, found);
-    Transcript transcript = transcripts.load(id);
     store.saveNames(
         id, mergeNames(store.names(id), content.path("names"), ScriptHandler.spoken(transcript)));
-    int window = context.jobPayload().path("window").asInt();
     return nextWindow(context, transcript, window);
   }
 
@@ -79,12 +80,16 @@ class ExtractHandler implements StepHandler {
     return List.copyOf(names);
   }
 
+  private List<Transcript.Utterance> part(Transcript transcript, int window) {
+    int size = properties.windowSec();
+    return transcript.between((double) window * size, (double) (window + 1) * size);
+  }
+
   private StepOutcome nextWindow(StepContext context, Transcript transcript, int after) {
     int size = properties.windowSec();
     int last = transcript.durationSec() / size;
     for (int w = after + 1; w <= last; w++) {
-      List<Transcript.Utterance> part =
-          transcript.between((double) w * size, (double) (w + 1) * size);
+      List<Transcript.Utterance> part = part(transcript, w);
       if (!part.isEmpty()) {
         ObjectNode extra = llm.object();
         extra.put("window", w);

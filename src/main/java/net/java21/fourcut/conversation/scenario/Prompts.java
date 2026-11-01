@@ -8,62 +8,87 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.7";
+  static final String VERSION = "2026-11-01.12";
 
   private Prompts() {}
 
-  /** 장면 후보 JSON은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
-  static final int EXTRACT_MAX_TOKENS = 600;
+  /** 장면 후보 JSON(후보 3개, 항목 점수, 이름)은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
+  static final int EXTRACT_MAX_TOKENS = 900;
 
   /** 콘티 JSON(컷 4개, 대사, 인물) 출력 상한. */
   static final int SCRIPT_MAX_TOKENS = 2000;
 
   static final String EXTRACT_SYSTEM =
       """
-      친구들 대화 전사에서 4컷 만화로 만들 장면을 고른다.
-      - kind: FUNNY(웃음, 반전, 엉뚱한 말) 또는 IMPORTANT(약속, 결정, 소식).
-      - 최대 2개. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
-      - start, end는 대화 시작부터의 초. 장면 길이는 30초~3분.
-      - summary 한 줄, reason 한 줄. 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      대화 전사에서 4컷 만화로 만들 장면 후보를 고른다. 만화 한 편에 담을 짧은 이야기를 찾는 것이다.
+      - kind: CORE(이 대화가 가장 오래·깊게 다룬 주제), FUNNY(웃음, 반전, 엉뚱한 말, 티격태격),
+        IMPORTANT(결정, 약속, 소식, 감정이 크게 움직인 순간).
+      - 최대 3개, 서로 겹치지 않게. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
+      - from, to: 장면 첫 줄과 마지막 줄 앞의 [분:초] 표시를 그대로 옮긴다(예: "04:11"). 장면 길이는 30초~3분.
+        summary와 같은 일이 실제로 그 줄들 안에 나와야 한다.
+      - summary 한 줄(무슨 일이 일어나는지), reason 한 줄(왜 만화로 좋은지). 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      - 항목 점수 1~5:
+        story 이야기성: 상황 → 사건 → 반응 → 결말이 이 구간 안에 다 나오는가.
+        visual 그림: 행동, 장소, 물건이 있어 그림으로 보여 줄 수 있는가.
+        relatable 공감: 대화한 사람들이 보고 "맞아, 이랬지" 할 장면인가.
+      - intro: 인사, 안부, 자리 잡기, 늦은 사과처럼 본론 전 도입부면 true.
+      - concept: 이 장면에 어울리는 그림 컨셉 하나. DAILY(일상 웹툰: 친구·회사·일상 이야기), ANIMALS(동물 친구들: 귀엽고 가벼운 다툼·먹는 이야기), WATERCOLOR(수채화
+        애니메이션: 추억, 여행, 계절, 따뜻한 감정), PICTURE_BOOK(어린이 그림책: 가족, 아이, 소박한 하루),
+        NEWSPAPER(흑백 신문 만화: 풍자, 회사·사회 이야기, 어이없는 반전), JOSEON(조선시대 사람들: 옛날이야기처럼
+        풀면 재미있는 가족·이웃·장터 이야기), WUXIA(무협: 내기, 승부, 비밀, 사소한 일을 크게 부풀린 대결).
       - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
         준호는 → 준호). 직함·호칭(팀장, 사장님, 언니), 음식, 물건, 장소, 가게 이름은 넣지 않는다. 없으면 빈 목록.
-      - score 0~1: 만화로 만들었을 때 재미·의미.
       - 대화와 같은 언어로 쓴다.
       """;
 
   static final String EXTRACT_SCHEMA =
       """
       {"type":"object","required":["candidates","names"],"properties":{
-       "candidates":{"type":"array","maxItems":2,
-       "items":{"type":"object","required":["kind","start","end","summary","reason","score"],
-        "properties":{"kind":{"type":"string","enum":["FUNNY","IMPORTANT"]},"start":{"type":"number"},
-         "end":{"type":"number"},"summary":{"type":"string"},"reason":{"type":"string"},
-         "score":{"type":"number","minimum":0,"maximum":1}}}},
+       "candidates":{"type":"array","maxItems":3,
+       "items":{"type":"object",
+        "required":["kind","from","to","summary","reason","story","visual","relatable","intro","concept"],
+        "properties":{"kind":{"type":"string","enum":["CORE","FUNNY","IMPORTANT"]},
+         "from":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},"to":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},
+         "summary":{"type":"string"},"reason":{"type":"string"},
+         "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
+         "relatable":{"type":"integer","minimum":1,"maximum":5},"intro":{"type":"boolean"},
+         "concept":{"type":"string","enum":["DAILY","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER","JOSEON","WUXIA"]}}}},
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
-  static final String SCRIPT_SYSTEM =
+  /** 컨셉에 맞는 콘티 지시. 컨셉마다 인물 외모(look) 규칙만 다르다. */
+  static String scriptSystem(Concept concept) {
+    return SCRIPT_TEMPLATE.replace("%LOOK%", concept.lookRule());
+  }
+
+  /** 기본(일상 웹툰) 콘티 지시. */
+  static final String SCRIPT_SYSTEM = scriptSystem(Concept.DAILY);
+
+  private static final String SCRIPT_TEMPLATE =
       """
       대화 장면을 기-승-전-결 4컷 만화 콘티로 만든다.
 
       인물 (characters, 화자 A, B…마다 하나)
       - name: 입력의 "인물 가명"을 그대로 쓴다.
       - persona: 이 장면에서 드러난 성격 한 줄(예: 먹는 데 진심인 친구).
-      - look: 그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
-        때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young woman, long black hair, yellow hoodie").
-        실제 외모는 추측하지 않는다. 인물끼리 머리색·옷 색이 모두 달라야 한다.
+      - look: %LOOK%
 
       컷 (panels, 정확히 4개, role 순서 "기","승","전","결")
+      - 먼저 "장면 요약"의 이야기를 네 순간으로 나눈다. 기: 상황(누가 어디서 무엇을) / 승: 사건이 생김 /
+        전: 반전·감정이 가장 큰 순간 / 결: 결과·여운. 네 컷을 차례로 보면 요약한 이야기가 그대로 읽혀야 한다.
       - 네 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
-        기: 장소와 인물 소개 / 승: 사건이 생김 / 전: 반전·감정이 가장 큰 순간 / 결: 결과·여운.
       - shot: wide, medium, close-up 중 하나. 기는 보통 wide, 전은 보통 close-up. 네 컷이 모두 같으면 안 된다.
-      - scene: 그림 모델용 영어 12단어 이내. 인물은 {A}, {B}처럼 쓰고 동사 하나로 행동을 쓴 뒤 장소를 붙인다.
+      - scene: 그림 모델용 영어 15단어 이내. 그 순간을 그림만 보고 알 수 있게 쓴다. 인물은 {A}, {B}처럼 쓰고,
+        눈에 보이는 행동 하나와 이야기의 핵심 물건을 넣은 뒤 장소를 붙인다.
+        핵심 물건은 이야기에 나온 구체적인 것(예: 물 상자 더미, 합격 문자가 뜬 휴대폰, 불판 위 고기)이고 두 컷
+        이상에 나온다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는 모습만 쓰지 않는다.
         그 컷에서 대사를 하는 인물은 모두 scene에 넣는다.
         장소는 대화 내용에 맞게 하나 정해 네 컷 모두 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
-        예: "{A} drops ice cream, {B} gasps, park"
-      - lines: 컷당 0~2개, 한 문장 30자 이내. [장면 대화]에 있는 말만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
+        예: "{A} drops ice cream cone on ground, {B} gasps, park",
+        "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
+      - lines: 컷당 0~2개, 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
-        길면 앞뒤를 잘라 줄인다.
+        길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다.
         speaker는 A, B…를 쓴다.
         text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
       - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면

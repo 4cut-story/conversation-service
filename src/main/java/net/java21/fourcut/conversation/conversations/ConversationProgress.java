@@ -22,7 +22,12 @@ class ConversationProgress implements PipelineObserver {
         .map(
             c ->
                 new ConversationInfo(
-                    c.getId(), c.getPublicId(), c.getOwnerId(), c.getLanguage(), c.getChunkCount()))
+                    c.getId(),
+                    c.getPublicId(),
+                    c.getOwnerId(),
+                    c.getLanguage(),
+                    c.getChunkCount(),
+                    c.getConcept()))
         .orElse(null);
   }
 

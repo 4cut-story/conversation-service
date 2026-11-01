@@ -44,4 +44,29 @@ class DrawPromptTest {
         .isEqualTo(
             "s, close up shot, two people, (boy, glasses) looks at (girl, bob hair), a friend waits, cafe");
   }
+
+  @Test
+  @DisplayName("FR-006: 동물 컨셉은 two people 대신 사람이 섞이지 않는 말을 쓴다")
+  void animalCrowd() {
+    var panel = new ComicScript.Panel("기", "wide", "{A} and {B} talk, {C} waits, cafe", List.of());
+    assertThat(
+            DrawHandler.prompt(
+                "bugs",
+                script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS),
+                panel))
+        .isEqualTo(
+            "bugs, wide shot, two animal characters, no humans, (girl, bob hair) and (boy, glasses) talk,"
+                + " another animal waits, cafe");
+  }
+
+  @Test
+  @DisplayName("FR-006: 컨셉 그림체를 쓰고, 일상 웹툰과 예전 콘티는 설정 그림체를 쓴다")
+  void conceptStyle() {
+    var props = new ComicProperties(768, "base style", "base neg", "http://x");
+    assertThat(DrawHandler.style(script, props)).isEqualTo("base style");
+    assertThat(DrawHandler.negative(script, props)).isEqualTo("base neg");
+    var animals = script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS);
+    assertThat(DrawHandler.style(animals, props)).contains("animal");
+    assertThat(DrawHandler.negative(animals, props)).startsWith("base neg, ").contains("human");
+  }
 }

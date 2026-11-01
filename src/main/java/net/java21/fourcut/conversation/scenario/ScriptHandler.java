@@ -21,6 +21,9 @@ class ScriptHandler implements StepHandler {
 
   private static final double CONTEXT_SEC = 60;
 
+  /** 대사로 인정하는 장면 구간 앞뒤 여유(초). 발화 시작 시각이 구간 경계에 걸친 말을 살린다. */
+  static final double SCENE_SLACK_SEC = 5;
+
   private final TranscriptStore transcripts;
   private final ScenarioStore store;
   private final LlmJobs llm;
@@ -39,11 +42,7 @@ class ScriptHandler implements StepHandler {
   @Override
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
-    SceneCandidate scene =
-        store.candidates(id).stream()
-            .filter(SceneCandidate::chosen)
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("고른 장면이 없다"));
+    SceneCandidate scene = chosen(id);
     String prompt =
         prompt(
             transcripts.load(id),
@@ -52,7 +51,7 @@ class ScriptHandler implements StepHandler {
             RealNames.whose(store.names(id), transcripts.load(id)));
     long seed = (long) id.hashCode() + context.attempt();
     return llm.job(
-        Prompts.SCRIPT_SYSTEM,
+        Prompts.scriptSystem(concept(context, scene)),
         prompt,
         Prompts.SCRIPT_SCHEMA,
         Prompts.SCRIPT_MAX_TOKENS,
@@ -107,6 +106,10 @@ class ScriptHandler implements StepHandler {
     Map<String, String> rename =
         RealNames.replacements(RealNames.whose(store.names(id), transcript), cast);
     List<String> source = SpokenLines.sentences(RealNames.apply(spoken(transcript), rename));
+    SceneCandidate scene = chosen(id);
+    Concept concept = concept(context, scene);
+    List<String> inScene =
+        SpokenLines.sentences(RealNames.apply(sceneText(transcript, scene), rename));
     ComicScript script =
         llm.read(llm.content(result), ComicScript.class)
             .normalized()
@@ -114,13 +117,53 @@ class ScriptHandler implements StepHandler {
             .withFictionalNames(spoken(transcript))
             .replaced(rename)
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
-            .withLineTexts(t -> SpokenLines.snap(t, source));
+            .withLineTexts(t -> SpokenLines.snap(t, source))
+            .withLinesWhere(t -> SpokenLines.inside(t, inScene))
+            .withConcept(concept);
+    if (concept == Concept.ANIMALS) {
+      script = script.withAnimals(animals(id.hashCode()));
+    }
     String violation = script.violation();
     if (violation != null) {
       log.warn("콘티 규칙 위반: {} 출력 앞부분: {}", violation, head(result));
       return new StepOutcome.Retry("콘티 규칙 위반: " + violation);
     }
     return new StepOutcome.Done(store.saveScript(id, script), Step.REVIEW);
+  }
+
+  /** 장면 구간(앞뒤 여유 SCENE_SLACK_SEC)의 대화. 대사는 이 안에서만 고른다. */
+  static String sceneText(Transcript transcript, SceneCandidate scene) {
+    StringBuilder sb = new StringBuilder();
+    transcript.utterances().stream()
+        .filter(
+            u ->
+                u.start() >= scene.start() - SCENE_SLACK_SEC
+                    && u.start() <= scene.end() + SCENE_SLACK_SEC)
+        .forEach(u -> sb.append(u.text()).append('\n'));
+    return sb.toString();
+  }
+
+  /** 인물마다 다른 동물. 대화마다 시작 동물을 바꾼다. */
+  static List<String> animals(long seed) {
+    List<String> pool = Concept.ANIMAL_POOL;
+    int start = (int) Math.floorMod(seed, (long) pool.size());
+    List<String> out = new java.util.ArrayList<>();
+    for (int i = 0; i < pool.size(); i++) {
+      out.add(pool.get((start + i) % pool.size()));
+    }
+    return out;
+  }
+
+  private SceneCandidate chosen(String id) {
+    return store.candidates(id).stream()
+        .filter(SceneCandidate::chosen)
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("고른 장면이 없다"));
+  }
+
+  /** 사용자가 고른 컨셉, 없으면(자동) 장면 추출이 장면에 맞게 고른 컨셉, 그것도 없으면 일상 웹툰. */
+  static Concept concept(StepContext context, SceneCandidate scene) {
+    return Concept.chosen(context.conversation().concept(), scene.concept());
   }
 
   private static String head(JsonNode result) {

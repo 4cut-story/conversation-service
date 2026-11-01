@@ -10,6 +10,7 @@ import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
 import net.java21.fourcut.conversation.pipeline.StepOutcome;
 import net.java21.fourcut.conversation.scenario.ComicScript;
+import net.java21.fourcut.conversation.scenario.Concept;
 import net.java21.fourcut.conversation.scenario.ScenarioStore;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
@@ -56,8 +57,8 @@ class DrawHandler implements StepHandler {
     for (int i = 0; i < PANELS; i++) {
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      image.put("prompt", prompt(properties.style(), script, script.panels().get(i)));
-      image.put("negativePrompt", properties.negativePrompt());
+      image.put("prompt", prompt(style(script, properties), script, script.panels().get(i)));
+      image.put("negativePrompt", negative(script, properties));
       // 네 컷을 같은 시드로 그린다. 컷마다 시드를 달리하면 같은 외모 문구로도 인물 얼굴·옷 색이 컷마다 바뀌었다(GPU PC 3회차 비교).
       // 구도는 컷마다 다른 장면·구도 문구로 달라진다
       image.put("seed", seed);
@@ -86,10 +87,11 @@ class DrawHandler implements StepHandler {
 
   /**
    * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 인원 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾸고, 두 명
-   * 이상이면 "two people"을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"로 바꾼다. 자리 표시가 없는
-   * 예전 콘티는 끝에 인물 외모를 붙인다.
+   * 이상이면 "two people"(컨셉별 crowd)을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"(컨셉별
+   * friend)로 바꾼다. 자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다.
    */
   static String prompt(String style, ComicScript script, ComicScript.Panel panel) {
+    Concept concept = Concept.of(script.concept());
     String scene = panel.scene().strip();
     boolean legacy = !scene.contains("{");
     StringBuilder cast = new StringBuilder();
@@ -103,15 +105,31 @@ class DrawHandler implements StepHandler {
         scene = scene.replace(mark, "(" + c.look().strip() + ")");
       }
     }
-    scene = UNKNOWN_MARK.matcher(scene).replaceAll("a friend");
+    scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
     String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
-    String count = people >= 2 ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " people, " : "";
+    String count =
+        people >= 2
+            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
+            : "";
     return style + ", " + shot + count + scene + cast;
   }
 
   private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
 
   private static final List<String> COUNTS = List.of("one", "two", "three", "four");
+
+  /** 컨셉 그림체. 일상 웹툰(기본·예전 콘티)은 설정의 그림체를 쓴다. */
+  static String style(ComicScript script, ComicProperties properties) {
+    Concept c = Concept.of(script.concept());
+    return c == Concept.DAILY ? properties.style() : c.style();
+  }
+
+  static String negative(ComicScript script, ComicProperties properties) {
+    String extra = Concept.of(script.concept()).negative();
+    return extra.isEmpty()
+        ? properties.negativePrompt()
+        : properties.negativePrompt() + ", " + extra;
+  }
 
   static String panelName(int index) {
     return "panel-" + (index + 1);

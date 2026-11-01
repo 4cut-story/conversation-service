@@ -106,6 +106,9 @@ class PipelineFlowIntegrationTest {
         .type(JsonFieldType.NUMBER)
         .optional()
         .description("대화 길이(초). 전사 후 채워진다"),
+    fieldWithPath("concept")
+        .description(
+            "만화 컨셉. AUTO(장면에 맞게 고름), DAILY, ANIMALS, WATERCOLOR, PICTURE_BOOK, NEWSPAPER, JOSEON, WUXIA"),
     fieldWithPath("createdAt").description("만든 시각")
   };
 
@@ -230,16 +233,24 @@ class PipelineFlowIntegrationTest {
             java.util.Map.of(
                 "kind",
                 "FUNNY",
-                "start",
-                1.0,
-                "end",
-                9.0,
+                "from",
+                "00:01",
+                "to",
+                "00:06",
                 "summary",
                 "빈 접시 범인 찾기",
                 "reason",
                 "들통나는 반전",
-                "score",
-                0.9)));
+                "story",
+                5,
+                "visual",
+                4,
+                "relatable",
+                4,
+                "intro",
+                false,
+                "concept",
+                "DAILY")));
   }
 
   static java.util.Map<String, Object> script(int panels) {
@@ -252,6 +263,8 @@ class PipelineFlowIntegrationTest {
       "{A} points at empty plate, shocked",
       "{B} laughs, {A} sighs"
     };
+    // 대사는 장면 구간의 실제 말이어야 남는다 (ScriptHandler가 장면 밖 대사를 버린다)
+    String[] spoken = {"내 접시 누가 다 먹었어?", "나 아니야, 진짜로.", "입가에 소스 묻었는데?"};
     for (int i = 0; i < panels; i++) {
       list.add(
           java.util.Map.of(
@@ -262,9 +275,9 @@ class PipelineFlowIntegrationTest {
               "scene",
               scenes[i],
               "lines",
-              List.of(
-                  java.util.Map.of(
-                      "speaker", i % 2 == 0 ? "A" : "B", "text", "대사 " + (i + 1) + "번이에요"))));
+              i < spoken.length
+                  ? List.of(java.util.Map.of("speaker", i % 2 == 0 ? "A" : "B", "text", spoken[i]))
+                  : List.of()));
     }
     return java.util.Map.of(
         "title",
@@ -315,7 +328,8 @@ class PipelineFlowIntegrationTest {
                 mvc.perform(
                         as(post("/api/v1/conversations"), owner)
                             .content(
-                                "{\"source\":\"RECORDING\",\"consent\":true,\"language\":\"ko\"}"))
+                                "{\"source\":\"RECORDING\",\"consent\":true,\"language\":\"ko\","
+                                    + "\"concept\":\"AUTO\"}"))
                     .andExpect(status().isCreated())
                     .andDo(
                         doc(
@@ -329,7 +343,12 @@ class PipelineFlowIntegrationTest {
                                         "함께 대화하는 사람들의 녹음 동의. true가 아니면 400 CONSENT_REQUIRED"),
                                 fieldWithPath("language")
                                     .optional()
-                                    .description("ko 또는 en. 없으면 자동 감지")),
+                                    .description("ko 또는 en. 없으면 자동 감지"),
+                                fieldWithPath("concept")
+                                    .optional()
+                                    .description(
+                                        "만화 컨셉. AUTO 또는 없으면 장면에 맞게 고른다. DAILY(일상 웹툰), ANIMALS(동물 친구들), WATERCOLOR(수채화 애니메이션),"
+                                            + " PICTURE_BOOK(어린이 그림책), NEWSPAPER(흑백 신문 만화), JOSEON(조선시대 사람들), WUXIA(무협)")),
                             responseFields(
                                 fieldWithPath("id").description("대화 ID"),
                                 fieldWithPath("status").description("RECORDING"))))),
@@ -491,12 +510,23 @@ class PipelineFlowIntegrationTest {
                 "conversations-candidates",
                 responseFields(
                     fieldWithPath("candidates[].kind")
-                        .description("FUNNY(웃음 포인트) 또는 IMPORTANT(중요한 일)"),
+                        .description("CORE(대화의 핵심 주제), FUNNY(웃음 포인트), IMPORTANT(결정·약속·소식·감정)"),
                     fieldWithPath("candidates[].start").description("시작(초)"),
                     fieldWithPath("candidates[].end").description("끝(초)"),
                     fieldWithPath("candidates[].summary").description("한 줄 요약"),
                     fieldWithPath("candidates[].reason").description("고른 이유"),
-                    fieldWithPath("candidates[].score").description("점수 0~1"),
+                    fieldWithPath("candidates[].score")
+                        .description("점수 0~1: (이야기성 0.4 + 그림 0.3 + 공감 0.3) / 5, 도입부는 0.3 감점"),
+                    fieldWithPath("candidates[].story").description("이야기성 1~5").optional(),
+                    fieldWithPath("candidates[].visual").description("그림으로 보이는가 1~5").optional(),
+                    fieldWithPath("candidates[].relatable").description("공감 1~5").optional(),
+                    fieldWithPath("candidates[].intro")
+                        .description("인사·안부 같은 도입부면 true")
+                        .optional(),
+                    fieldWithPath("candidates[].concept")
+                        .type(JsonFieldType.STRING)
+                        .description("장면에 어울리는 그림 컨셉(추천). 대화에 컨셉을 고르지 않았으면 이 컨셉으로 그린다")
+                        .optional(),
                     fieldWithPath("candidates[].selected").description("만화로 만든 장면이면 true"))));
 
     // SCRIPT: 컷이 3개뿐인 콘티는 규칙 위반으로 다시 시도한다

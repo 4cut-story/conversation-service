@@ -40,6 +40,17 @@ class PromptBundleExport {
     draw.put("style", ComicProperties.DEFAULT_STYLE);
     draw.put("negativePrompt", ComicProperties.DEFAULT_NEGATIVE);
     draw.put("imageSize", ComicProperties.DEFAULT_IMAGE_SIZE);
+    var concepts = b.putArray("concepts");
+    for (Concept c : Concept.values()) {
+      ObjectNode n = concepts.addObject();
+      n.put("id", c.name());
+      n.put("label", c.label());
+      n.put("style", c.style());
+      n.put("negative", c.negative());
+      n.put("crowd", c.crowd());
+      n.put("friend", c.friend());
+      n.put("scriptSystem", Prompts.scriptSystem(c).strip());
+    }
     var spare = b.putArray("castNames");
     CastNames.POOL.forEach(spare::add);
     Path out = Path.of(System.getenv("PROMPT_BUNDLE_OUT"));
