@@ -111,6 +111,17 @@ class GpuJobService {
       return false;
     }
     JsonNode result = request.result() == null ? json.createObjectNode() : request.result();
+    return succeed(job, result, now);
+  }
+
+  /** 서버 안에서 처리한 작업(Gemini)의 결과. 임대를 잃었으면 false. 워커 연락 시각은 바꾸지 않는다. */
+  @Transactional
+  public boolean complete(Long jobId, UUID leaseToken, JsonNode result) {
+    GpuJob job = jobs.lockById(jobId).filter(j -> j.heldBy(leaseToken)).orElse(null);
+    return job != null && succeed(job, result, clock.instant());
+  }
+
+  private boolean succeed(GpuJob job, JsonNode result, Instant now) {
     ConversationInfo conversation = pipeline.conversation(job.getConversationId());
     if (conversation == null) {
       return false;
