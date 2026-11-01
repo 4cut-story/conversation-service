@@ -36,6 +36,9 @@ class PromptBundleExport {
     script.put("system", Prompts.SCRIPT_SYSTEM.strip());
     script.set("schema", json.readTree(Prompts.SCRIPT_SCHEMA));
     script.put("maxTokens", Prompts.SCRIPT_MAX_TOKENS);
+    ObjectNode voice = b.putObject("voice");
+    voice.set("schema", json.readTree(Prompts.VOICE_SCHEMA));
+    voice.put("maxTokens", Prompts.VOICE_MAX_TOKENS);
     ObjectNode draw = b.putObject("draw");
     draw.put("style", ComicProperties.DEFAULT_STYLE);
     draw.put("negativePrompt", ComicProperties.DEFAULT_NEGATIVE);
@@ -50,8 +53,7 @@ class PromptBundleExport {
       n.put("crowd", c.crowd());
       n.put("friend", c.friend());
       n.put("scriptSystem", Prompts.scriptSystem(c).strip());
-      n.set("scriptSchema", json.readTree(Prompts.scriptSchema(c)));
-      n.put("voice", c.voice());
+      n.put("voiceSystem", c.voice().isBlank() ? "" : Prompts.voiceSystem(c).strip());
     }
     var spare = b.putArray("castNames");
     CastNames.POOL.forEach(spare::add);

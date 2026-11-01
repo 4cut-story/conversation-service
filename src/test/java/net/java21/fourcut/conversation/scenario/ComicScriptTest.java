@@ -87,32 +87,32 @@ class ComicScriptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 장면 확인을 마친 대사는 컨셉 말투 문장으로 바꾸고, 말투 문장이 없거나 너무 길면 원래 대사를 둔다")
-  void voice() {
-    var ps =
-        List.of(
-            new ComicScript.Panel(
-                "기",
-                "wide",
-                "{A} and {B} at table",
-                List.of(
-                    new ComicScript.Line("A", "민지야 내 접시 누가 먹었어?", "민지, 내 접시를 누가 비웠소?"),
-                    new ComicScript.Line("B", "나 아니야", "  "))),
-            new ComicScript.Panel(
-                "승",
-                "medium",
-                "{B} hides plate",
-                List.of(new ComicScript.Line("B", "진짜로", "가".repeat(41)))));
-    ComicScript s =
-        script(cast(), ps)
-            .replaced(java.util.Map.of("민지", "도윤"))
-            .withLinesWhere(t -> !t.contains("없는 말"))
-            .withVoice();
-    assertThat(s.panels().get(0).lines())
-        .extracting(ComicScript.Line::text)
-        .containsExactly("도윤, 내 접시를 누가 비웠소?", "나 아니야");
-    assertThat(s.panels().get(1).lines().get(0).text()).isEqualTo("진짜로");
-    assertThat(s.panels().get(0).lines()).allMatch(l -> l.voice() == null);
+  @DisplayName("FR-006: 말투 문장으로 대사를 바꾸되 숫자가 달라지거나 너무 길거나 개수가 다르면 원래 대사를 둔다")
+  void voices() {
+    ComicScript s = script(cast(), panels());
+    List<String> original = s.lineTexts();
+    List<String> voiced = new java.util.ArrayList<>();
+    for (int i = 0; i < original.size(); i++) {
+      voiced.add(original.get(i) + "소");
+    }
+    voiced.set(0, "가".repeat(41));
+    ComicScript v = s.withVoices("허허, 새 제목이오", voiced);
+    assertThat(v.title()).isEqualTo("허허, 새 제목이오");
+    assertThat(v.lineTexts().get(0)).isEqualTo(original.get(0));
+    assertThat(v.lineTexts().subList(1, original.size())).allMatch(t -> t.endsWith("소"));
+    assertThat(s.withVoices("제목", List.of("하나"))).isEqualTo(s);
+    assertThat(ComicScript.keepsFacts("지하철이 10분 섰어", "가마가 10분이나 멈췄소")).isTrue();
+    assertThat(ComicScript.keepsFacts("지하철이 10분 섰어", "가마가 늦게 왔소")).isFalse();
+    assertThat(ComicScript.keepsFacts("배고파", " ")).isFalse();
+  }
+
+  @Test
+  @DisplayName("FR-006: 말투 바꾸기 입력은 제목과 번호 붙인 대사다")
+  void voicePrompt() {
+    ComicScript s = script(cast(), panels());
+    assertThat(ReviewHandler.prompt(s))
+        .startsWith("제목: " + s.title())
+        .contains("1. " + s.lineTexts().get(0));
   }
 
   @Test

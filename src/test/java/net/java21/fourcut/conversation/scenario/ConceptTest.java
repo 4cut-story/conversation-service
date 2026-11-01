@@ -27,15 +27,14 @@ class ConceptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 조선시대·무협·동물·그림책 컨셉은 대사를 그 말투로 바꿔 쓰게 하고, 일상 컨셉은 대화 그대로 둔다")
+  @DisplayName("FR-006: 조선시대·무협·동물·그림책 컨셉은 대사 말투 규칙이 있고, 일상·수채화·신문은 대화 그대로 둔다")
   void voices() {
-    assertThat(Prompts.scriptSystem(Concept.JOSEON)).contains("하오체").contains("주막");
-    assertThat(Prompts.scriptSystem(Concept.WUXIA)).contains("무협 소설 말투").contains("객잔");
-    assertThat(Prompts.scriptSystem(Concept.ANIMALS)).contains("동화");
-    assertThat(Prompts.scriptSystem(Concept.PICTURE_BOOK)).contains("그림책 말투");
-    assertThat(Prompts.SCRIPT_SYSTEM).contains("voice는 빈 문자열").doesNotContain("%VOICE%");
-    assertThat(Prompts.scriptSchema(Concept.JOSEON)).contains("\"speaker\",\"text\",\"voice\"");
-    assertThat(Prompts.scriptSchema(Concept.DAILY)).isEqualTo(Prompts.SCRIPT_SCHEMA);
+    assertThat(Prompts.voiceSystem(Concept.JOSEON)).contains("하오체").contains("주막").contains("조선시대");
+    assertThat(Prompts.voiceSystem(Concept.WUXIA)).contains("객잔").doesNotContain("%VOICE%");
+    assertThat(Concept.ANIMALS.voice()).contains("해요체");
+    assertThat(Concept.PICTURE_BOOK.voice()).contains("그림책");
+    assertThat(Concept.DAILY.voice()).isEmpty();
+    assertThat(Concept.WATERCOLOR.voice()).isEmpty();
     assertThat(Concept.NEWSPAPER.voice()).isEmpty();
   }
 }

@@ -53,7 +53,7 @@ class ScriptHandler implements StepHandler {
     return llm.job(
         Prompts.scriptSystem(concept(context, scene)),
         prompt,
-        Prompts.scriptSchema(concept(context, scene)),
+        Prompts.SCRIPT_SCHEMA,
         Prompts.SCRIPT_MAX_TOKENS,
         seed,
         null);
@@ -119,7 +119,6 @@ class ScriptHandler implements StepHandler {
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withLineTexts(t -> SpokenLines.snap(t, source))
             .withLinesWhere(t -> SpokenLines.inside(t, inScene))
-            .withVoice()
             .withConcept(concept);
     if (concept == Concept.ANIMALS) {
       script = script.withAnimals(animals(id.hashCode()));
