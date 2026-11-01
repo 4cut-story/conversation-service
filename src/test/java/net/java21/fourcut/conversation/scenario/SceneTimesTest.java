@@ -67,4 +67,15 @@ class SceneTimesTest {
     ObjectNode old = JSON.createObjectNode().put("start", 10).put("end", 50);
     assertThat(SceneTimes.resolve(old, LINES)).isSameAs(old);
   }
+
+  @Test
+  @DisplayName("FR-004: LLM 출력에 score가 없어도 장면 후보로 읽힌다(점수는 코드가 계산한다)")
+  void readableWithoutScore() {
+    JsonNode r = SceneTimes.resolve(candidate("04:11", "04:21"), LINES);
+    r = ((ObjectNode) r).put("summary", "입영통지서").put("reason", "반전");
+    ((ObjectNode) r).put("story", 5).put("visual", 4).put("relatable", 5).put("intro", false);
+    SceneCandidate c = JSON.treeToValue(r, SceneCandidate.class).scored();
+    assertThat(c.score()).isEqualTo(0.94);
+    assertThat(c.valid()).isTrue();
+  }
 }

@@ -40,7 +40,14 @@ final class SceneTimes {
    * @param lines LLM에 보여 준 줄(TranscriptText.merge 결과)
    */
   static JsonNode resolve(JsonNode node, List<Transcript.Utterance> lines) {
-    if (!(node instanceof ObjectNode obj) || !node.has("from")) {
+    if (!(node instanceof ObjectNode obj)) {
+      return node;
+    }
+    // 점수는 LLM이 아니라 코드가 계산한다(SceneCandidate.scored). 출력에 없으면 0으로 두고 읽는다
+    if (!obj.has("score")) {
+      obj.put("score", 0);
+    }
+    if (!node.has("from")) {
       return node;
     }
     int first = index(lines, seconds(node.path("from").asString("")));
