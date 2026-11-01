@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.1";
+  static final String VERSION = "2026-11-01.2";
 
   private Prompts() {}
 
@@ -55,6 +55,7 @@ final class Prompts {
       - scene: 그림 모델용 영어 12단어 이내. 인물은 {A}, {B}처럼 쓰고 동사 하나로 행동을 쓴 뒤 장소를 붙인다.
         예: "{A} drops ice cream, {B} gasps, park"
       - lines: 컷당 0~2개, 한 문장 30자 이내. 실제 말투를 살려 짧게, 맞춤법을 맞춘다. speaker는 A, B…를 쓴다.
+        text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
       - 대사에 실명·별명·학교·회사 이름이 나오면 가명이나 "친구"로 바꾸고 원래 단어를 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
 
