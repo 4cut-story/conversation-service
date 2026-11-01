@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.12";
+  static final String VERSION = "2026-11-01.13";
 
   private Prompts() {}
 
@@ -56,9 +56,24 @@ final class Prompts {
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
-  /** 컨셉에 맞는 콘티 지시. 컨셉마다 인물 외모(look) 규칙만 다르다. */
+  /** 컨셉에 맞는 콘티 지시. 컨셉마다 인물 외모(look) 규칙과 대사 말투가 다르다. */
   static String scriptSystem(Concept concept) {
-    return SCRIPT_TEMPLATE.replace("%LOOK%", concept.lookRule());
+    String voice =
+        concept.voice().isBlank()
+            ? "voice는 빈 문자열로 둔다."
+            : "voice: text를 이 말투로 바꿔 쓴다. "
+                + concept.voice()
+                + "\n  뜻과 사실(누가 무엇을 했는지, 물건, 숫자)은 그대로 두고 말투와 낱말만 바꾼다."
+                + " 새 내용이나 이름을 더하지 않는다. 30자 이내. title도 이 말투에 어울리게 짓는다.";
+    return SCRIPT_TEMPLATE.replace("%LOOK%", concept.lookRule()).replace("%VOICE%", voice);
+  }
+
+  /** 컨셉에 맞는 콘티 출력 스키마. 말투가 있는 컨셉은 대사마다 voice를 꼭 쓴다. */
+  static String scriptSchema(Concept concept) {
+    return concept.voice().isBlank()
+        ? SCRIPT_SCHEMA
+        : SCRIPT_SCHEMA.replace(
+            "\"required\":[\"speaker\",\"text\"]", "\"required\":[\"speaker\",\"text\",\"voice\"]");
   }
 
   /** 기본(일상 웹툰) 콘티 지시. */
@@ -91,6 +106,7 @@ final class Prompts {
         길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다.
         speaker는 A, B…를 쓴다.
         text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
+        %VOICE%
       - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면
         "도윤아"), 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기 전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
@@ -109,7 +125,8 @@ final class Prompts {
         "required":["role","shot","scene","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
          "scene":{"type":"string"},"lines":{"type":"array","maxItems":2,"items":{"type":"object",
-          "required":["speaker","text"],"properties":{"speaker":{"type":"string"},"text":{"type":"string"}}}}}}},
+          "required":["speaker","text"],"properties":{"speaker":{"type":"string"},"text":{"type":"string"},
+           "voice":{"type":"string"}}}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;
 }

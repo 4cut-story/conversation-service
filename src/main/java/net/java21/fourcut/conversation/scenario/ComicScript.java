@@ -1,5 +1,6 @@
 package net.java21.fourcut.conversation.scenario;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,8 +68,28 @@ public record ComicScript(
    */
   public record Panel(String role, String shot, String scene, List<Line> lines) {}
 
-  /** 말풍선 하나. speaker는 화자 표시(A, B…). */
-  public record Line(String speaker, String text) {}
+  /**
+   * 말풍선 하나.
+   *
+   * @param speaker 화자 표시(A, B…)
+   * @param text 대화에서 그대로 옮긴 말. 장면 안 대화인지 이것으로 확인한다
+   * @param voice 컨셉 말투로 바꿔 쓴 말(조선시대·무협 등). 확인이 끝나면 text 자리로 옮기고 비운다
+   */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public record Line(String speaker, String text, String voice) {
+
+    public Line(String speaker, String text) {
+      this(speaker, text, null);
+    }
+
+    /** 대사와 말투 문장에 같은 바꾸기를 한다(이름 지우기 등). */
+    Line map(UnaryOperator<String> f) {
+      return new Line(speaker, f.apply(text), voice == null ? null : f.apply(voice));
+    }
+  }
+
+  /** 말투 문장이 이보다 길면 쓰지 않고 원래 대사를 둔다(말풍선에 넘친다). */
+  static final int MAX_VOICE_CHARS = 40;
 
   /** 컷당 최대 말풍선 수. */
   public static final int MAX_LINES = 2;
@@ -223,7 +244,7 @@ public record ComicScript(
                   return new Character(c.speaker(), name, c.persona(), c.look());
                 })
             .toList();
-    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
+    List<Panel> fixed = mapLines(l -> l.map(t -> replaceAll(t, rename)));
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
   }
 
@@ -256,7 +277,7 @@ public record ComicScript(
                             c.speaker(), rename.get(c.displayName()), c.persona(), c.look())
                         : c)
             .toList();
-    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
+    List<Panel> fixed = mapLines(l -> l.map(t -> replaceAll(t, rename)));
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
   }
 
@@ -276,7 +297,7 @@ public record ComicScript(
       rename.put(stem, RealNames.UNKNOWN);
     }
     ComicScript out = replaced(rename);
-    List<Panel> fixed = out.mapLines(l -> new Line(l.speaker(), stripJson(l.text())));
+    List<Panel> fixed = out.mapLines(l -> l.map(ComicScript::stripJson));
     return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings, concept);
   }
 
@@ -285,7 +306,7 @@ public record ComicScript(
     return new ComicScript(
         title,
         characters,
-        mapLines(l -> new Line(l.speaker(), f.apply(l.text()))),
+        mapLines(l -> new Line(l.speaker(), f.apply(l.text()), l.voice())),
         reviewed,
         nameWarnings,
         concept);
@@ -307,6 +328,21 @@ public record ComicScript(
                                 ? null
                                 : p.lines().stream().filter(l -> keep.test(l.text())).toList()))
                 .toList();
+    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+  }
+
+  /**
+   * 대화에서 옮긴 대사(text)를 컨셉 말투 문장(voice)으로 바꾼다. 대사가 장면 안 대화인지 확인한 뒤에 부른다. 말투 문장이 없거나 너무 길면 원래 대사를 둔다.
+   */
+  public ComicScript withVoice() {
+    List<Panel> fixed =
+        mapLines(
+            l ->
+                l.voice() == null
+                        || l.voice().isBlank()
+                        || l.voice().strip().length() > MAX_VOICE_CHARS
+                    ? new Line(l.speaker(), l.text())
+                    : new Line(l.speaker(), stripJson(l.voice())));
     return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
   }
 
@@ -333,7 +369,7 @@ public record ComicScript(
     if (rename.isEmpty()) {
       return this;
     }
-    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
+    List<Panel> fixed = mapLines(l -> l.map(t -> replaceAll(t, rename)));
     return new ComicScript(
         replaceAll(title, rename), characters, fixed, reviewed, nameWarnings, concept);
   }
@@ -380,7 +416,8 @@ public record ComicScript(
                     l.speaker() == null
                         ? null
                         : byName.getOrDefault(l.speaker().strip(), l.speaker().strip()),
-                    l.text()));
+                    l.text(),
+                    l.voice()));
     return new ComicScript(
         title,
         characters,

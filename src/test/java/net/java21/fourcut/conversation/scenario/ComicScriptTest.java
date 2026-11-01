@@ -87,6 +87,35 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 장면 확인을 마친 대사는 컨셉 말투 문장으로 바꾸고, 말투 문장이 없거나 너무 길면 원래 대사를 둔다")
+  void voice() {
+    var ps =
+        List.of(
+            new ComicScript.Panel(
+                "기",
+                "wide",
+                "{A} and {B} at table",
+                List.of(
+                    new ComicScript.Line("A", "민지야 내 접시 누가 먹었어?", "민지, 내 접시를 누가 비웠소?"),
+                    new ComicScript.Line("B", "나 아니야", "  "))),
+            new ComicScript.Panel(
+                "승",
+                "medium",
+                "{B} hides plate",
+                List.of(new ComicScript.Line("B", "진짜로", "가".repeat(41)))));
+    ComicScript s =
+        script(cast(), ps)
+            .replaced(java.util.Map.of("민지", "도윤"))
+            .withLinesWhere(t -> !t.contains("없는 말"))
+            .withVoice();
+    assertThat(s.panels().get(0).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("도윤, 내 접시를 누가 비웠소?", "나 아니야");
+    assertThat(s.panels().get(1).lines().get(0).text()).isEqualTo("진짜로");
+    assertThat(s.panels().get(0).lines()).allMatch(l -> l.voice() == null);
+  }
+
+  @Test
   @DisplayName("FR-005: 같은 대사를 두 컷에 쓰면 위반이다")
   void repeatedLine() {
     var copy = new java.util.ArrayList<>(panels());

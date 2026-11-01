@@ -50,6 +50,8 @@ class PromptBundleExport {
       n.put("crowd", c.crowd());
       n.put("friend", c.friend());
       n.put("scriptSystem", Prompts.scriptSystem(c).strip());
+      n.set("scriptSchema", json.readTree(Prompts.scriptSchema(c)));
+      n.put("voice", c.voice());
     }
     var spare = b.putArray("castNames");
     CastNames.POOL.forEach(spare::add);

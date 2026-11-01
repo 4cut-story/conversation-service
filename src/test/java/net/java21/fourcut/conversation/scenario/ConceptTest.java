@@ -25,4 +25,17 @@ class ConceptTest {
     assertThat(Prompts.scriptSystem(Concept.WUXIA)).contains("swordsman");
     assertThat(Concept.of("wuxia")).isEqualTo(Concept.WUXIA);
   }
+
+  @Test
+  @DisplayName("FR-006: 조선시대·무협·동물·그림책 컨셉은 대사를 그 말투로 바꿔 쓰게 하고, 일상 컨셉은 대화 그대로 둔다")
+  void voices() {
+    assertThat(Prompts.scriptSystem(Concept.JOSEON)).contains("하오체").contains("주막");
+    assertThat(Prompts.scriptSystem(Concept.WUXIA)).contains("무협 소설 말투").contains("객잔");
+    assertThat(Prompts.scriptSystem(Concept.ANIMALS)).contains("동화");
+    assertThat(Prompts.scriptSystem(Concept.PICTURE_BOOK)).contains("그림책 말투");
+    assertThat(Prompts.SCRIPT_SYSTEM).contains("voice는 빈 문자열").doesNotContain("%VOICE%");
+    assertThat(Prompts.scriptSchema(Concept.JOSEON)).contains("\"speaker\",\"text\",\"voice\"");
+    assertThat(Prompts.scriptSchema(Concept.DAILY)).isEqualTo(Prompts.SCRIPT_SCHEMA);
+    assertThat(Concept.NEWSPAPER.voice()).isEmpty();
+  }
 }
