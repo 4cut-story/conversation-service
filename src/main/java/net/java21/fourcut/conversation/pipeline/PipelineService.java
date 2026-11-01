@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class PipelineService {
   private final Clock clock;
   private final TaskExecutor executor;
   private final TransactionTemplate tx;
+  private final ApplicationEventPublisher events;
 
   public PipelineService(
       List<StepHandler> handlerList,
@@ -49,7 +51,8 @@ public class PipelineService {
       JsonMapper json,
       Clock clock,
       @Qualifier("applicationTaskExecutor") TaskExecutor executor,
-      TransactionTemplate tx) {
+      TransactionTemplate tx,
+      ApplicationEventPublisher events) {
     handlerList.forEach(h -> handlers.put(h.step(), h));
     this.steps = steps;
     this.jobs = jobs;
@@ -60,6 +63,7 @@ public class PipelineService {
     this.clock = clock;
     this.executor = executor;
     this.tx = tx;
+    this.events = events;
   }
 
   /** 녹음이 끝난 대화의 처리를 시작한다 (전사부터). */
@@ -159,6 +163,9 @@ public class PipelineService {
         step.jobEnqueued(job.getId());
         if (e.modelInfo() != null) {
           step.modelInfo(e.modelInfo());
+        }
+        if (e.type() == JobType.LLM) {
+          events.publishEvent(new LlmJobQueued(job.getId()));
         }
       }
       case StepOutcome.RunLocal r -> afterCommit(step.getId());
