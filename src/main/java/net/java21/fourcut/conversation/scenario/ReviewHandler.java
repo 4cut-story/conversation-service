@@ -50,7 +50,7 @@ class ReviewHandler implements StepHandler {
     return llm.job(
         Prompts.voiceSystem(concept),
         prompt(script),
-        Prompts.VOICE_SCHEMA,
+        Prompts.voiceSchema(script.lineTexts().size()),
         Prompts.VOICE_MAX_TOKENS,
         seed,
         null);
@@ -65,6 +65,10 @@ class ReviewHandler implements StepHandler {
       JsonNode out = llm.content(result);
       List<String> lines = new ArrayList<>();
       out.path("lines").forEach(n -> lines.add(n.asString("")));
+      List<String> rejected = script.voiceRejections(lines);
+      if (!rejected.isEmpty()) {
+        log.warn("말투 바꾼 대사 일부를 원래 대사로 둔다 ({}): {}", id, rejected);
+      }
       voiced = script.withVoices(out.path("title").asString(""), lines);
     } catch (RuntimeException e) {
       log.warn("말투 바꾸기 결과를 읽지 못해 원래 대사를 쓴다: {}", e.getMessage());

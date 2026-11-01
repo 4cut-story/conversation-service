@@ -31,6 +31,7 @@ class ConceptTest {
   void voices() {
     assertThat(Prompts.voiceSystem(Concept.JOSEON)).contains("하오체").contains("주막").contains("조선시대");
     assertThat(Prompts.voiceSystem(Concept.WUXIA)).contains("객잔").doesNotContain("%VOICE%");
+    assertThat(Prompts.voiceSystem(Concept.JOSEON)).contains("앉으시오").contains("덧붙이지 않는다");
     assertThat(Concept.ANIMALS.voice()).contains("해요체");
     assertThat(Concept.PICTURE_BOOK.voice()).contains("그림책");
     assertThat(Concept.DAILY.voice()).isEmpty();

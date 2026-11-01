@@ -325,6 +325,27 @@ public record ComicScript(
     return new ComicScript(t, characters, fixed, reviewed, nameWarnings, concept);
   }
 
+  /** 말투 문장 중 쓰지 못하는 것과 그 까닭(로그용). 개수가 다르면 그것 하나만 알린다. */
+  public List<String> voiceRejections(List<String> voices) {
+    List<String> original = lineTexts();
+    if (voices == null || voices.size() != original.size()) {
+      return List.of("대사 수 " + (voices == null ? 0 : voices.size()) + " ≠ " + original.size());
+    }
+    List<String> out = new java.util.ArrayList<>();
+    for (int i = 0; i < original.size(); i++) {
+      String v = stripJson(voices.get(i));
+      if (!keepsFacts(original.get(i), v)) {
+        out.add(
+            (i + 1)
+                + "번 "
+                + (v == null || v.isBlank()
+                    ? "빈 대사"
+                    : v.length() > MAX_VOICE_CHARS ? "너무 김" : "숫자 다름"));
+      }
+    }
+    return out;
+  }
+
   /** 말투 문장이 원래 대사의 숫자를 그대로 갖고, 말풍선에 들어갈 길이인지. */
   static boolean keepsFacts(String original, String voiced) {
     if (voiced == null || voiced.isBlank() || voiced.length() > MAX_VOICE_CHARS) {

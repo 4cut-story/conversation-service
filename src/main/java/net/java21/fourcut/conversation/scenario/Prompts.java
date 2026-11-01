@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.13";
+  static final String VERSION = "2026-11-01.14";
 
   private Prompts() {}
 
@@ -129,6 +129,9 @@ final class Prompts {
       - 입력의 번호마다 하나씩, 같은 순서와 같은 개수로 lines에 쓴다.
       - 뜻과 사실은 그대로 둔다: 누가 무엇을 했는지, 숫자, 시간, 이름을 바꾸지 않는다. 새 내용을 더하지 않는다.
       - 문장마다 말끝을 위 말투로 바꾼다. 원래 문장을 그대로 두지 않는다.
+      - 원래 말끝 뒤에 새 말끝을 덧붙이지 않는다. 동사와 형용사를 그 말투에 맞게 활용해 다시 쓴다.
+        틀림: "앉아하오", "칭찬해줘하오", "여기했어요". 맞음: "앉으시오", "칭찬해 주시오", "여기 있어요".
+      - 읽어서 어색한 말, 없는 말("멈았소")을 만들지 않는다. 자신 없으면 쉬운 말로 바꾼다.
       - 한 대사는 30자 이내. 원래 대사가 길면 뜻이 같게 줄인다.
       - title도 같은 말투로 20자 이내로 바꾼다.
       """;
@@ -137,6 +140,11 @@ final class Prompts {
       """
       {"type":"object","required":["title","lines"],"properties":{
        "title":{"type":"string"},
-       "lines":{"type":"array","maxItems":8,"items":{"type":"string"}}}}
+       "lines":{"type":"array","minItems":%N%,"maxItems":%N%,"items":{"type":"string"}}}}
       """;
+
+  /** 대사 개수를 스키마로 못 박는다. 개수가 어긋나면 대사를 하나도 바꿀 수 없어서다(첫 시험에서 4번 중 1번꼴). */
+  static String voiceSchema(int lines) {
+    return VOICE_SCHEMA.replace("%N%", Integer.toString(lines));
+  }
 }

@@ -37,7 +37,7 @@ class PromptBundleExport {
     script.set("schema", json.readTree(Prompts.SCRIPT_SCHEMA));
     script.put("maxTokens", Prompts.SCRIPT_MAX_TOKENS);
     ObjectNode voice = b.putObject("voice");
-    voice.set("schema", json.readTree(Prompts.VOICE_SCHEMA));
+    voice.set("schema", json.readTree(Prompts.voiceSchema(8)));
     voice.put("maxTokens", Prompts.VOICE_MAX_TOKENS);
     ObjectNode draw = b.putObject("draw");
     draw.put("style", ComicProperties.DEFAULT_STYLE);

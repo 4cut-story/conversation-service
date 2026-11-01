@@ -104,6 +104,14 @@ class ComicScriptTest {
     assertThat(ComicScript.keepsFacts("지하철이 10분 섰어", "가마가 10분이나 멈췄소")).isTrue();
     assertThat(ComicScript.keepsFacts("지하철이 10분 섰어", "가마가 늦게 왔소")).isFalse();
     assertThat(ComicScript.keepsFacts("배고파", " ")).isFalse();
+    assertThat(s.voiceRejections(voiced)).containsExactly("1번 너무 김");
+    assertThat(s.voiceRejections(List.of("하나"))).containsExactly("대사 수 1 ≠ " + original.size());
+  }
+
+  @Test
+  @DisplayName("FR-006: 말투 스키마는 대사 개수를 못 박는다")
+  void voiceSchema() {
+    assertThat(Prompts.voiceSchema(5)).contains("\"minItems\":5,\"maxItems\":5");
   }
 
   @Test
