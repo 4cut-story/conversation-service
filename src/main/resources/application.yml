@@ -54,5 +54,5 @@ scenario:
   llm-model: ${LLM_MODEL:qwen3:8b}
 
 comic:
-  image-size: ${COMIC_IMAGE_SIZE:1024}
+  image-size: ${COMIC_IMAGE_SIZE:768}
   content-url: ${SERVICES_CONTENT_URL:http://localhost:8083}

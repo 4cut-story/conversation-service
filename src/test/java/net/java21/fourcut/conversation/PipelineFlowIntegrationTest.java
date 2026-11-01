@@ -245,13 +245,22 @@ class PipelineFlowIntegrationTest {
   static java.util.Map<String, Object> script(int panels) {
     List<Object> list = new java.util.ArrayList<>();
     String[] roles = {"기", "승", "전", "결"};
+    String[] shots = {"wide", "medium", "close-up", "medium"};
+    String[] scenes = {
+      "{A} and {B} sit at table, restaurant",
+      "{B} secretly eats from plate",
+      "{A} points at empty plate, shocked",
+      "{B} laughs, {A} sighs"
+    };
     for (int i = 0; i < panels; i++) {
       list.add(
           java.util.Map.of(
               "role",
               roles[i],
+              "shot",
+              shots[i],
               "scene",
-              "person A pointing at an empty plate, restaurant " + (i + 1),
+              scenes[i],
               "lines",
               List.of(
                   java.util.Map.of(
@@ -262,10 +271,21 @@ class PipelineFlowIntegrationTest {
         "접시 미스터리",
         "characters",
         List.of(
-            java.util.Map.of("speaker", "A", "look", "short black hair, yellow hoodie"),
-            java.util.Map.of("speaker", "B", "look", "glasses, blue shirt")),
+            java.util.Map.of(
+                "speaker",
+                "A",
+                "name",
+                "하린",
+                "persona",
+                "먹는 데 진심",
+                "look",
+                "girl, short black hair, yellow hoodie"),
+            java.util.Map.of(
+                "speaker", "B", "name", "준호", "persona", "능청꾼", "look", "boy, glasses")),
         "panels",
-        list);
+        list,
+        "nameWarnings",
+        List.of("민지"));
   }
 
   static byte[] png() throws Exception {
@@ -485,18 +505,20 @@ class PipelineFlowIntegrationTest {
     assertThat((String) JsonPath.read(script, "$.input.system")).contains("4컷");
     result(script, llm(script(4)));
 
-    // REVIEW
-    result(claim(), llm(java.util.Map.of("script", script(4), "nameWarnings", List.of("민지"))));
+    // REVIEW는 서버에서 규칙만 다시 확인한다 (LLM 호출 없음)
 
     // DRAW: 워커가 사전 서명 PUT 주소로 그림을 올린다
     String draw = claim();
     List<String> urls = JsonPath.read(draw, "$.input.images[*].uploadUrl");
     assertThat(urls).hasSize(4);
-    // CLIP은 앞 77토큰만 읽으므로 장면(행동)이 인물 외모보다 앞에 온다
+    // CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 장면 순이고, {A}는 외모로 바뀐다
     assertThat((String) JsonPath.read(draw, "$.input.images[0].prompt"))
-        .startsWith("korean webtoon style")
-        .containsSubsequence(
-            "person A pointing at an empty plate", "person A with short black hair");
+        .startsWith("simple cartoon")
+        .containsSubsequence("wide shot", "(girl, short black hair, yellow hoodie) and (boy");
+    // 컷마다 시드가 달라 같은 구도가 반복되지 않는다
+    List<Number> seeds = JsonPath.read(draw, "$.input.images[*].seed");
+    assertThat(seeds.stream().map(Number::longValue).distinct()).hasSize(4);
+    assertThat((Integer) JsonPath.read(draw, "$.input.images[0].width")).isEqualTo(768);
     for (String url : urls) {
       put(url, png());
     }

@@ -3,7 +3,6 @@ package net.java21.fourcut.conversation.comic;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -20,8 +19,8 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * DRAW: 콘티의 컷 4장을 GPU 워커(SDXL)에 그리게 한다. 워커는 사전 서명 PUT 주소로 PNG를 올린다. 같은 대화는 같은 시드를 써서 캐릭터 모습을 맞춘다.
- * 그림에는 글자를 넣지 않고, 말풍선은 COMPOSE에서 코드로 그린다.
+ * DRAW: 콘티의 컷 4장을 GPU 워커(SDXL)에 그리게 한다. 워커는 사전 서명 PUT 주소로 PNG를 올린다. 컷마다 구도와 시드가 다르고, 인물 모습은 외모 문구로
+ * 맞춘다. 그림에는 글자를 넣지 않고, 말풍선은 COMPOSE에서 코드로 그린다.
  */
 @Component
 class DrawHandler implements StepHandler {
@@ -50,21 +49,16 @@ class DrawHandler implements StepHandler {
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
     ComicScript script = scenarios.script(id);
-    String cast =
-        script.characters().stream()
-            .map(c -> "person " + c.speaker() + " with " + c.look())
-            .collect(Collectors.joining("; "));
-    long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt();
+    long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
     for (int i = 0; i < PANELS; i++) {
-      ComicScript.Panel panel = script.panels().get(i);
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      // SDXL의 CLIP은 앞 77토큰만 읽는다. 짧은 그림체 → 장면(행동) → 인물 외모 순으로 둬서 잘려도 장면은 남긴다.
-      image.put("prompt", properties.style() + ", " + panel.scene() + ". " + cast);
+      image.put("prompt", prompt(properties.style(), script, script.panels().get(i)));
       image.put("negativePrompt", properties.negativePrompt());
-      image.put("seed", seed);
+      // 컷마다 시드를 달리해 같은 구도가 반복되지 않게 한다. 인물은 외모 문구로 맞춘다
+      image.put("seed", seed + i);
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));
@@ -86,6 +80,25 @@ class DrawHandler implements StepHandler {
       }
     }
     return new StepOutcome.Done(WorkKeys.workPrefix(id), Step.COMPOSE);
+  }
+
+  /**
+   * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾼다. 자리 표시가 없는
+   * 예전 콘티는 끝에 인물 외모를 붙인다.
+   */
+  static String prompt(String style, ComicScript script, ComicScript.Panel panel) {
+    String scene = panel.scene().strip();
+    boolean legacy = !scene.contains("{");
+    StringBuilder cast = new StringBuilder();
+    for (ComicScript.Character c : script.characters()) {
+      if (legacy) {
+        cast.append("; ").append(c.look().strip());
+      } else {
+        scene = scene.replace("{" + c.speaker() + "}", "(" + c.look().strip() + ")");
+      }
+    }
+    String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
+    return style + ", " + shot + scene + cast;
   }
 
   static String panelName(int index) {

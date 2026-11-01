@@ -20,7 +20,7 @@ class LlmJobs {
   }
 
   StepOutcome.Enqueue job(
-      String system, String prompt, String schema, long seed, ObjectNode extra) {
+      String system, String prompt, String schema, int maxTokens, long seed, ObjectNode extra) {
     ObjectNode payload = extra == null ? json.createObjectNode() : extra;
     payload.put("model", properties.llmModel());
     payload.put("system", system.strip());
@@ -30,6 +30,7 @@ class LlmJobs {
     options.put("num_ctx", properties.numCtx());
     options.put("temperature", properties.temperature());
     options.put("seed", seed);
+    options.put("num_predict", maxTokens);
     ObjectNode info = json.createObjectNode();
     info.put("model", properties.llmModel());
     info.put("promptVersion", Prompts.VERSION);
