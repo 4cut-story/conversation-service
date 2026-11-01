@@ -49,16 +49,22 @@ final class Prompts {
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
-  static final String SCRIPT_SYSTEM =
+  /** 컨셉에 맞는 콘티 지시. 컨셉마다 인물 외모(look) 규칙만 다르다. */
+  static String scriptSystem(Concept concept) {
+    return SCRIPT_TEMPLATE.replace("%LOOK%", concept.lookRule());
+  }
+
+  /** 기본(일상 웹툰) 콘티 지시. */
+  static final String SCRIPT_SYSTEM = scriptSystem(Concept.DAILY);
+
+  private static final String SCRIPT_TEMPLATE =
       """
       대화 장면을 기-승-전-결 4컷 만화 콘티로 만든다.
 
       인물 (characters, 화자 A, B…마다 하나)
       - name: 입력의 "인물 가명"을 그대로 쓴다.
       - persona: 이 장면에서 드러난 성격 한 줄(예: 먹는 데 진심인 친구).
-      - look: 그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
-        때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young woman, long black hair, yellow hoodie").
-        실제 외모는 추측하지 않는다. 인물끼리 머리색·옷 색이 모두 달라야 한다.
+      - look: %LOOK%
 
       컷 (panels, 정확히 4개, role 순서 "기","승","전","결")
       - 네 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
