@@ -81,7 +81,7 @@ class ComicScriptTest {
         .extracting(ComicScript.Character::look)
         .containsExactly("fox, bob hair, yellow hoodie", "bear, glasses, blue shirt");
     assertThat(ScriptHandler.animals(3))
-        .startsWith("bear", "cat")
+        .startsWith("panda", "cat")
         .hasSize(8)
         .doesNotHaveDuplicates();
   }

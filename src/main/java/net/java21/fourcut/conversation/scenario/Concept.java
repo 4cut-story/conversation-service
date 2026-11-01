@@ -92,9 +92,9 @@ public enum Concept {
         일상 이야기를 무림의 큰일처럼 과장해 그린다. scene의 현대 물건·장소는 무협 세계 것으로 바꿔 쓴다
         (휴대폰 → secret scroll, 택배 상자 → treasure chests, 거실 → martial arts hall, 식당 → inn).""");
 
-  /** 동물 컨셉에서 인물마다 코드로 나눠 주는 동물(누구나 아는 귀여운 동물만). */
+  /** 동물 컨셉에서 인물마다 코드로 나눠 주는 동물(누구나 아는 귀여운 동물만). 이웃한 두 동물은 생김새가 달라야 그림 모델이 섞지 않는다(사슴·여우가 섞였다). */
   public static final List<String> ANIMAL_POOL =
-      List.of("rabbit", "deer", "fox", "bear", "cat", "dog", "squirrel", "panda");
+      List.of("rabbit", "bear", "fox", "panda", "cat", "deer", "dog", "squirrel");
 
   private final String label;
   private final String style;
