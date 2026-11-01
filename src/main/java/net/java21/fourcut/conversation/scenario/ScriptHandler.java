@@ -110,7 +110,7 @@ class ScriptHandler implements StepHandler {
             .withNames(cast)
             .withFictionalNames(spoken(transcript))
             .replaced(RealNames.replacements(RealNames.whose(store.names(id), transcript), cast))
-            .scrubbed();
+            .scrubbed(w -> RealNames.called(w, spoken(transcript)));
     String violation = script.violation();
     if (violation != null) {
       log.warn("콘티 규칙 위반: {} 출력 앞부분: {}", violation, head(result));

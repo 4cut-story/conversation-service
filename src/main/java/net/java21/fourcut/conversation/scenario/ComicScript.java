@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
@@ -238,17 +239,17 @@ public record ComicScript(
   /**
    * LLM이 nameWarnings에 적고도 대사·제목에 남긴 실명을 "친구"로 바꾼다("지현이가" → "친구가"). 대사에 섞여 나온 JSON 조각({ } ")도 지운다.
    */
-  public ComicScript scrubbed() {
+  public ComicScript scrubbed(Predicate<String> isName) {
     Map<String, String> rename = new HashMap<>();
     for (String w : nameWarnings == null ? List.<String>of() : nameWarnings) {
       String word = w == null ? "" : w.strip();
-      if (word.length() < 2) {
+      String stem =
+          word.length() > 2 && word.endsWith("이") ? word.substring(0, word.length() - 1) : word;
+      if (stem.length() < 2 || !(isName.test(word) || isName.test(stem))) {
         continue;
       }
       rename.put(word, RealNames.UNKNOWN);
-      if (word.length() > 2 && word.endsWith("이")) {
-        rename.put(word.substring(0, word.length() - 1), RealNames.UNKNOWN);
-      }
+      rename.put(stem, RealNames.UNKNOWN);
     }
     ComicScript out = replaced(rename);
     List<Panel> fixed = out.mapLines(l -> new Line(l.speaker(), stripJson(l.text())));

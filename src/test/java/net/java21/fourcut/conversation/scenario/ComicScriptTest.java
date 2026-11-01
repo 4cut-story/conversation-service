@@ -140,9 +140,11 @@ class ComicScriptTest {
     ps.set(
         0,
         new ComicScript.Panel(
-            "기", "wide", "{A} at table", List.of(line("A", "민수야 지현이가 캡처했어}, {"))));
-    ComicScript s = new ComicScript("지현의 복수", cast(), ps, null, List.of("민수", "지현이")).scrubbed();
-    assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("친구야 친구가 캡처했어");
+            "기", "wide", "{A} at table", List.of(line("A", "민수야 지현이가 예약 캡처했어}, {"))));
+    ComicScript s =
+        new ComicScript("지현의 복수", cast(), ps, null, List.of("민수", "지현이", "예약"))
+            .scrubbed(w -> RealNames.called(w, "민수야 지현아 예약했어"));
+    assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("친구야 친구가 예약 캡처했어");
     assertThat(s.title()).isEqualTo("친구의 복수");
   }
 

@@ -37,6 +37,15 @@ final class RealNames {
         && !CastNames.POOL.contains(word);
   }
 
+  /** 대화에서 "민수야"처럼 불린 적이 있는 말인지. LLM이 nameWarnings에 낸 단어 중 실제 이름만 고르는 데 쓴다. */
+  static boolean called(String word, String spokenText) {
+    return word.length() >= 2 && vocative(word).matcher(spokenText).find();
+  }
+
+  private static Pattern vocative(String name) {
+    return Pattern.compile(Pattern.quote(name) + "(?:야|아)(?![가-힣])");
+  }
+
   /** 실명 → 그 이름으로 불리는 화자. 화자가 둘이고 한 화자가 "민지야"처럼 부르면 그 이름은 다른 화자다. 알 수 없으면 빈 문자열("친구"로 바뀐다). */
   static Map<String, String> whose(List<String> names, Transcript transcript) {
     Map<String, String> out = new LinkedHashMap<>();
@@ -44,7 +53,7 @@ final class RealNames {
     for (String name : names) {
       String who = "";
       if (speakers.size() == 2) {
-        Pattern vocative = Pattern.compile(Pattern.quote(name) + "(?:야|아)(?![가-힣])");
+        Pattern vocative = vocative(name);
         Set<String> callers = new HashSet<>();
         for (Transcript.Utterance u : transcript.utterances()) {
           if (vocative.matcher(u.text()).find()) {
