@@ -104,13 +104,17 @@ class ScriptHandler implements StepHandler {
     String id = context.conversation().publicId();
     Transcript transcript = transcripts.load(id);
     Map<String, String> cast = cast(transcript, id.hashCode());
+    Map<String, String> rename =
+        RealNames.replacements(RealNames.whose(store.names(id), transcript), cast);
+    List<String> source = SpokenLines.sentences(RealNames.apply(spoken(transcript), rename));
     ComicScript script =
         llm.read(llm.content(result), ComicScript.class)
             .normalized()
             .withNames(cast)
             .withFictionalNames(spoken(transcript))
-            .replaced(RealNames.replacements(RealNames.whose(store.names(id), transcript), cast))
-            .scrubbed(w -> RealNames.called(w, spoken(transcript)));
+            .replaced(rename)
+            .scrubbed(w -> RealNames.called(w, spoken(transcript)))
+            .withLineTexts(t -> SpokenLines.snap(t, source));
     String violation = script.violation();
     if (violation != null) {
       log.warn("콘티 규칙 위반: {} 출력 앞부분: {}", violation, head(result));

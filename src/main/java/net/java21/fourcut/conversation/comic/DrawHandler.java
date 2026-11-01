@@ -58,8 +58,9 @@ class DrawHandler implements StepHandler {
       image.put("name", panelName(i));
       image.put("prompt", prompt(properties.style(), script, script.panels().get(i)));
       image.put("negativePrompt", properties.negativePrompt());
-      // 컷마다 시드를 달리해 같은 구도가 반복되지 않게 한다. 인물은 외모 문구로 맞춘다
-      image.put("seed", seed + i);
+      // 네 컷을 같은 시드로 그린다. 컷마다 시드를 달리하면 같은 외모 문구로도 인물 얼굴·옷 색이 컷마다 바뀌었다(GPU PC 3회차 비교).
+      // 구도는 컷마다 다른 장면·구도 문구로 달라진다
+      image.put("seed", seed);
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));

@@ -256,6 +256,16 @@ public record ComicScript(
     return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings);
   }
 
+  /** 모든 대사 문장을 f로 바꾼다. */
+  public ComicScript withLineTexts(UnaryOperator<String> f) {
+    return new ComicScript(
+        title,
+        characters,
+        mapLines(l -> new Line(l.speaker(), f.apply(l.text()))),
+        reviewed,
+        nameWarnings);
+  }
+
   /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
   public ComicScript replaced(Map<String, String> rename) {
     if (rename.isEmpty()) {
