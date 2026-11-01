@@ -17,11 +17,26 @@ public final class ConversationApi {
    *
    * @param consent 함께 대화하는 사람들의 녹음 동의. true가 아니면 400 CONSENT_REQUIRED
    * @param language ko, en. 없으면 자동 감지
+   * @param concept 만화 컨셉. AUTO이거나 없으면 장면에 맞게 고른다
    */
   public record CreateRequest(
       @NotNull Conversation.Source source,
       Boolean consent,
-      @Pattern(regexp = "ko|en") String language) {}
+      @Pattern(regexp = "ko|en") String language,
+      @Pattern(regexp = CONCEPTS) String concept) {
+
+    public CreateRequest(Conversation.Source source, Boolean consent, String language) {
+      this(source, consent, language, null);
+    }
+
+    /** 저장할 컨셉. 자동이면 null. */
+    String chosenConcept() {
+      return concept == null || "AUTO".equals(concept) ? null : concept;
+    }
+  }
+
+  /** 고를 수 있는 컨셉. AUTO는 자동. */
+  static final String CONCEPTS = "AUTO|DAILY|INSECTS|ANIMALS|WATERCOLOR|PICTURE_BOOK|NEWSPAPER";
 
   /** 만든 대화. id는 공개 ID다. */
   public record Created(String id, ConversationStatus status) {}
@@ -53,6 +68,7 @@ public final class ConversationApi {
       String failureReason,
       String comicId,
       String language,
+      String concept,
       Integer durationSec,
       Instant createdAt) {}
 }

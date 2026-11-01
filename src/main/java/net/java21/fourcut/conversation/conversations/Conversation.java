@@ -38,6 +38,10 @@ public class Conversation extends BaseEntity {
   @Column(length = 2)
   private String language;
 
+  /** 만화 컨셉. null이면 자동. */
+  @Column(length = 20)
+  private String concept;
+
   @Column(name = "duration_sec")
   private Integer durationSec;
 
@@ -63,9 +67,15 @@ public class Conversation extends BaseEntity {
   }
 
   public Conversation(String ownerId, Source source, String language, Instant consentAt) {
+    this(ownerId, source, language, null, consentAt);
+  }
+
+  public Conversation(
+      String ownerId, Source source, String language, String concept, Instant consentAt) {
     this.ownerId = ownerId;
     this.source = source;
     this.language = language;
+    this.concept = concept;
     this.consentAt = consentAt;
   }
 
@@ -83,6 +93,11 @@ public class Conversation extends BaseEntity {
 
   public String getLanguage() {
     return language;
+  }
+
+  /** 사용자가 고른 만화 컨셉. null이면 자동. */
+  public String getConcept() {
+    return concept;
   }
 
   public Integer getDurationSec() {

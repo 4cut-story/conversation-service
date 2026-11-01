@@ -10,6 +10,7 @@ import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
 import net.java21.fourcut.conversation.pipeline.StepOutcome;
 import net.java21.fourcut.conversation.scenario.ComicScript;
+import net.java21.fourcut.conversation.scenario.Concept;
 import net.java21.fourcut.conversation.scenario.ScenarioStore;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
@@ -56,8 +57,8 @@ class DrawHandler implements StepHandler {
     for (int i = 0; i < PANELS; i++) {
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      image.put("prompt", prompt(properties.style(), script, script.panels().get(i)));
-      image.put("negativePrompt", properties.negativePrompt());
+      image.put("prompt", prompt(style(script, properties), script, script.panels().get(i)));
+      image.put("negativePrompt", negative(script, properties));
       // 네 컷을 같은 시드로 그린다. 컷마다 시드를 달리하면 같은 외모 문구로도 인물 얼굴·옷 색이 컷마다 바뀌었다(GPU PC 3회차 비교).
       // 구도는 컷마다 다른 장면·구도 문구로 달라진다
       image.put("seed", seed);
@@ -112,6 +113,19 @@ class DrawHandler implements StepHandler {
   private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
 
   private static final List<String> COUNTS = List.of("one", "two", "three", "four");
+
+  /** 컨셉 그림체. 일상 웹툰(기본·예전 콘티)은 설정의 그림체를 쓴다. */
+  static String style(ComicScript script, ComicProperties properties) {
+    Concept c = Concept.of(script.concept());
+    return c == Concept.DAILY ? properties.style() : c.style();
+  }
+
+  static String negative(ComicScript script, ComicProperties properties) {
+    String extra = Concept.of(script.concept()).negative();
+    return extra.isEmpty()
+        ? properties.negativePrompt()
+        : properties.negativePrompt() + ", " + extra;
+  }
 
   static String panelName(int index) {
     return "panel-" + (index + 1);

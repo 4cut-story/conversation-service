@@ -39,11 +39,7 @@ class ScriptHandler implements StepHandler {
   @Override
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
-    SceneCandidate scene =
-        store.candidates(id).stream()
-            .filter(SceneCandidate::chosen)
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("고른 장면이 없다"));
+    SceneCandidate scene = chosen(id);
     String prompt =
         prompt(
             transcripts.load(id),
@@ -52,7 +48,7 @@ class ScriptHandler implements StepHandler {
             RealNames.whose(store.names(id), transcripts.load(id)));
     long seed = (long) id.hashCode() + context.attempt();
     return llm.job(
-        Prompts.SCRIPT_SYSTEM,
+        Prompts.scriptSystem(concept(context, scene)),
         prompt,
         Prompts.SCRIPT_SCHEMA,
         Prompts.SCRIPT_MAX_TOKENS,
@@ -114,13 +110,26 @@ class ScriptHandler implements StepHandler {
             .withFictionalNames(spoken(transcript))
             .replaced(rename)
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
-            .withLineTexts(t -> SpokenLines.snap(t, source));
+            .withLineTexts(t -> SpokenLines.snap(t, source))
+            .withConcept(concept(context, chosen(id)));
     String violation = script.violation();
     if (violation != null) {
       log.warn("콘티 규칙 위반: {} 출력 앞부분: {}", violation, head(result));
       return new StepOutcome.Retry("콘티 규칙 위반: " + violation);
     }
     return new StepOutcome.Done(store.saveScript(id, script), Step.REVIEW);
+  }
+
+  private SceneCandidate chosen(String id) {
+    return store.candidates(id).stream()
+        .filter(SceneCandidate::chosen)
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("고른 장면이 없다"));
+  }
+
+  /** 사용자가 고른 컨셉, 없으면(자동) 장면 추출이 장면에 맞게 고른 컨셉, 그것도 없으면 일상 웹툰. */
+  static Concept concept(StepContext context, SceneCandidate scene) {
+    return Concept.chosen(context.conversation().concept(), scene.concept());
   }
 
   private static String head(JsonNode result) {

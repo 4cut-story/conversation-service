@@ -66,7 +66,12 @@ public class ConversationService {
     }
     Conversation saved =
         conversations.save(
-            new Conversation(owner, request.source(), request.language(), clock.instant()));
+            new Conversation(
+                owner,
+                request.source(),
+                request.language(),
+                request.chosenConcept(),
+                clock.instant()));
     return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
   }
 
@@ -167,6 +172,7 @@ public class ConversationService {
         c.getFailureReason(),
         c.getComicId(),
         c.getLanguage(),
+        c.getConcept() == null ? "AUTO" : c.getConcept(),
         c.getDurationSec(),
         c.getCreatedAt());
   }

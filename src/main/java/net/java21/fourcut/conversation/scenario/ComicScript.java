@@ -18,13 +18,29 @@ import java.util.stream.Collectors;
  * 컷은 서로 다른 순간이어야 해서 구도(shot)가 모두 같거나 장면 설명이 거의 같으면 위반이다.
  *
  * @param nameWarnings 콘티를 만들며 가명으로 바꾼 실명 의심 단어. 올리기 전 경고에 쓴다
+ * @param concept 그림 컨셉({@link Concept} 이름). 예전 콘티에는 없을 수 있다(일상 웹툰)
  */
 public record ComicScript(
     String title,
     List<Character> characters,
     List<Panel> panels,
     Boolean reviewed,
-    List<String> nameWarnings) {
+    List<String> nameWarnings,
+    String concept) {
+
+  public ComicScript(
+      String title,
+      List<Character> characters,
+      List<Panel> panels,
+      Boolean reviewed,
+      List<String> nameWarnings) {
+    this(title, characters, panels, reviewed, nameWarnings, null);
+  }
+
+  /** 컨셉을 정한 콘티. */
+  public ComicScript withConcept(Concept c) {
+    return new ComicScript(title, characters, panels, reviewed, nameWarnings, c.name());
+  }
 
   /**
    * 등장인물.
@@ -200,7 +216,7 @@ public record ComicScript(
                 })
             .toList();
     List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
-    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
+    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
   }
 
   /**
@@ -233,7 +249,7 @@ public record ComicScript(
                         : c)
             .toList();
     List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
-    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
+    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
   }
 
   /**
@@ -253,7 +269,7 @@ public record ComicScript(
     }
     ComicScript out = replaced(rename);
     List<Panel> fixed = out.mapLines(l -> new Line(l.speaker(), stripJson(l.text())));
-    return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings);
+    return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings, concept);
   }
 
   /** 모든 대사 문장을 f로 바꾼다. */
@@ -263,7 +279,8 @@ public record ComicScript(
         characters,
         mapLines(l -> new Line(l.speaker(), f.apply(l.text()))),
         reviewed,
-        nameWarnings);
+        nameWarnings,
+        concept);
   }
 
   /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
@@ -272,7 +289,8 @@ public record ComicScript(
       return this;
     }
     List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
-    return new ComicScript(replaceAll(title, rename), characters, fixed, reviewed, nameWarnings);
+    return new ComicScript(
+        replaceAll(title, rename), characters, fixed, reviewed, nameWarnings, concept);
   }
 
   /** 모든 컷의 대사를 f로 바꾼 새 컷 목록. 컷이 없으면 빈 목록(검증에서 컷 수 위반이 된다). */
@@ -323,7 +341,8 @@ public record ComicScript(
         characters,
         fixed.stream().map(ComicScript::withSpeakersInScene).toList(),
         reviewed,
-        nameWarnings);
+        nameWarnings,
+        concept);
   }
 
   /** 대사가 있는 인물이 장면 설명에 없으면 그림에도 나오도록 붙인다("{B} looks surprised" + ", {A} nearby"). */
@@ -343,6 +362,6 @@ public record ComicScript(
 
   ComicScript reviewedWith(List<String> warnings) {
     return new ComicScript(
-        title, characters, panels, true, warnings == null ? List.of() : warnings);
+        title, characters, panels, true, warnings == null ? List.of() : warnings, concept);
   }
 }

@@ -106,6 +106,9 @@ class PipelineFlowIntegrationTest {
         .type(JsonFieldType.NUMBER)
         .optional()
         .description("대화 길이(초). 전사 후 채워진다"),
+    fieldWithPath("concept")
+        .description(
+            "만화 컨셉. AUTO(장면에 맞게 고름), DAILY, INSECTS, ANIMALS, WATERCOLOR, PICTURE_BOOK, NEWSPAPER"),
     fieldWithPath("createdAt").description("만든 시각")
   };
 
@@ -321,7 +324,8 @@ class PipelineFlowIntegrationTest {
                 mvc.perform(
                         as(post("/api/v1/conversations"), owner)
                             .content(
-                                "{\"source\":\"RECORDING\",\"consent\":true,\"language\":\"ko\"}"))
+                                "{\"source\":\"RECORDING\",\"consent\":true,\"language\":\"ko\","
+                                    + "\"concept\":\"AUTO\"}"))
                     .andExpect(status().isCreated())
                     .andDo(
                         doc(
@@ -335,7 +339,13 @@ class PipelineFlowIntegrationTest {
                                         "함께 대화하는 사람들의 녹음 동의. true가 아니면 400 CONSENT_REQUIRED"),
                                 fieldWithPath("language")
                                     .optional()
-                                    .description("ko 또는 en. 없으면 자동 감지")),
+                                    .description("ko 또는 en. 없으면 자동 감지"),
+                                fieldWithPath("concept")
+                                    .optional()
+                                    .description(
+                                        "만화 컨셉. AUTO 또는 없으면 장면에 맞게 고른다. DAILY(일상 웹툰), INSECTS(곤충"
+                                            + " 친구들), ANIMALS(동물 친구들), WATERCOLOR(수채화 애니메이션),"
+                                            + " PICTURE_BOOK(어린이 그림책), NEWSPAPER(흑백 신문 만화)")),
                             responseFields(
                                 fieldWithPath("id").description("대화 ID"),
                                 fieldWithPath("status").description("RECORDING"))))),

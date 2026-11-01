@@ -44,4 +44,15 @@ class DrawPromptTest {
         .isEqualTo(
             "s, close up shot, two people, (boy, glasses) looks at (girl, bob hair), a friend waits, cafe");
   }
+
+  @Test
+  @DisplayName("FR-006: 컨셉 그림체를 쓰고, 일상 웹툰과 예전 콘티는 설정 그림체를 쓴다")
+  void conceptStyle() {
+    var props = new ComicProperties(768, "base style", "base neg", "http://x");
+    assertThat(DrawHandler.style(script, props)).isEqualTo("base style");
+    assertThat(DrawHandler.negative(script, props)).isEqualTo("base neg");
+    var insects = script.withConcept(net.java21.fourcut.conversation.scenario.Concept.INSECTS);
+    assertThat(DrawHandler.style(insects, props)).contains("insect");
+    assertThat(DrawHandler.negative(insects, props)).startsWith("base neg, ").contains("human");
+  }
 }

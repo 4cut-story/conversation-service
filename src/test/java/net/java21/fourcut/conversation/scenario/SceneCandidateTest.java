@@ -9,7 +9,7 @@ class SceneCandidateTest {
 
   private static SceneCandidate rubric(int story, int visual, int relatable, boolean intro) {
     return new SceneCandidate(
-        "FUNNY", 30, 120, "빵 하나에 40분", "반전", 0.9, null, story, visual, relatable, intro);
+        "FUNNY", 30, 120, "빵 하나에 40분", "반전", 0.9, null, story, visual, relatable, intro, null);
   }
 
   @Test

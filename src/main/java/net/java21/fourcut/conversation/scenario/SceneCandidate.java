@@ -10,6 +10,7 @@ package net.java21.fourcut.conversation.scenario;
  * @param visual 그림으로 보이는가 1~5: 행동·장소·물건이 있는가
  * @param relatable 공감 1~5: 대화한 사람들이 보고 "맞아, 이랬지" 할 장면인가
  * @param intro 인사·안부·지각 사과 같은 도입부인가
+ * @param concept 이 장면에 어울리는 그림 컨셉({@link Concept} 이름). 사용자가 컨셉을 고르지 않았을 때 쓴다
  */
 public record SceneCandidate(
     String kind,
@@ -22,7 +23,8 @@ public record SceneCandidate(
     Integer story,
     Integer visual,
     Integer relatable,
-    Boolean intro) {
+    Boolean intro,
+    String concept) {
 
   /** 도입부 감점. */
   static final double INTRO_PENALTY = 0.3;
@@ -35,7 +37,7 @@ public record SceneCandidate(
       String reason,
       double score,
       Boolean selected) {
-    this(kind, start, end, summary, reason, score, selected, null, null, null, null);
+    this(kind, start, end, summary, reason, score, selected, null, null, null, null, null);
   }
 
   boolean valid() {
@@ -61,7 +63,8 @@ public record SceneCandidate(
     }
     double rounded = Math.round(Math.max(0, s) * 100) / 100.0;
     return new SceneCandidate(
-        kind, start, end, summary, reason, rounded, selected, story, visual, relatable, intro);
+        kind, start, end, summary, reason, rounded, selected, story, visual, relatable, intro,
+        concept);
   }
 
   private static int clamp(int v) {
@@ -75,6 +78,6 @@ public record SceneCandidate(
 
   SceneCandidate select() {
     return new SceneCandidate(
-        kind, start, end, summary, reason, score, true, story, visual, relatable, intro);
+        kind, start, end, summary, reason, score, true, story, visual, relatable, intro, concept);
   }
 }

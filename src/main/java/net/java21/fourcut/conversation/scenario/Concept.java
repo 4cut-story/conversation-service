@@ -88,6 +88,11 @@ public enum Concept {
     return lookRule.strip();
   }
 
+  /** 사용자가 고른 컨셉이 있으면 그것, 없으면(자동) 장면에 맞게 고른 컨셉. */
+  public static Concept chosen(String user, String suggested) {
+    return of(user != null ? user : suggested);
+  }
+
   /** 이름으로 찾는다. 없거나 모르는 값이면 기본(DAILY). */
   public static Concept of(String name) {
     for (Concept c : values()) {
