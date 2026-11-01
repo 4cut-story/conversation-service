@@ -250,7 +250,7 @@ class PipelineFlowIntegrationTest {
                 "intro",
                 false,
                 "concept",
-                "ANIMALS")));
+                "DAILY")));
   }
 
   static java.util.Map<String, Object> script(int panels) {
