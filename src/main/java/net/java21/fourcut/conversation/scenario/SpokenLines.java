@@ -46,6 +46,21 @@ final class SpokenLines {
     return out.isEmpty() ? line.strip() : out.toString();
   }
 
+  /** 대사의 첫 문장이 장면 대화(sceneSentences)에 있는 말인지(편집 거리로 충분히 비슷하거나 그 안에 들어 있다). */
+  static boolean inside(String line, List<String> sceneSentences) {
+    List<String> parts = sentences(line);
+    if (parts.isEmpty()) {
+      return false;
+    }
+    String first = parts.get(0);
+    for (String s : sceneSentences) {
+      if (s.contains(first) || similarity(first, s) >= MIN_SIMILARITY) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static String closest(String sentence, List<String> source) {
     String best = sentence;
     double score = MIN_SIMILARITY;

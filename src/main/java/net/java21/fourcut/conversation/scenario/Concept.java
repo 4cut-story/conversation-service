@@ -1,5 +1,7 @@
 package net.java21.fourcut.conversation.scenario;
 
+import java.util.List;
+
 /**
  * 만화 컨셉: 그림체와 인물 표현. 콘티 LLM에는 외모(look) 규칙을, 그림 모델에는 그림체 문구를 준다.
  *
@@ -63,6 +65,10 @@ public enum Concept {
       그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고, 흑백이라 색 대신
         머리 모양과 눈에 띄는 소품으로 구분한다(예: "young man, curly hair, round glasses"). 인물끼리 머리
         모양·소품이 모두 달라야 한다.""");
+
+  /** 동물 컨셉에서 인물마다 코드로 나눠 주는 동물(누구나 아는 귀여운 동물만). */
+  public static final List<String> ANIMAL_POOL =
+      List.of("rabbit", "deer", "fox", "bear", "cat", "dog", "squirrel", "panda");
 
   private final String label;
   private final String style;

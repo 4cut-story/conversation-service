@@ -68,6 +68,25 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 장면 밖 대사는 버리고, 동물 컨셉은 인물마다 코드로 정한 다른 동물을 쓴다")
+  void sceneLinesAndAnimals() {
+    ComicScript s =
+        script(cast(), panels()).withLinesWhere(t -> SpokenLines.inside(t, List.of("누구야? 내 접시!")));
+    assertThat(s.panels().get(0).lines()).isEmpty();
+    assertThat(s.panels().get(2).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("누구야?");
+    ComicScript animals = s.withAnimals(List.of("fox", "bear"));
+    assertThat(animals.characters())
+        .extracting(ComicScript.Character::look)
+        .containsExactly("fox, bob hair, yellow hoodie", "bear, glasses, blue shirt");
+    assertThat(ScriptHandler.animals(3))
+        .startsWith("bear", "cat")
+        .hasSize(8)
+        .doesNotHaveDuplicates();
+  }
+
+  @Test
   @DisplayName("FR-005: 같은 대사를 두 컷에 쓰면 위반이다")
   void repeatedLine() {
     var copy = new java.util.ArrayList<>(panels());

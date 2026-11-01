@@ -291,6 +291,43 @@ public record ComicScript(
         concept);
   }
 
+  /** keep을 통과한 대사만 남긴다(장면 밖 대화에서 가져온 대사를 버린다). */
+  public ComicScript withLinesWhere(Predicate<String> keep) {
+    List<Panel> fixed =
+        panels == null
+            ? List.of()
+            : panels.stream()
+                .map(
+                    p ->
+                        new Panel(
+                            p.role(),
+                            p.shot(),
+                            p.scene(),
+                            p.lines() == null
+                                ? null
+                                : p.lines().stream().filter(l -> keep.test(l.text())).toList()))
+                .toList();
+    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+  }
+
+  /** 인물 외모의 첫 단어(동물)를 코드로 정한 동물로 바꾼다. LLM은 두 인물을 같은 동물로 자주 고른다. */
+  public ComicScript withAnimals(List<String> animals) {
+    if (characters == null || animals.isEmpty()) {
+      return this;
+    }
+    List<Character> cast = new java.util.ArrayList<>();
+    for (int i = 0; i < characters.size(); i++) {
+      Character c = characters.get(i);
+      String look = c.look() == null ? "" : c.look().strip();
+      int comma = look.indexOf(',');
+      String rest = comma < 0 ? "" : look.substring(comma);
+      cast.add(
+          new Character(
+              c.speaker(), c.name(), c.persona(), animals.get(i % animals.size()) + rest));
+    }
+    return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
+  }
+
   /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
   public ComicScript replaced(Map<String, String> rename) {
     if (rename.isEmpty()) {

@@ -260,6 +260,8 @@ class PipelineFlowIntegrationTest {
       "{A} points at empty plate, shocked",
       "{B} laughs, {A} sighs"
     };
+    // 대사는 장면 구간의 실제 말이어야 남는다 (ScriptHandler가 장면 밖 대사를 버린다)
+    String[] spoken = {"내 접시 누가 다 먹었어?", "나 아니야, 진짜로.", "입가에 소스 묻었는데?"};
     for (int i = 0; i < panels; i++) {
       list.add(
           java.util.Map.of(
@@ -270,9 +272,9 @@ class PipelineFlowIntegrationTest {
               "scene",
               scenes[i],
               "lines",
-              List.of(
-                  java.util.Map.of(
-                      "speaker", i % 2 == 0 ? "A" : "B", "text", "대사 " + (i + 1) + "번이에요"))));
+              i < spoken.length
+                  ? List.of(java.util.Map.of("speaker", i % 2 == 0 ? "A" : "B", "text", spoken[i]))
+                  : List.of()));
     }
     return java.util.Map.of(
         "title",
