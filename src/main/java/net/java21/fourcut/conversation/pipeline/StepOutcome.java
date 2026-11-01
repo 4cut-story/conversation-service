@@ -1,6 +1,5 @@
 package net.java21.fourcut.conversation.pipeline;
 
-import java.util.UUID;
 import tools.jackson.databind.node.ObjectNode;
 
 /** 단계 처리 결과. 파이프라인 엔진이 받아 다음 일을 정한다. */
@@ -24,7 +23,7 @@ public sealed interface StepOutcome {
   record Done(String resultKey, Step next) implements StepOutcome {}
 
   /** 만화 완성 (마지막 단계). */
-  record Completed(String resultKey, UUID comicId) implements StepOutcome {}
+  record Completed(String resultKey, String comicId) implements StepOutcome {}
 
   /** 장면을 찾지 못해 끝낸다. */
   record NoScene(String resultKey) implements StepOutcome {}

@@ -1,7 +1,6 @@
 package net.java21.fourcut.conversation.conversations;
 
 import jakarta.validation.Valid;
-import java.util.UUID;
 import net.java21.fourcut.conversation.support.CursorPage;
 import net.java21.fourcut.conversation.web.HeaderNames;
 import org.springframework.http.HttpStatus;
@@ -30,40 +29,41 @@ class ConversationController {
 
   @PostMapping
   ResponseEntity<ConversationApi.Created> create(
-      @RequestHeader(HeaderNames.USER_ID) UUID userId,
+      @RequestHeader(HeaderNames.USER_ID) String userId,
       @Valid @RequestBody ConversationApi.CreateRequest body) {
     return ResponseEntity.status(HttpStatus.CREATED).body(conversations.create(userId, body));
   }
 
   @PostMapping("/{id}/chunks")
   ConversationApi.ChunkUpload chunk(
-      @RequestHeader(HeaderNames.USER_ID) UUID userId,
-      @PathVariable UUID id,
+      @RequestHeader(HeaderNames.USER_ID) String userId,
+      @PathVariable String id,
       @Valid @RequestBody ConversationApi.ChunkRequest body) {
     return conversations.chunk(userId, id, body);
   }
 
   @PostMapping("/{id}/finish")
   ResponseEntity<ConversationApi.Finished> finish(
-      @RequestHeader(HeaderNames.USER_ID) UUID userId,
-      @PathVariable UUID id,
+      @RequestHeader(HeaderNames.USER_ID) String userId,
+      @PathVariable String id,
       @Valid @RequestBody ConversationApi.FinishRequest body) {
     return ResponseEntity.accepted().body(conversations.finish(userId, id, body.chunkCount()));
   }
 
   @GetMapping("/{id}")
-  ConversationApi.View get(@RequestHeader(HeaderNames.USER_ID) UUID userId, @PathVariable UUID id) {
+  ConversationApi.View get(
+      @RequestHeader(HeaderNames.USER_ID) String userId, @PathVariable String id) {
     return conversations.get(userId, id);
   }
 
   @GetMapping("/{id}/candidates")
-  JsonNode candidates(@RequestHeader(HeaderNames.USER_ID) UUID userId, @PathVariable UUID id) {
+  JsonNode candidates(@RequestHeader(HeaderNames.USER_ID) String userId, @PathVariable String id) {
     return conversations.candidates(userId, id);
   }
 
   @GetMapping
   CursorPage<ConversationApi.View> list(
-      @RequestHeader(HeaderNames.USER_ID) UUID userId,
+      @RequestHeader(HeaderNames.USER_ID) String userId,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) Integer size) {
     return conversations.list(userId, cursor, size);
@@ -71,7 +71,7 @@ class ConversationController {
 
   @DeleteMapping("/{id}")
   ResponseEntity<Void> delete(
-      @RequestHeader(HeaderNames.USER_ID) UUID userId, @PathVariable UUID id) {
+      @RequestHeader(HeaderNames.USER_ID) String userId, @PathVariable String id) {
     conversations.delete(userId, id);
     return ResponseEntity.noContent().build();
   }

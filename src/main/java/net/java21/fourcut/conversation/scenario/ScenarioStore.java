@@ -2,7 +2,6 @@ package net.java21.fourcut.conversation.scenario;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.UUID;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
@@ -23,25 +22,25 @@ public class ScenarioStore {
     this.json = json;
   }
 
-  List<SceneCandidate> candidates(UUID id) {
+  List<SceneCandidate> candidates(String id) {
     return storage
         .get(WorkKeys.candidates(id))
         .map(b -> json.readValue(b, Candidates.class).candidates())
         .orElse(List.of());
   }
 
-  String saveCandidates(UUID id, List<SceneCandidate> candidates) {
+  String saveCandidates(String id, List<SceneCandidate> candidates) {
     return put(WorkKeys.candidates(id), new Candidates(candidates));
   }
 
   /** 검수까지 끝난 콘티. comic 모듈이 읽는다. */
-  public ComicScript script(UUID id) {
+  public ComicScript script(String id) {
     byte[] bytes =
         storage.get(WorkKeys.script(id)).orElseThrow(() -> new IllegalStateException("콘티가 없다"));
     return json.readValue(bytes, ComicScript.class);
   }
 
-  String saveScript(UUID id, ComicScript script) {
+  String saveScript(String id, ComicScript script) {
     return put(WorkKeys.script(id), script);
   }
 

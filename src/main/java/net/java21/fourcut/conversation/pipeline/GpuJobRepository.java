@@ -5,12 +5,11 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
-interface GpuJobRepository extends JpaRepository<GpuJob, UUID> {
+interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
 
   /** 대기 중인 작업 한 건을 잠근다. 워커가 올려 둔 모델과 같은 종류를 먼저, 그 다음은 들어온 순서. 다른 워커가 잠근 행은 건너뛴다(SKIP LOCKED). */
   @Query(
@@ -23,7 +22,7 @@ interface GpuJobRepository extends JpaRepository<GpuJob, UUID> {
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select j from GpuJob j where j.id = ?1")
-  Optional<GpuJob> lockById(UUID id);
+  Optional<GpuJob> lockById(Long id);
 
   /** 임대 시간이 지났거나 마감을 넘긴 작업. 다른 처리 중인 행은 건너뛴다. */
   @Query(
@@ -34,5 +33,5 @@ interface GpuJobRepository extends JpaRepository<GpuJob, UUID> {
       nativeQuery = true)
   List<GpuJob> lockExpired(Instant now);
 
-  boolean existsByConversationIdAndState(UUID conversationId, GpuJob.State state);
+  boolean existsByConversationIdAndState(Long conversationId, GpuJob.State state);
 }

@@ -3,7 +3,6 @@ package net.java21.fourcut.conversation.comic;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
@@ -49,13 +48,13 @@ class DrawHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     ComicScript script = scenarios.script(id);
     String cast =
         script.characters().stream()
             .map(c -> "person " + c.speaker() + ": " + c.look())
             .collect(Collectors.joining("; "));
-    long seed = Math.floorMod(id.getMostSignificantBits(), 1_000_000_000L) + context.attempt();
+    long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt();
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
     for (int i = 0; i < PANELS; i++) {
@@ -79,7 +78,7 @@ class DrawHandler implements StepHandler {
   public StepOutcome onResult(StepContext context, JsonNode result) {
     Set<String> uploaded = new HashSet<>();
     result.path("uploaded").forEach(n -> uploaded.add(n.asString()));
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     for (int i = 0; i < PANELS; i++) {
       if (!uploaded.contains(panelName(i)) || !storage.exists(WorkKeys.panel(id, i + 1))) {
         return new StepOutcome.Retry(panelName(i) + " 그림이 올라오지 않았다");

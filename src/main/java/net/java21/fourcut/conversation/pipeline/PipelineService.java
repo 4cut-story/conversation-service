@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,22 +64,27 @@ public class PipelineService {
 
   /** 녹음이 끝난 대화의 처리를 시작한다 (전사부터). */
   @Transactional
-  public void start(UUID conversationId) {
+  public void start(Long conversationId) {
     ConversationInfo conversation = observer.find(conversationId);
     if (conversation != null) {
       startStep(conversation, Step.TRANSCRIBE, 1);
     }
   }
 
+  /** 대화 정보. 대화가 지워졌으면 null. */
+  ConversationInfo conversation(Long conversationId) {
+    return observer.find(conversationId);
+  }
+
   /** 지금까지 다시 시도한 횟수 (단계별 마지막 시도 기준 합). */
   @Transactional(readOnly = true)
-  public int retries(UUID conversationId) {
+  public int retries(Long conversationId) {
     return (int) steps.retries(conversationId);
   }
 
   /** GPU 작업이 대기 중인데 최근에 연락한 워커가 없는지. 그렇다면 GPU_WAITING으로 보여 준다. */
   @Transactional(readOnly = true)
-  public boolean waitingForGpu(UUID conversationId) {
+  public boolean waitingForGpu(Long conversationId) {
     return jobs.existsByConversationIdAndState(conversationId, GpuJob.State.QUEUED)
         && !workers.existsByLastSeenAtAfter(now().minus(properties.workerSeenWithin()));
   }
@@ -200,7 +204,7 @@ public class PipelineService {
     }
   }
 
-  private void afterCommit(UUID stepId) {
+  private void afterCommit(Long stepId) {
     TransactionSynchronizationManager.registerSynchronization(
         new TransactionSynchronization() {
           @Override
@@ -211,7 +215,7 @@ public class PipelineService {
   }
 
   /** 서버 단계 본 작업. 오래 걸리므로 트랜잭션 밖에서 하고, 결과만 트랜잭션으로 반영한다. */
-  void runLocal(UUID stepId) {
+  void runLocal(Long stepId) {
     StepContext context =
         tx.execute(
             status ->

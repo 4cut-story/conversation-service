@@ -2,7 +2,6 @@ package net.java21.fourcut.conversation.pipeline;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
-import java.util.UUID;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.web.HeaderNames;
@@ -45,7 +44,7 @@ class GpuJobController {
   @PostMapping("/{jobId}/heartbeat")
   WorkerApi.HeartbeatResponse heartbeat(
       @RequestHeader(HeaderNames.WORKER_ID) @Pattern(regexp = WORKER_ID) String workerId,
-      @PathVariable UUID jobId,
+      @PathVariable Long jobId,
       @Valid @RequestBody WorkerApi.HeartbeatRequest request) {
     return jobs.heartbeat(jobId, workerId, request.leaseToken())
         .map(WorkerApi.HeartbeatResponse::new)
@@ -55,7 +54,7 @@ class GpuJobController {
   @PostMapping("/{jobId}/result")
   ResponseEntity<Void> result(
       @RequestHeader(HeaderNames.WORKER_ID) @Pattern(regexp = WORKER_ID) String workerId,
-      @PathVariable UUID jobId,
+      @PathVariable Long jobId,
       @Valid @RequestBody WorkerApi.ResultRequest request) {
     if (!jobs.result(jobId, workerId, request)) {
       throw leaseLost();
@@ -66,7 +65,7 @@ class GpuJobController {
   @PostMapping("/{jobId}/fail")
   ResponseEntity<Void> fail(
       @RequestHeader(HeaderNames.WORKER_ID) @Pattern(regexp = WORKER_ID) String workerId,
-      @PathVariable UUID jobId,
+      @PathVariable Long jobId,
       @Valid @RequestBody WorkerApi.FailRequest request) {
     if (!jobs.fail(jobId, workerId, request)) {
       throw leaseLost();

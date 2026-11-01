@@ -28,7 +28,7 @@ public class GpuJob extends BaseEntity {
   public static final int MAX_LEASES = 3;
 
   @Column(name = "conversation_id", nullable = false)
-  private UUID conversationId;
+  private Long conversationId;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
@@ -84,7 +84,7 @@ public class GpuJob extends BaseEntity {
     // JPA 전용
   }
 
-  public GpuJob(UUID conversationId, Step step, JobType type, String payload, Instant now) {
+  public GpuJob(Long conversationId, Step step, JobType type, String payload, Instant now) {
     this.conversationId = conversationId;
     this.step = step;
     this.type = type;
@@ -92,7 +92,7 @@ public class GpuJob extends BaseEntity {
     this.enqueuedAt = now;
   }
 
-  public UUID getConversationId() {
+  public Long getConversationId() {
     return conversationId;
   }
 

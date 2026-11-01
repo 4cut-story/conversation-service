@@ -6,8 +6,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import net.java21.fourcut.conversation.support.BaseEntity;
+import net.java21.fourcut.conversation.support.PublicId;
 
 /** 대화 1건 (녹음 또는 업로드). */
 @Entity
@@ -20,8 +20,13 @@ public class Conversation extends BaseEntity {
     UPLOAD
   }
 
-  @Column(name = "owner_id", nullable = false)
-  private UUID ownerId;
+  /** 밖에 보이는 대화 ID. API 경로, MinIO 객체 키, content-service에 넘기는 값이다. */
+  @Column(name = "public_id", nullable = false, updatable = false, length = PublicId.LENGTH)
+  private String publicId = PublicId.generate();
+
+  /** 소유자의 공개 ID (auth). */
+  @Column(name = "owner_id", nullable = false, length = PublicId.LENGTH)
+  private String ownerId;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
@@ -46,8 +51,9 @@ public class Conversation extends BaseEntity {
   @Column(name = "failure_reason", length = 500)
   private String failureReason;
 
-  @Column(name = "comic_id")
-  private UUID comicId;
+  /** 완성된 만화의 공개 ID (content). */
+  @Column(name = "comic_id", length = PublicId.LENGTH)
+  private String comicId;
 
   @Column(name = "elapsed_sec")
   private Integer elapsedSec;
@@ -56,14 +62,18 @@ public class Conversation extends BaseEntity {
     // JPA 전용
   }
 
-  public Conversation(UUID ownerId, Source source, String language, Instant consentAt) {
+  public Conversation(String ownerId, Source source, String language, Instant consentAt) {
     this.ownerId = ownerId;
     this.source = source;
     this.language = language;
     this.consentAt = consentAt;
   }
 
-  public UUID getOwnerId() {
+  public String getPublicId() {
+    return publicId;
+  }
+
+  public String getOwnerId() {
     return ownerId;
   }
 
@@ -91,7 +101,7 @@ public class Conversation extends BaseEntity {
     return failureReason;
   }
 
-  public UUID getComicId() {
+  public String getComicId() {
     return comicId;
   }
 
@@ -117,7 +127,7 @@ public class Conversation extends BaseEntity {
     this.durationSec = Math.min(Math.max(seconds, 0), 3600);
   }
 
-  void complete(UUID comic, int elapsed) {
+  void complete(String comic, int elapsed) {
     this.status = ConversationStatus.DONE;
     this.comicId = comic;
     this.elapsedSec = elapsed;

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.PipelineObserver;
 import net.java21.fourcut.conversation.pipeline.Step;
@@ -49,7 +48,7 @@ class TranscribeHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     ObjectNode payload = json.createObjectNode();
     ArrayNode keys = payload.putArray("audioGetKeys");
     for (int i = 0; i < context.conversation().chunkCount(); i++) {
@@ -68,10 +67,11 @@ class TranscribeHandler implements StepHandler {
       return new StepOutcome.Retry("전사 결과에 segments가 없다");
     }
     Transcript transcript = pseudonymize(segments, result.path("language").asString(null));
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     String key = transcripts.save(id, transcript);
     storage.deletePrefix(WorkKeys.audioPrefix(id));
-    observer.transcribed(id, transcript.language(), transcript.durationSec());
+    observer.transcribed(
+        context.conversation().id(), transcript.language(), transcript.durationSec());
     if (transcript.utterances().isEmpty()) {
       return new StepOutcome.NoScene(key);
     }
