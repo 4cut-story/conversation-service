@@ -22,8 +22,9 @@ final class WorkerApi {
   record ClaimRequest(
       @NotEmpty List<JobType> types, String loadedModel, @Size(max = 50) String version) {}
 
+  /** jobId는 문자열로 내보낸다(워커 계약). 값은 gpu_jobs.id다. */
   record ClaimResponse(
-      UUID jobId,
+      String jobId,
       JobType type,
       UUID leaseToken,
       Instant leaseExpiresAt,

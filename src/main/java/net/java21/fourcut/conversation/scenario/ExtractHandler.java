@@ -2,7 +2,6 @@ package net.java21.fourcut.conversation.scenario;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -41,14 +40,14 @@ class ExtractHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     store.saveCandidates(id, List.of());
     return nextWindow(context, transcripts.load(id), -1);
   }
 
   @Override
   public StepOutcome onResult(StepContext context, JsonNode result) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     JsonNode content = llm.content(result);
     List<SceneCandidate> found = new ArrayList<>(store.candidates(id));
     for (JsonNode node : content.path("candidates")) {
@@ -80,10 +79,11 @@ class ExtractHandler implements StepHandler {
                 + (w * size / 60)
                 + "분부터):\n"
                 + Transcript.lines(part);
-        long seed = context.conversation().id().getMostSignificantBits() + w + context.attempt();
+        long seed = (long) context.conversation().publicId().hashCode() + w + context.attempt();
         return llm.job(Prompts.EXTRACT_SYSTEM, prompt, Prompts.EXTRACT_SCHEMA, seed, extra);
       }
     }
-    return new StepOutcome.Done(WorkKeys.candidates(context.conversation().id()), Step.SELECT);
+    return new StepOutcome.Done(
+        WorkKeys.candidates(context.conversation().publicId()), Step.SELECT);
   }
 }

@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -52,7 +51,7 @@ class ComposeHandler implements StepHandler {
 
   @Override
   public StepOutcome runLocal(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     ComicScript script = scenarios.script(id);
     List<BufferedImage> panels = new ArrayList<>();
     for (int i = 1; i <= DrawHandler.PANELS; i++) {

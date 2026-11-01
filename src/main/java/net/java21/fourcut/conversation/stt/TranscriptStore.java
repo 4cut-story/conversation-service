@@ -1,7 +1,6 @@
 package net.java21.fourcut.conversation.stt;
 
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
@@ -19,7 +18,7 @@ public class TranscriptStore {
     this.json = json;
   }
 
-  public String save(UUID conversationId, Transcript transcript) {
+  public String save(String conversationId, Transcript transcript) {
     String key = WorkKeys.transcript(conversationId);
     storage.put(
         key,
@@ -28,7 +27,7 @@ public class TranscriptStore {
     return key;
   }
 
-  public Transcript load(UUID conversationId) {
+  public Transcript load(String conversationId) {
     byte[] bytes =
         storage
             .get(WorkKeys.transcript(conversationId))

@@ -3,7 +3,6 @@ package net.java21.fourcut.conversation.scenario;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -29,7 +28,7 @@ class SelectHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     List<SceneCandidate> top =
         store.candidates(id).stream()
             .filter(SceneCandidate::valid)

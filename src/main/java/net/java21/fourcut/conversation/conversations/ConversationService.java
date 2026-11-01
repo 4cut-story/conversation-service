@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.IntStream;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
@@ -13,6 +12,7 @@ import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import net.java21.fourcut.conversation.support.Cursor;
 import net.java21.fourcut.conversation.support.CursorPage;
+import net.java21.fourcut.conversation.support.PublicId;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,20 +60,20 @@ public class ConversationService {
   }
 
   @Transactional
-  public ConversationApi.Created create(UUID owner, ConversationApi.CreateRequest request) {
+  public ConversationApi.Created create(String owner, ConversationApi.CreateRequest request) {
     if (!Boolean.TRUE.equals(request.consent())) {
       throw new ApiException(ErrorCode.CONSENT_REQUIRED);
     }
     Conversation saved =
         conversations.save(
             new Conversation(owner, request.source(), request.language(), clock.instant()));
-    return new ConversationApi.Created(saved.getId(), saved.getStatus());
+    return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
   }
 
   /** 녹음 조각 하나를 올릴 사전 서명 PUT 주소. web 서버가 받아 조각을 대신 올린다. */
   @Transactional(readOnly = true)
   public ConversationApi.ChunkUpload chunk(
-      UUID owner, UUID id, ConversationApi.ChunkRequest request) {
+      String owner, String id, ConversationApi.ChunkRequest request) {
     Conversation c = owned(owner, id);
     requireRecording(c);
     if (request.index() >= MAX_CHUNKS) {
@@ -89,7 +89,7 @@ public class ConversationService {
 
   /** 녹음을 끝내고 처리를 시작한다. 조각이 모두 올라와 있어야 한다. */
   @Transactional
-  public ConversationApi.Finished finish(UUID owner, UUID id, int chunkCount) {
+  public ConversationApi.Finished finish(String owner, String id, int chunkCount) {
     Conversation c = owned(owner, id);
     requireRecording(c);
     if (chunkCount > MAX_CHUNKS) {
@@ -102,17 +102,17 @@ public class ConversationService {
     }
     c.queue(chunkCount);
     conversations.flush();
-    pipeline.start(id);
+    pipeline.start(c.getId());
     return new ConversationApi.Finished(c.getStatus());
   }
 
   @Transactional(readOnly = true)
-  public ConversationApi.View get(UUID owner, UUID id) {
+  public ConversationApi.View get(String owner, String id) {
     return view(owned(owner, id));
   }
 
   @Transactional(readOnly = true)
-  public CursorPage<ConversationApi.View> list(UUID owner, String cursor, Integer size) {
+  public CursorPage<ConversationApi.View> list(String owner, String cursor, Integer size) {
     int limit = CursorPage.size(size);
     Cursor from = Cursor.decodeOr(cursor, Cursor.NEWEST_FIRST);
     return CursorPage.of(
@@ -124,7 +124,7 @@ public class ConversationService {
 
   /** 장면 후보 (참고용, FR-004a). 아직 없으면 빈 목록. */
   @Transactional(readOnly = true)
-  public JsonNode candidates(UUID owner, UUID id) {
+  public JsonNode candidates(String owner, String id) {
     owned(owner, id);
     return storage
         .get(WorkKeys.candidates(id))
@@ -135,19 +135,19 @@ public class ConversationService {
 
   /** 대화와 중간 결과(음성, 단계 결과)를 지운다. 만화는 content-service 만화함에서 따로 지운다. */
   @Transactional
-  public void delete(UUID owner, UUID id) {
+  public void delete(String owner, String id) {
     remove(owned(owner, id));
   }
 
   /** 탈퇴한 사용자의 대화를 모두 지운다 (멱등). */
   @Transactional
-  public void deleteAllOf(UUID owner) {
+  public void deleteAllOf(String owner) {
     conversations.findByOwnerId(owner).forEach(this::remove);
   }
 
   private void remove(Conversation c) {
-    storage.deletePrefix(WorkKeys.audioPrefix(c.getId()));
-    storage.deletePrefix(WorkKeys.workPrefix(c.getId()));
+    storage.deletePrefix(WorkKeys.audioPrefix(c.getPublicId()));
+    storage.deletePrefix(WorkKeys.workPrefix(c.getPublicId()));
     conversations.delete(c);
   }
 
@@ -158,7 +158,7 @@ public class ConversationService {
             ? ConversationStatus.GPU_WAITING
             : stage;
     return new ConversationApi.View(
-        c.getId(),
+        c.getPublicId(),
         c.getSource(),
         shown,
         stage,
@@ -171,9 +171,13 @@ public class ConversationService {
         c.getCreatedAt());
   }
 
-  private Conversation owned(UUID owner, UUID id) {
+  /** 주인의 대화. 없거나, 남의 것이거나, 형식이 틀린 ID면 404. */
+  private Conversation owned(String owner, String id) {
+    if (!PublicId.isValid(id)) {
+      throw ApiException.notFound();
+    }
     return conversations
-        .findById(id)
+        .findByPublicId(id)
         .filter(c -> c.getOwnerId().equals(owner))
         .orElseThrow(ApiException::notFound);
   }

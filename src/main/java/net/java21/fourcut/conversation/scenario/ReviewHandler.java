@@ -2,7 +2,6 @@ package net.java21.fourcut.conversation.scenario;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -29,10 +28,10 @@ class ReviewHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     ComicScript script = store.script(id);
     String prompt = "검수할 콘티 (JSON):\n" + llm.write(script);
-    long seed = id.getMostSignificantBits() ^ context.attempt();
+    long seed = (long) id.hashCode() ^ context.attempt();
     return llm.job(Prompts.REVIEW_SYSTEM, prompt, Prompts.REVIEW_SCHEMA, seed, null);
   }
 
@@ -46,7 +45,7 @@ class ReviewHandler implements StepHandler {
     }
     List<String> warnings = new ArrayList<>();
     content.path("nameWarnings").forEach(n -> warnings.add(n.asString()));
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     return new StepOutcome.Done(store.saveScript(id, script.reviewedWith(warnings)), Step.DRAW);
   }
 }

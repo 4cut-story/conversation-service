@@ -37,6 +37,7 @@ import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.comic.ContentClient;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
+import net.java21.fourcut.conversation.support.PublicId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -128,8 +129,8 @@ class PipelineFlowIntegrationTest {
         id, preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()), snippets);
   }
 
-  static MockHttpServletRequestBuilder as(MockHttpServletRequestBuilder r, UUID user) {
-    return r.header("X-User-Id", user.toString()).contentType(MediaType.APPLICATION_JSON);
+  static MockHttpServletRequestBuilder as(MockHttpServletRequestBuilder r, String user) {
+    return r.header("X-User-Id", user).contentType(MediaType.APPLICATION_JSON);
   }
 
   static MockHttpServletRequestBuilder worker(MockHttpServletRequestBuilder r) {
@@ -151,7 +152,7 @@ class PipelineFlowIntegrationTest {
   }
 
   /** 녹음 대화를 만들고 조각 2개를 올린 뒤 처리를 시작한다. */
-  UUID startedConversation(UUID owner) throws Exception {
+  String startedConversation(String owner) throws Exception {
     String id =
         JsonPath.read(
             body(
@@ -173,7 +174,7 @@ class PipelineFlowIntegrationTest {
     mvc.perform(
             as(post("/api/v1/conversations/{id}/finish", id), owner).content("{\"chunkCount\":2}"))
         .andExpect(status().isAccepted());
-    return UUID.fromString(id);
+    return id;
   }
 
   String claim() throws Exception {
@@ -278,8 +279,8 @@ class PipelineFlowIntegrationTest {
   @Test
   @DisplayName("FR-001~013: 녹음부터 만화함 등록까지 자동으로 끝난다 (콘티 규칙 위반은 다시 시도)")
   void wholePipeline() throws Exception {
-    UUID owner = UUID.randomUUID();
-    UUID comicId = UUID.randomUUID();
+    String owner = PublicId.generate();
+    String comicId = PublicId.generate();
     when(content.register(any())).thenReturn(new ContentClient.Registered(comicId));
 
     mvc.perform(
@@ -372,7 +373,7 @@ class PipelineFlowIntegrationTest {
         .andExpect(jsonPath("$.status").value("GPU_WAITING"))
         .andExpect(jsonPath("$.stage").value("TRANSCRIBING"))
         .andDo(doc("conversations-get-waiting", responseFields(VIEW)));
-    mvc.perform(as(get("/api/v1/conversations/{id}", id), UUID.randomUUID()))
+    mvc.perform(as(get("/api/v1/conversations/{id}", id), PublicId.generate()))
         .andExpect(status().isNotFound());
 
     // TRANSCRIBE
@@ -455,7 +456,7 @@ class PipelineFlowIntegrationTest {
             worker(post("/internal/gpu-jobs/{jobId}/result", jobId))
                 .content(json.writeValueAsString(resultBody)))
         .andExpect(status().isOk());
-    UUID conversationId = UUID.fromString(id);
+    String conversationId = id;
     assertThat(storage.exists(WorkKeys.audioChunk(conversationId, 0))).isFalse();
 
     // EXTRACT (구간 1개) → SELECT(서버) → SCRIPT
@@ -504,7 +505,7 @@ class PipelineFlowIntegrationTest {
                 mvc.perform(as(get("/api/v1/conversations/{id}", id), owner))
                     .andExpect(jsonPath("$.status").value("DONE")));
     mvc.perform(as(get("/api/v1/conversations/{id}", id), owner))
-        .andExpect(jsonPath("$.comicId").value(comicId.toString()))
+        .andExpect(jsonPath("$.comicId").value(comicId))
         .andExpect(jsonPath("$.retries").value(1))
         .andExpect(jsonPath("$.progress").value(100))
         .andExpect(jsonPath("$.durationSec").value(9))
@@ -555,8 +556,8 @@ class PipelineFlowIntegrationTest {
   @Test
   @DisplayName("FR-011: 다시 해도 되는 실패는 대기열로, 아니면 단계 재시도, 3번 실패하면 FAILED")
   void failures() throws Exception {
-    UUID owner = UUID.randomUUID();
-    UUID id = startedConversation(owner);
+    String owner = PublicId.generate();
+    String id = startedConversation(owner);
 
     String first = claim();
     mvc.perform(
@@ -614,8 +615,8 @@ class PipelineFlowIntegrationTest {
   @DisplayName("임대가 끝났는데 소식이 없으면 대기열로 되돌리고, 3번 넘으면 단계를 다시 한다")
   void leaseRecovery(@Autowired net.java21.fourcut.conversation.pipeline.PipelineService pipeline)
       throws Exception {
-    UUID owner = UUID.randomUUID();
-    UUID id = startedConversation(owner);
+    String owner = PublicId.generate();
+    String id = startedConversation(owner);
     String job = null;
     for (int lease = 1; lease <= 3; lease++) {
       job = claim();
@@ -626,11 +627,14 @@ class PipelineFlowIntegrationTest {
     // 3번째 임대가 만료되면 작업은 LEASE_EXHAUSTED로 실패하고 단계가 2번째 시도로 새 작업을 만든다
     Integer attempts =
         jdbc.queryForObject(
-            "select max(attempt) from pipeline_steps where conversation_id = ?", Integer.class, id);
+            "select max(ps.attempt) from pipeline_steps ps join conversations c on c.id ="
+                + " ps.conversation_id where c.public_id = ?",
+            Integer.class,
+            id);
     assertThat(attempts).isEqualTo(2);
     String code =
         jdbc.queryForObject(
-            "select error_code from gpu_jobs where id = ?::uuid",
+            "select error_code from gpu_jobs where id = ?::bigint",
             String.class,
             (String) JsonPath.read(job, "$.jobId"));
     assertThat(code).isEqualTo("LEASE_EXHAUSTED");
@@ -645,7 +649,9 @@ class PipelineFlowIntegrationTest {
                         + JsonPath.read(job, "$.leaseToken")
                         + "\",\"result\":{}}"))
         .andExpect(status().isConflict());
-    assertThat(pipeline.retries(id)).isEqualTo(1);
+    Long internalId =
+        jdbc.queryForObject("select id from conversations where public_id = ?", Long.class, id);
+    assertThat(pipeline.retries(internalId)).isEqualTo(1);
   }
 
   @Autowired private org.springframework.context.ApplicationContext context;
@@ -657,8 +663,8 @@ class PipelineFlowIntegrationTest {
   @Test
   @DisplayName("Edge: 장면 후보가 없으면 NO_SCENE")
   void noScene() throws Exception {
-    UUID owner = UUID.randomUUID();
-    UUID id = startedConversation(owner);
+    String owner = PublicId.generate();
+    String id = startedConversation(owner);
     result(claim(), transcript());
     result(claim(), llm(java.util.Map.of("candidates", List.of())));
     mvc.perform(as(get("/api/v1/conversations/{id}", id), owner))
@@ -669,8 +675,8 @@ class PipelineFlowIntegrationTest {
   @Test
   @DisplayName("M-03: 탈퇴하면 대화와 중간 결과를 모두 지운다 (멱등)")
   void withdrawal() throws Exception {
-    UUID owner = UUID.randomUUID();
-    UUID id = startedConversation(owner);
+    String owner = PublicId.generate();
+    String id = startedConversation(owner);
     mvc.perform(delete("/internal/users/{userId}/data", owner))
         .andExpect(status().isNoContent())
         .andDo(

@@ -6,7 +6,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import net.java21.fourcut.conversation.support.BaseEntity;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -24,7 +23,7 @@ public class PipelineStep extends BaseEntity {
   }
 
   @Column(name = "conversation_id", nullable = false)
-  private UUID conversationId;
+  private Long conversationId;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
@@ -60,14 +59,14 @@ public class PipelineStep extends BaseEntity {
     // JPA 전용
   }
 
-  public PipelineStep(UUID conversationId, Step step, int attempt, Instant startedAt) {
+  public PipelineStep(Long conversationId, Step step, int attempt, Instant startedAt) {
     this.conversationId = conversationId;
     this.step = step;
     this.attempt = (short) attempt;
     this.startedAt = startedAt;
   }
 
-  public UUID getConversationId() {
+  public Long getConversationId() {
     return conversationId;
   }
 
@@ -103,7 +102,7 @@ public class PipelineStep extends BaseEntity {
     return startedAt;
   }
 
-  void jobEnqueued(UUID jobId) {
+  void jobEnqueued(Long jobId) {
     this.runtimeJobId = jobId.toString();
   }
 

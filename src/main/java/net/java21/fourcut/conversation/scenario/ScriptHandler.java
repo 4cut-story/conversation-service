@@ -1,7 +1,6 @@
 package net.java21.fourcut.conversation.scenario;
 
 import java.util.List;
-import java.util.UUID;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -34,7 +33,7 @@ class ScriptHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    UUID id = context.conversation().id();
+    String id = context.conversation().publicId();
     SceneCandidate scene =
         store.candidates(id).stream()
             .filter(SceneCandidate::chosen)
@@ -54,7 +53,7 @@ class ScriptHandler implements StepHandler {
             + scene.reason()
             + "\n\n장면 앞뒤 대화:\n"
             + Transcript.lines(part);
-    long seed = id.getLeastSignificantBits() + context.attempt();
+    long seed = (long) id.hashCode() + context.attempt();
     return llm.job(Prompts.SCRIPT_SYSTEM, prompt, Prompts.SCRIPT_SCHEMA, seed, null);
   }
 
@@ -65,6 +64,7 @@ class ScriptHandler implements StepHandler {
     if (violation != null) {
       return new StepOutcome.Retry("콘티 규칙 위반: " + violation);
     }
-    return new StepOutcome.Done(store.saveScript(context.conversation().id(), script), Step.REVIEW);
+    return new StepOutcome.Done(
+        store.saveScript(context.conversation().publicId(), script), Step.REVIEW);
   }
 }

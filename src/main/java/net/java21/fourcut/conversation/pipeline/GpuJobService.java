@@ -68,7 +68,7 @@ class GpuJobService {
               JsonNode input =
                   resolver.resolve(job.getPayload(), Duration.between(now, job.getDeadlineAt()));
               return new WorkerApi.ClaimResponse(
-                  job.getId(),
+                  String.valueOf(job.getId()),
                   job.getType(),
                   job.getLeaseToken(),
                   job.getLeaseExpiresAt(),
@@ -78,7 +78,7 @@ class GpuJobService {
   }
 
   @Transactional
-  public Optional<Instant> heartbeat(UUID jobId, String workerId, UUID leaseToken) {
+  public Optional<Instant> heartbeat(Long jobId, String workerId, UUID leaseToken) {
     Instant now = clock.instant();
     seen(workerId, now, null, null);
     GpuJob job = jobs.lockById(jobId).filter(j -> j.heldBy(leaseToken)).orElse(null);
@@ -96,7 +96,7 @@ class GpuJobService {
 
   /** 결과 보고. 같은 토큰으로 다시 보내면 그대로 성공이다. */
   @Transactional
-  public boolean result(UUID jobId, String workerId, WorkerApi.ResultRequest request) {
+  public boolean result(Long jobId, String workerId, WorkerApi.ResultRequest request) {
     Instant now = clock.instant();
     seen(workerId, now, null, null);
     GpuJob job = jobs.lockById(jobId).orElse(null);
@@ -111,7 +111,11 @@ class GpuJobService {
       return false;
     }
     JsonNode result = request.result() == null ? json.createObjectNode() : request.result();
-    String key = WorkKeys.work(job.getConversationId(), "jobs/" + job.getId() + ".json");
+    ConversationInfo conversation = pipeline.conversation(job.getConversationId());
+    if (conversation == null) {
+      return false;
+    }
+    String key = WorkKeys.work(conversation.publicId(), "jobs/" + job.getId() + ".json");
     storage.put(
         key, json.writeValueAsString(result).getBytes(StandardCharsets.UTF_8), "application/json");
     job.succeed(key, now);
@@ -120,7 +124,7 @@ class GpuJobService {
   }
 
   @Transactional
-  public boolean fail(UUID jobId, String workerId, WorkerApi.FailRequest request) {
+  public boolean fail(Long jobId, String workerId, WorkerApi.FailRequest request) {
     Instant now = clock.instant();
     seen(workerId, now, null, null);
     GpuJob job = jobs.lockById(jobId).filter(j -> j.heldBy(request.leaseToken())).orElse(null);
