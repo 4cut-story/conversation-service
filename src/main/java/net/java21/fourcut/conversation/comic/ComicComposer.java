@@ -35,6 +35,8 @@ public class ComicComposer {
   private static final int TITLE_HEIGHT = 90;
   private static final int PANEL = WIDTH - 2 * MARGIN;
   private static final int BUBBLE_PAD = 14;
+  private static final int TITLE_FONT = 40;
+  private static final int TITLE_FONT_MIN = 24;
   private static final int BUBBLE_MAX = (int) (PANEL * 0.72);
   private static final Set<String> PREFERRED =
       Set.of(
@@ -62,9 +64,8 @@ public class ComicComposer {
       g.setColor(Color.WHITE);
       g.fillRect(0, 0, WIDTH, height);
       g.setColor(Color.BLACK);
-      g.setFont(new Font(family, Font.BOLD, 40));
+      String title = fitTitle(g, script.title());
       FontMetrics fm = g.getFontMetrics();
-      String title = script.title();
       g.drawString(
           title,
           (WIDTH - fm.stringWidth(title)) / 2,
@@ -94,7 +95,7 @@ public class ComicComposer {
       ComicScript.Line line = lines.get(i);
       List<String> rows =
           wrap(
-              names.getOrDefault(line.speaker(), line.speaker()) + ": " + line.text(),
+              bubbleText(names.getOrDefault(line.speaker(), line.speaker()), line),
               fm,
               BUBBLE_MAX - 2 * BUBBLE_PAD);
       int w = rows.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
@@ -114,6 +115,47 @@ public class ComicComposer {
         baseline += fm.getHeight();
       }
     }
+  }
+
+  /** 제목이 폭(여백 제외)에 들어가게 글자 크기를 줄이고, 가장 작은 크기로도 넘치면 끝을 말줄임표로 자른다. g에 맞춘 글꼴을 남긴다. */
+  private String fitTitle(Graphics2D g, String title) {
+    int max = WIDTH - 2 * MARGIN;
+    for (int size = TITLE_FONT; size >= TITLE_FONT_MIN; size -= 2) {
+      g.setFont(new Font(family, Font.BOLD, size));
+      if (g.getFontMetrics().stringWidth(title) <= max) {
+        return title;
+      }
+    }
+    return ellipsize(title, g.getFontMetrics(), max);
+  }
+
+  static String ellipsize(String text, FontMetrics fm, int maxWidth) {
+    String cut = text;
+    while (!cut.isEmpty() && fm.stringWidth(cut + "…") > maxWidth) {
+      cut = cut.substring(0, cut.offsetByCodePoints(cut.length(), -1));
+    }
+    return cut.strip() + "…";
+  }
+
+  /** 말풍선 글: "이름: 대사". LLM이 대사 앞에 화자("A:", "민지:")를 붙여 내도 한 번만 보이게 지운다. */
+  static String bubbleText(String name, ComicScript.Line line) {
+    String text = line.text().strip();
+    boolean stripped = true;
+    while (stripped) {
+      stripped = false;
+      for (String who : new String[] {line.speaker(), name}) {
+        if (who == null || who.isBlank()) {
+          continue;
+        }
+        for (String sep : new String[] {":", "："}) {
+          if (text.startsWith(who + sep)) {
+            text = text.substring(who.length() + sep.length()).strip();
+            stripped = true;
+          }
+        }
+      }
+    }
+    return name + ": " + text;
   }
 
   /** 폭에 맞춰 글자 단위로 줄을 나눈다 (한글은 띄어쓰기가 없어도 나눌 수 있게). */

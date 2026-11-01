@@ -59,4 +59,37 @@ class ComicComposerTest {
     assertThat(String.join("", rows)).isEqualTo("가나다라마바사아자차카타파하");
     g.dispose();
   }
+
+  @Test
+  @DisplayName("FR-007: 대사 앞에 붙은 화자 표시는 지우고 가명을 한 번만 쓴다")
+  void bubbleText() {
+    assertThat(ComicComposer.bubbleText("민지", new ComicScript.Line("A", "A: A: 내 접시!")))
+        .isEqualTo("민지: 내 접시!");
+    assertThat(ComicComposer.bubbleText("민지", new ComicScript.Line("A", "민지： 어디 갔어")))
+        .isEqualTo("민지: 어디 갔어");
+    assertThat(ComicComposer.bubbleText("민지", new ComicScript.Line("A", "Apple 맛있다")))
+        .isEqualTo("민지: Apple 맛있다");
+  }
+
+  @Test
+  @DisplayName("FR-007: 긴 제목은 글자를 줄이고 그래도 넘치면 말줄임표로 잘라 폭 안에 그린다")
+  void longTitle() throws Exception {
+    ComicScript.Panel panel = new ComicScript.Panel("기", "wide", "장면", List.of());
+    String title = "아주아주 길고 길어서 한 줄에 절대로 다 들어가지 않을 것 같은 만화 제목입니다 정말로";
+    ComicScript script =
+        new ComicScript(
+            title,
+            List.of(new ComicScript.Character("A", "민지", "", "girl")),
+            List.of(panel, panel, panel, panel),
+            true,
+            List.of());
+    BufferedImage image = new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
+    composer.compose(script, List.of(image, image, image, image));
+    Graphics2D g = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB).createGraphics();
+    g.setFont(new Font(Font.MONOSPACED, Font.BOLD, 24));
+    String cut = ComicComposer.ellipsize(title, g.getFontMetrics(), 300);
+    assertThat(cut).endsWith("…");
+    assertThat(g.getFontMetrics().stringWidth(cut)).isLessThanOrEqualTo(300);
+    g.dispose();
+  }
 }
