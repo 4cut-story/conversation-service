@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.9";
+  static final String VERSION = "2026-11-01.10";
 
   private Prompts() {}
 
@@ -24,7 +24,8 @@ final class Prompts {
       - kind: CORE(이 대화가 가장 오래·깊게 다룬 주제), FUNNY(웃음, 반전, 엉뚱한 말, 티격태격),
         IMPORTANT(결정, 약속, 소식, 감정이 크게 움직인 순간).
       - 최대 3개, 서로 겹치지 않게. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
-      - start, end는 대화 시작부터의 초. 장면 길이는 30초~3분.
+      - from, to: 장면 첫 줄과 마지막 줄 앞의 [분:초] 표시를 그대로 옮긴다(예: "04:11"). 장면 길이는 30초~3분.
+        summary와 같은 일이 실제로 그 줄들 안에 나와야 한다.
       - summary 한 줄(무슨 일이 일어나는지), reason 한 줄(왜 만화로 좋은지). 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
       - 항목 점수 1~5:
         story 이야기성: 상황 → 사건 → 반응 → 결말이 이 구간 안에 다 나오는가.
@@ -45,9 +46,10 @@ final class Prompts {
       {"type":"object","required":["candidates","names"],"properties":{
        "candidates":{"type":"array","maxItems":3,
        "items":{"type":"object",
-        "required":["kind","start","end","summary","reason","story","visual","relatable","intro","concept"],
-        "properties":{"kind":{"type":"string","enum":["CORE","FUNNY","IMPORTANT"]},"start":{"type":"number"},
-         "end":{"type":"number"},"summary":{"type":"string"},"reason":{"type":"string"},
+        "required":["kind","from","to","summary","reason","story","visual","relatable","intro","concept"],
+        "properties":{"kind":{"type":"string","enum":["CORE","FUNNY","IMPORTANT"]},
+         "from":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},"to":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},
+         "summary":{"type":"string"},"reason":{"type":"string"},
          "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
          "relatable":{"type":"integer","minimum":1,"maximum":5},"intro":{"type":"boolean"},
          "concept":{"type":"string","enum":["DAILY","INSECTS","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER"]}}}},

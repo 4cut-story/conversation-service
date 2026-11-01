@@ -26,6 +26,11 @@ final class TranscriptText {
   private TranscriptText() {}
 
   static String compact(List<Transcript.Utterance> utterances) {
+    return Transcript.lines(merge(utterances));
+  }
+
+  /** 군말을 지우고 같은 화자의 이어진 말을 합친 발화. LLM이 보는 줄과 같다. */
+  static List<Transcript.Utterance> merge(List<Transcript.Utterance> utterances) {
     List<Transcript.Utterance> merged = new ArrayList<>();
     for (Transcript.Utterance u : utterances) {
       String text = clean(u.text());
@@ -44,7 +49,7 @@ final class TranscriptText {
       }
       merged.add(new Transcript.Utterance(u.speaker(), u.start(), u.end(), text));
     }
-    return Transcript.lines(merged);
+    return merged;
   }
 
   static String clean(String text) {

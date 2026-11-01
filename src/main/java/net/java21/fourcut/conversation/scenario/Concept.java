@@ -8,6 +8,8 @@ package net.java21.fourcut.conversation.scenario;
  * @param label 화면에 보이는 이름
  * @param style 그림 프롬프트 맨 앞에 붙는 그림체 (CLIP은 앞 77토큰만 읽으므로 짧게)
  * @param negative 기본 negative 뒤에 붙이는 말 (의인화 컨셉은 사람이 그려지지 않게)
+ * @param crowd 두 명 이상일 때 "two ___" 자리에 쓰는 말 (의인화 컨셉은 사람이 섞이지 않게)
+ * @param friend 등장인물에 없는 자리 표시({C})를 바꿀 말
  * @param lookRule 콘티 LLM이 인물 외모(look)를 쓰는 규칙
  */
 public enum Concept {
@@ -15,6 +17,8 @@ public enum Concept {
       "일상 웹툰",
       "simple cartoon, thick outlines, flat colors, plain background",
       "",
+      "people",
+      "a friend",
       """
       그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
         때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young woman, long black hair, yellow hoodie").
@@ -24,6 +28,8 @@ public enum Concept {
       "cute storybook illustration, anthropomorphic insect characters, big eyes, soft colors,"
           + " simple background",
       "human, person, realistic insect, scary",
+      "cute bug characters, no humans",
+      "another bug",
       """
       그림용 영어 6단어 이내. 인물마다 서로 다른 곤충 하나(ladybug, honeybee, ant, butterfly, beetle,
         grasshopper, snail)로 시작하고 색 있는 소품 하나를 붙인다(예: "ladybug, yellow scarf").
@@ -32,6 +38,8 @@ public enum Concept {
       "동물 친구들",
       "cute anthropomorphic animal characters, round shapes, pastel colors, simple background",
       "human, person, realistic animal",
+      "animal characters, no humans",
+      "another animal",
       """
       그림용 영어 6단어 이내. 인물마다 서로 다른 동물 하나(cat, bear, rabbit, fox, dog, penguin, hamster)로
         시작하고 색 있는 옷이나 소품 하나를 붙인다(예: "bear, green sweater"). 성격에 어울리는 동물을 고른다.
@@ -40,6 +48,8 @@ public enum Concept {
       "수채화 애니메이션",
       "hand-painted anime style, watercolor background, soft warm light, gentle colors",
       "",
+      "people",
+      "a friend",
       """
       그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
         때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young man, short brown hair, white shirt").
@@ -48,13 +58,17 @@ public enum Concept {
       "어린이 그림책",
       "children's picture book, crayon and colored pencil drawing, simple shapes, white paper",
       "",
+      "children",
+      "another child",
       """
       그림용 영어 6단어 이내. "little girl", "little boy"로 시작하고 머리 하나와 옷 하나를 색과 함께 쓴다
         (예: "little girl, pigtails, red dress"). 인물끼리 머리 모양·옷 색이 모두 달라야 한다."""),
   NEWSPAPER(
       "흑백 신문 만화",
       "black and white newspaper comic strip, ink pen lines, cross hatching",
-      "color, colorful",
+      "color, colorful, red, blue",
+      "people",
+      "a friend",
       """
       그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고, 흑백이라 색 대신
         머리 모양과 눈에 띄는 소품으로 구분한다(예: "young man, curly hair, round glasses"). 인물끼리 머리
@@ -63,13 +77,26 @@ public enum Concept {
   private final String label;
   private final String style;
   private final String negative;
+  private final String crowd;
+  private final String friend;
   private final String lookRule;
 
-  Concept(String label, String style, String negative, String lookRule) {
+  Concept(
+      String label, String style, String negative, String crowd, String friend, String lookRule) {
     this.label = label;
     this.style = style;
     this.negative = negative;
+    this.crowd = crowd;
+    this.friend = friend;
     this.lookRule = lookRule;
+  }
+
+  public String crowd() {
+    return crowd;
+  }
+
+  public String friend() {
+    return friend;
   }
 
   public String label() {

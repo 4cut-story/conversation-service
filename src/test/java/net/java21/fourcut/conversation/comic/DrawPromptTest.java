@@ -46,6 +46,20 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 곤충 컨셉은 two people 대신 사람이 섞이지 않는 말을 쓴다")
+  void insectCrowd() {
+    var panel = new ComicScript.Panel("기", "wide", "{A} and {B} talk, {C} waits, cafe", List.of());
+    assertThat(
+            DrawHandler.prompt(
+                "bugs",
+                script.withConcept(net.java21.fourcut.conversation.scenario.Concept.INSECTS),
+                panel))
+        .isEqualTo(
+            "bugs, wide shot, two cute bug characters, no humans, (girl, bob hair) and (boy, glasses) talk,"
+                + " another bug waits, cafe");
+  }
+
+  @Test
   @DisplayName("FR-006: 컨셉 그림체를 쓰고, 일상 웹툰과 예전 콘티는 설정 그림체를 쓴다")
   void conceptStyle() {
     var props = new ComicProperties(768, "base style", "base neg", "http://x");

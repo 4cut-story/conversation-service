@@ -47,6 +47,8 @@ class PromptBundleExport {
       n.put("label", c.label());
       n.put("style", c.style());
       n.put("negative", c.negative());
+      n.put("crowd", c.crowd());
+      n.put("friend", c.friend());
       n.put("scriptSystem", Prompts.scriptSystem(c).strip());
     }
     var spare = b.putArray("castNames");

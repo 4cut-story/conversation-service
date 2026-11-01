@@ -87,10 +87,11 @@ class DrawHandler implements StepHandler {
 
   /**
    * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 인원 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾸고, 두 명
-   * 이상이면 "two people"을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"로 바꾼다. 자리 표시가 없는
-   * 예전 콘티는 끝에 인물 외모를 붙인다.
+   * 이상이면 "two people"(컨셉별 crowd)을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"(컨셉별
+   * friend)로 바꾼다. 자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다.
    */
   static String prompt(String style, ComicScript script, ComicScript.Panel panel) {
+    Concept concept = Concept.of(script.concept());
     String scene = panel.scene().strip();
     boolean legacy = !scene.contains("{");
     StringBuilder cast = new StringBuilder();
@@ -104,9 +105,12 @@ class DrawHandler implements StepHandler {
         scene = scene.replace(mark, "(" + c.look().strip() + ")");
       }
     }
-    scene = UNKNOWN_MARK.matcher(scene).replaceAll("a friend");
+    scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
     String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
-    String count = people >= 2 ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " people, " : "";
+    String count =
+        people >= 2
+            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
+            : "";
     return style + ", " + shot + count + scene + cast;
   }
 
