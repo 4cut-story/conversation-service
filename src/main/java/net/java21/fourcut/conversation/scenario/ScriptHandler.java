@@ -44,7 +44,12 @@ class ScriptHandler implements StepHandler {
             .filter(SceneCandidate::chosen)
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("고른 장면이 없다"));
-    String prompt = prompt(transcripts.load(id), scene, id.hashCode(), store.names(id));
+    String prompt =
+        prompt(
+            transcripts.load(id),
+            scene,
+            id.hashCode(),
+            RealNames.whose(store.names(id), transcripts.load(id)));
     long seed = (long) id.hashCode() + context.attempt();
     return llm.job(
         Prompts.SCRIPT_SYSTEM,
@@ -104,7 +109,7 @@ class ScriptHandler implements StepHandler {
             .normalized()
             .withNames(cast)
             .withFictionalNames(spoken(transcript))
-            .replaced(RealNames.replacements(store.names(id), cast))
+            .replaced(RealNames.replacements(RealNames.whose(store.names(id), transcript), cast))
             .scrubbed();
     String violation = script.violation();
     if (violation != null) {

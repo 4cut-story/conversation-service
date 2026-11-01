@@ -2,7 +2,6 @@ package net.java21.fourcut.conversation.scenario;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
@@ -15,8 +14,8 @@ public class ScenarioStore {
   /** 저장 형식 {@code {candidates: [...]}}. 대화 API가 그대로 보여 준다. */
   record Candidates(List<SceneCandidate> candidates) {}
 
-  /** 저장 형식 {@code {names: {"민지": "A"}}}. */
-  record RealNameMap(Map<String, String> names) {}
+  /** 저장 형식 {@code {names: ["민지", "준호"]}}. */
+  record RealNameList(List<String> names) {}
 
   private static final String NAMES = "names.json";
 
@@ -39,16 +38,16 @@ public class ScenarioStore {
     return put(WorkKeys.candidates(id), new Candidates(candidates));
   }
 
-  /** 장면 추출이 찾은 대화 속 실명 → 화자 표시(모르면 빈 문자열). 콘티 입력에서 가명으로 바꾸는 데 쓴다. API에는 내보내지 않는다. */
-  Map<String, String> names(String id) {
+  /** 장면 추출이 찾은 대화 속 실명. 콘티 입력에서 가명으로 바꾸는 데 쓴다. API에는 내보내지 않는다. */
+  List<String> names(String id) {
     return storage
         .get(WorkKeys.work(id, NAMES))
-        .map(b -> json.readValue(b, RealNameMap.class).names())
-        .orElse(Map.of());
+        .map(b -> json.readValue(b, RealNameList.class).names())
+        .orElse(List.of());
   }
 
-  void saveNames(String id, Map<String, String> names) {
-    put(WorkKeys.work(id, NAMES), new RealNameMap(names));
+  void saveNames(String id, List<String> names) {
+    put(WorkKeys.work(id, NAMES), new RealNameList(names));
   }
 
   /** 검수까지 끝난 콘티. comic 모듈이 읽는다. */

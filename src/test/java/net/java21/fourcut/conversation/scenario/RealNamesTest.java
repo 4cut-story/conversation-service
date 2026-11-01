@@ -2,7 +2,6 @@ package net.java21.fourcut.conversation.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.java21.fourcut.conversation.stt.Transcript;
@@ -37,19 +36,27 @@ class RealNamesTest {
   }
 
   @Test
-  @DisplayName("FR-005: 장면 추출이 구간마다 찾은 실명을 합치고, 화자를 모르던 이름에 화자를 채운다")
+  @DisplayName("FR-005: 장면 추출이 찾은 실명은 대화에 나오고 이름처럼 보이는 것만 합친다")
   void mergeNames() {
     JsonMapper json = JsonMapper.builder().build();
-    var found =
-        json.readTree(
-            "[{\"word\":\"민지\",\"speaker\":\"\"},{\"word\":\"준호\",\"speaker\":\"Q\"},"
-                + "{\"word\":\"A\",\"speaker\":\"\"},{\"word\":\"x\",\"speaker\":\"A\"}]");
-    Map<String, String> first = ExtractHandler.mergeNames(Map.of(), found, List.of("A", "B"));
-    assertThat(first).containsExactlyInAnyOrderEntriesOf(Map.of("민지", "", "준호", ""));
-    var later = json.readTree("[{\"word\":\"민지\",\"speaker\":\"A\"},{\"word\":\"준호\"}]");
-    Map<String, String> merged =
-        ExtractHandler.mergeNames(new LinkedHashMap<>(first), later, List.of("A", "B"));
-    assertThat(merged).containsEntry("민지", "A").containsEntry("준호", "");
+    String spoken = "준호야 여기. 역시 민지. 팀장님이 삼겹살 사 주셨어. 막내도 왔어";
+    var found = json.readTree("[\"민지\",\"팀장님\",\"막내\",\"없는이름\",\"A\",\"준호\"]");
+    assertThat(ExtractHandler.mergeNames(List.of("준호"), found, spoken)).containsExactly("준호", "민지");
+  }
+
+  @Test
+  @DisplayName("FR-005: 두 사람 대화에서 한 화자가 이름을 부르면 그 이름은 다른 화자다, 모르면 비워 둔다")
+  void whose() {
+    Transcript t =
+        new Transcript(
+            "ko",
+            List.of("A", "B"),
+            List.of(
+                new Transcript.Utterance("A", 1, 2, "준호야 여기"),
+                new Transcript.Utterance("B", 3, 4, "역시 민지. 민지가 최고")));
+    assertThat(RealNames.whose(List.of("준호", "민지"), t))
+        .containsEntry("준호", "B")
+        .containsEntry("민지", "");
   }
 
   @Test

@@ -61,7 +61,7 @@ public record ComicScript(
 
   /** 장면 겹침을 잴 때 빼는 흔한 단어. */
   private static final Set<String> STOPWORDS =
-      Set.of("a", "an", "the", "and", "at", "in", "on", "of", "with", "to", "is", "are");
+      Set.of("a", "an", "the", "and", "at", "in", "on", "of", "with", "to", "is", "are", "nearby");
 
   static final Set<String> SHOTS = Set.of("wide", "medium", "close-up");
 

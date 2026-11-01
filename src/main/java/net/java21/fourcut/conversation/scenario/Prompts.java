@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.5";
+  static final String VERSION = "2026-11-01.6";
 
   private Prompts() {}
 
@@ -25,9 +25,8 @@ final class Prompts {
       - 최대 2개. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
       - start, end는 대화 시작부터의 초. 장면 길이는 30초~3분.
       - summary 한 줄, reason 한 줄. 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
-      - names: 대화에서 사람 이름·별명으로 쓰인 단어를 모두 적는다(장면을 고르지 않아도). word는 조사·호격을 뺀
-        형태(민지야 → 민지, 준호는 → 준호), speaker는 그 이름으로 불리는 화자 표시(A, B…), 화자가 아닌 사람이거나
-        모르면 빈 문자열. 예: B가 A에게 "민지야"라고 부르면 {"word":"민지","speaker":"A"}.
+      - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
+        준호는 → 준호). 직함·호칭(팀장, 사장님, 언니), 음식, 물건, 장소, 가게 이름은 넣지 않는다. 없으면 빈 목록.
       - score 0~1: 만화로 만들었을 때 재미·의미.
       - 대화와 같은 언어로 쓴다.
       """;
@@ -35,13 +34,12 @@ final class Prompts {
   static final String EXTRACT_SCHEMA =
       """
       {"type":"object","required":["candidates","names"],"properties":{
-       "names":{"type":"array","items":{"type":"object","required":["word","speaker"],
-        "properties":{"word":{"type":"string"},"speaker":{"type":"string"}}}},
        "candidates":{"type":"array","maxItems":2,
        "items":{"type":"object","required":["kind","start","end","summary","reason","score"],
         "properties":{"kind":{"type":"string","enum":["FUNNY","IMPORTANT"]},"start":{"type":"number"},
          "end":{"type":"number"},"summary":{"type":"string"},"reason":{"type":"string"},
-         "score":{"type":"number","minimum":0,"maximum":1}}}}}}
+         "score":{"type":"number","minimum":0,"maximum":1}}}},
+       "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
   static final String SCRIPT_SYSTEM =
