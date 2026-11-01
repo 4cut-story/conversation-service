@@ -114,4 +114,35 @@ class ComicScriptTest {
     assertThat(fixed.violation()).isNull();
     assertThat(s.withFictionalNames("상관없는 대화")).isSameAs(s);
   }
+
+  @Test
+  @DisplayName("FR-005: 코드로 정한 가명은 대화에 나온 이름을 피하고, LLM이 다른 이름을 내도 덮어쓴다")
+  void assignedNames() {
+    var names = CastNames.assign(List.of("A", "B"), "하늘이랑 지우가 왔어", 0);
+    assertThat(names.values()).doesNotContain("하늘", "지우").hasSize(2).doesNotHaveDuplicates();
+    assertThat(CastNames.assign(List.of("A", "B"), "", 7))
+        .isEqualTo(CastNames.assign(List.of("A", "B"), "", 7));
+    assertThat(CastNames.line(java.util.Map.of("A", "유진"))).isEqualTo("A=유진");
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(0, new ComicScript.Panel("기", "wide", "{A} at table", List.of(line("B", "민지야 안녕"))));
+    ComicScript s =
+        new ComicScript("t", cast(), ps, null, List.of())
+            .withNames(java.util.Map.of("A", "유진", "B", "해솔"));
+    assertThat(s.displayNames()).containsEntry("A", "유진").containsEntry("B", "해솔");
+    assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("유진야 안녕");
+    assertThat(s.withNames(java.util.Map.of())).isSameAs(s);
+  }
+
+  @Test
+  @DisplayName("FR-005: nameWarnings에 적힌 실명이 대사·제목에 남아 있으면 친구로 바꾸고 JSON 조각을 지운다")
+  void scrubbed() {
+    var ps = new java.util.ArrayList<>(panels());
+    ps.set(
+        0,
+        new ComicScript.Panel(
+            "기", "wide", "{A} at table", List.of(line("A", "민수야 지현이가 캡처했어}, {"))));
+    ComicScript s = new ComicScript("지현의 복수", cast(), ps, null, List.of("민수", "지현이")).scrubbed();
+    assertThat(s.panels().get(0).lines().get(0).text()).isEqualTo("친구야 친구가 캡처했어");
+    assertThat(s.title()).isEqualTo("친구의 복수");
+  }
 }

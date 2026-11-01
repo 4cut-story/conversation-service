@@ -174,9 +174,47 @@ public record ComicScript(
         .toList();
   }
 
-  /** 대화에 나온 이름과 겹칠 때 대신 쓰는 성별 구분 없는 가명. */
-  static final List<String> SPARE_NAMES =
-      List.of("하늘", "지우", "유진", "해솔", "다온", "시온", "한결", "가온", "나래", "보람", "새봄", "이랑");
+  /** 대화에 나온 이름과 겹칠 때 대신 쓰는 가명. */
+  static final List<String> SPARE_NAMES = CastNames.POOL;
+
+  /** 코드로 정한 가명을 인물에 넣는다(LLM이 다른 이름을 냈어도 덮어쓴다). 대사·제목 속 LLM 가명도 함께 바꾼다. */
+  public ComicScript withNames(Map<String, String> assigned) {
+    if (assigned.isEmpty() || characters == null) {
+      return this;
+    }
+    Map<String, String> rename = new HashMap<>();
+    List<Character> cast =
+        characters.stream()
+            .map(
+                c -> {
+                  String name = assigned.get(c.speaker());
+                  if (name == null) {
+                    return c;
+                  }
+                  if (c.name() != null && !c.name().isBlank() && !c.name().strip().equals(name)) {
+                    rename.put(c.name().strip(), name);
+                  }
+                  return new Character(c.speaker(), name, c.persona(), c.look());
+                })
+            .toList();
+    List<Panel> fixed =
+        panels == null
+            ? null
+            : panels.stream()
+                .map(
+                    p ->
+                        new Panel(
+                            p.role(),
+                            p.shot(),
+                            p.scene(),
+                            p.lines() == null
+                                ? null
+                                : p.lines().stream()
+                                    .map(l -> new Line(l.speaker(), replaceAll(l.text(), rename)))
+                                    .toList()))
+                .toList();
+    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
+  }
 
   /**
    * 가명이 대화 원문에 나오면(LLM이 대화 속 실명을 가명으로 쓴 경우) 원문에 없는 예비 가명으로 바꾼다. 대사와 제목에 그 이름이 있으면 함께 바꾼다. 다시 만들지 않고
@@ -224,13 +262,61 @@ public record ComicScript(
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings);
   }
 
+  /**
+   * LLM이 nameWarnings에 적고도 대사·제목에 남긴 실명을 "친구"로 바꾼다("지현이가" → "친구가"). 대사에 섞여 나온 JSON 조각({ } ")도 지운다.
+   */
+  public ComicScript scrubbed() {
+    Map<String, String> rename = new HashMap<>();
+    for (String w : nameWarnings == null ? List.<String>of() : nameWarnings) {
+      String word = w == null ? "" : w.strip();
+      if (word.length() < 2) {
+        continue;
+      }
+      rename.put(word, "친구");
+      if (word.length() > 2 && word.endsWith("이")) {
+        rename.put(word.substring(0, word.length() - 1) + "이", "친구");
+        rename.put(word.substring(0, word.length() - 1), "친구");
+      }
+    }
+    List<Panel> fixed =
+        panels == null
+            ? null
+            : panels.stream()
+                .map(
+                    p ->
+                        new Panel(
+                            p.role(),
+                            p.shot(),
+                            p.scene(),
+                            p.lines() == null
+                                ? null
+                                : p.lines().stream()
+                                    .map(
+                                        l ->
+                                            new Line(
+                                                l.speaker(),
+                                                stripJson(replaceAll(l.text(), rename))))
+                                    .toList()))
+                .toList();
+    return new ComicScript(replaceAll(title, rename), characters, fixed, reviewed, nameWarnings);
+  }
+
+  private static String stripJson(String text) {
+    return text == null ? null : text.replaceAll("[{}\"]", "").replaceAll(",\\s*$", "").strip();
+  }
+
   private static String replaceAll(String text, Map<String, String> rename) {
     if (text == null) {
       return null;
     }
     String out = text;
-    for (Map.Entry<String, String> e : rename.entrySet()) {
-      out = out.replace(e.getKey(), e.getValue());
+    // 긴 단어부터 바꿔야 "지현이"가 "지현"보다 먼저 바뀐다
+    List<String> keys =
+        rename.keySet().stream()
+            .sorted(java.util.Comparator.comparingInt(String::length).reversed())
+            .toList();
+    for (String k : keys) {
+      out = out.replace(k, rename.get(k));
     }
     return out;
   }

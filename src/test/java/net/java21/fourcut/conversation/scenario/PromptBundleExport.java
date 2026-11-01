@@ -40,8 +40,8 @@ class PromptBundleExport {
     draw.put("style", ComicProperties.DEFAULT_STYLE);
     draw.put("negativePrompt", ComicProperties.DEFAULT_NEGATIVE);
     draw.put("imageSize", ComicProperties.DEFAULT_IMAGE_SIZE);
-    var spare = b.putArray("spareNames");
-    ComicScript.SPARE_NAMES.forEach(spare::add);
+    var spare = b.putArray("castNames");
+    CastNames.POOL.forEach(spare::add);
     Path out = Path.of(System.getenv("PROMPT_BUNDLE_OUT"));
     Files.writeString(out, json.writerWithDefaultPrettyPrinter().writeValueAsString(b) + "\n");
   }
