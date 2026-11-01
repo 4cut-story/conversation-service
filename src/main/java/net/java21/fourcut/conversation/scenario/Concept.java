@@ -64,7 +64,33 @@ public enum Concept {
       """
       그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고, 흑백이라 색 대신
         머리 모양과 눈에 띄는 소품으로 구분한다(예: "young man, curly hair, round glasses"). 인물끼리 머리
-        모양·소품이 모두 달라야 한다.""");
+        모양·소품이 모두 달라야 한다."""),
+  JOSEON(
+      "조선시대 사람들",
+      "korean traditional genre painting, joseon era village, ink lines with soft color wash,"
+          + " hanji paper texture",
+      "modern clothes, car, building, smartphone, computer",
+      "people in hanbok",
+      "a villager",
+      """
+      그림용 영어 외모 6단어 이내. 조선시대 사람으로 그린다. "woman in hanbok", "man in hanbok"으로 시작하고
+        머리 모양이나 쓰개 하나와 한복 색 하나를 쓴다(예: "man in hanbok, black gat, blue jeogori",
+        "woman in hanbok, braided hair, pink chima"). 인물끼리 한복 색이 모두 달라야 한다.
+        scene에 나오는 현대 물건·장소는 조선시대 것으로 바꿔 쓴다(휴대폰 → letter, 택배 상자 → cloth bundles,
+        거실 → hanok room, 식당 → jumak tavern)."""),
+  WUXIA(
+      "무협",
+      "wuxia martial arts comic, dynamic ink brush lines, flowing robes, misty mountains,"
+          + " dramatic lighting",
+      "modern clothes, car, building, smartphone, computer, gun",
+      "martial artists",
+      "a wandering swordsman",
+      """
+      그림용 영어 외모 6단어 이내. 무협 소설 속 무림 고수로 그린다. "swordswoman", "swordsman"으로
+        시작하고 도포 색 하나와 무기나 소품 하나를 쓴다(예: "swordsman, white robe, long sword",
+        "swordswoman, red robe, folding fan"). 인물끼리 도포 색이 모두 달라야 한다.
+        일상 이야기를 무림의 큰일처럼 과장해 그린다. scene의 현대 물건·장소는 무협 세계 것으로 바꿔 쓴다
+        (휴대폰 → secret scroll, 택배 상자 → treasure chests, 거실 → martial arts hall, 식당 → inn).""");
 
   /** 동물 컨셉에서 인물마다 코드로 나눠 주는 동물(누구나 아는 귀여운 동물만). */
   public static final List<String> ANIMAL_POOL =

@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.11";
+  static final String VERSION = "2026-11-01.12";
 
   private Prompts() {}
 
@@ -34,7 +34,8 @@ final class Prompts {
       - intro: 인사, 안부, 자리 잡기, 늦은 사과처럼 본론 전 도입부면 true.
       - concept: 이 장면에 어울리는 그림 컨셉 하나. DAILY(일상 웹툰: 친구·회사·일상 이야기), ANIMALS(동물 친구들: 귀엽고 가벼운 다툼·먹는 이야기), WATERCOLOR(수채화
         애니메이션: 추억, 여행, 계절, 따뜻한 감정), PICTURE_BOOK(어린이 그림책: 가족, 아이, 소박한 하루),
-        NEWSPAPER(흑백 신문 만화: 풍자, 회사·사회 이야기, 어이없는 반전).
+        NEWSPAPER(흑백 신문 만화: 풍자, 회사·사회 이야기, 어이없는 반전), JOSEON(조선시대 사람들: 옛날이야기처럼
+        풀면 재미있는 가족·이웃·장터 이야기), WUXIA(무협: 내기, 승부, 비밀, 사소한 일을 크게 부풀린 대결).
       - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
         준호는 → 준호). 직함·호칭(팀장, 사장님, 언니), 음식, 물건, 장소, 가게 이름은 넣지 않는다. 없으면 빈 목록.
       - 대화와 같은 언어로 쓴다.
@@ -51,7 +52,7 @@ final class Prompts {
          "summary":{"type":"string"},"reason":{"type":"string"},
          "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
          "relatable":{"type":"integer","minimum":1,"maximum":5},"intro":{"type":"boolean"},
-         "concept":{"type":"string","enum":["DAILY","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER"]}}}},
+         "concept":{"type":"string","enum":["DAILY","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER","JOSEON","WUXIA"]}}}},
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
