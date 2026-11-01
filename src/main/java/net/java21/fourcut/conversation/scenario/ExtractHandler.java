@@ -54,7 +54,7 @@ class ExtractHandler implements StepHandler {
     JsonNode content = llm.content(result);
     List<SceneCandidate> found = new ArrayList<>(store.candidates(id));
     for (JsonNode node : content.path("candidates")) {
-      SceneCandidate c = llm.read(node, SceneCandidate.class);
+      SceneCandidate c = llm.read(node, SceneCandidate.class).scored();
       if (c.valid()) {
         found.add(c);
       }

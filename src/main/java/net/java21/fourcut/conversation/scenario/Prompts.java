@@ -8,37 +8,44 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.7";
+  static final String VERSION = "2026-11-01.8";
 
   private Prompts() {}
 
-  /** 장면 후보 JSON은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
-  static final int EXTRACT_MAX_TOKENS = 600;
+  /** 장면 후보 JSON(후보 3개, 항목 점수, 이름)은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
+  static final int EXTRACT_MAX_TOKENS = 900;
 
   /** 콘티 JSON(컷 4개, 대사, 인물) 출력 상한. */
   static final int SCRIPT_MAX_TOKENS = 2000;
 
   static final String EXTRACT_SYSTEM =
       """
-      친구들 대화 전사에서 4컷 만화로 만들 장면을 고른다.
-      - kind: FUNNY(웃음, 반전, 엉뚱한 말) 또는 IMPORTANT(약속, 결정, 소식).
-      - 최대 2개. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
+      대화 전사에서 4컷 만화로 만들 장면 후보를 고른다. 만화 한 편에 담을 짧은 이야기를 찾는 것이다.
+      - kind: CORE(이 대화가 가장 오래·깊게 다룬 주제), FUNNY(웃음, 반전, 엉뚱한 말, 티격태격),
+        IMPORTANT(결정, 약속, 소식, 감정이 크게 움직인 순간).
+      - 최대 3개, 서로 겹치지 않게. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
       - start, end는 대화 시작부터의 초. 장면 길이는 30초~3분.
-      - summary 한 줄, reason 한 줄. 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      - summary 한 줄(무슨 일이 일어나는지), reason 한 줄(왜 만화로 좋은지). 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      - 항목 점수 1~5:
+        story 이야기성: 상황 → 사건 → 반응 → 결말이 이 구간 안에 다 나오는가.
+        visual 그림: 행동, 장소, 물건이 있어 그림으로 보여 줄 수 있는가.
+        relatable 공감: 대화한 사람들이 보고 "맞아, 이랬지" 할 장면인가.
+      - intro: 인사, 안부, 자리 잡기, 늦은 사과처럼 본론 전 도입부면 true.
       - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
         준호는 → 준호). 직함·호칭(팀장, 사장님, 언니), 음식, 물건, 장소, 가게 이름은 넣지 않는다. 없으면 빈 목록.
-      - score 0~1: 만화로 만들었을 때 재미·의미.
       - 대화와 같은 언어로 쓴다.
       """;
 
   static final String EXTRACT_SCHEMA =
       """
       {"type":"object","required":["candidates","names"],"properties":{
-       "candidates":{"type":"array","maxItems":2,
-       "items":{"type":"object","required":["kind","start","end","summary","reason","score"],
-        "properties":{"kind":{"type":"string","enum":["FUNNY","IMPORTANT"]},"start":{"type":"number"},
+       "candidates":{"type":"array","maxItems":3,
+       "items":{"type":"object",
+        "required":["kind","start","end","summary","reason","story","visual","relatable","intro"],
+        "properties":{"kind":{"type":"string","enum":["CORE","FUNNY","IMPORTANT"]},"start":{"type":"number"},
          "end":{"type":"number"},"summary":{"type":"string"},"reason":{"type":"string"},
-         "score":{"type":"number","minimum":0,"maximum":1}}}},
+         "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
+         "relatable":{"type":"integer","minimum":1,"maximum":5},"intro":{"type":"boolean"}}}},
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 

@@ -238,8 +238,14 @@ class PipelineFlowIntegrationTest {
                 "빈 접시 범인 찾기",
                 "reason",
                 "들통나는 반전",
-                "score",
-                0.9)));
+                "story",
+                5,
+                "visual",
+                4,
+                "relatable",
+                4,
+                "intro",
+                false)));
   }
 
   static java.util.Map<String, Object> script(int panels) {
@@ -491,12 +497,19 @@ class PipelineFlowIntegrationTest {
                 "conversations-candidates",
                 responseFields(
                     fieldWithPath("candidates[].kind")
-                        .description("FUNNY(웃음 포인트) 또는 IMPORTANT(중요한 일)"),
+                        .description("CORE(대화의 핵심 주제), FUNNY(웃음 포인트), IMPORTANT(결정·약속·소식·감정)"),
                     fieldWithPath("candidates[].start").description("시작(초)"),
                     fieldWithPath("candidates[].end").description("끝(초)"),
                     fieldWithPath("candidates[].summary").description("한 줄 요약"),
                     fieldWithPath("candidates[].reason").description("고른 이유"),
-                    fieldWithPath("candidates[].score").description("점수 0~1"),
+                    fieldWithPath("candidates[].score")
+                        .description("점수 0~1: (이야기성 0.4 + 그림 0.3 + 공감 0.3) / 5, 도입부는 0.3 감점"),
+                    fieldWithPath("candidates[].story").description("이야기성 1~5").optional(),
+                    fieldWithPath("candidates[].visual").description("그림으로 보이는가 1~5").optional(),
+                    fieldWithPath("candidates[].relatable").description("공감 1~5").optional(),
+                    fieldWithPath("candidates[].intro")
+                        .description("인사·안부 같은 도입부면 true")
+                        .optional(),
                     fieldWithPath("candidates[].selected").description("만화로 만든 장면이면 true"))));
 
     // SCRIPT: 컷이 3개뿐인 콘티는 규칙 위반으로 다시 시도한다
