@@ -95,7 +95,8 @@ class ComicScriptTest {
     for (int i = 0; i < original.size(); i++) {
       voiced.add(original.get(i) + "소");
     }
-    voiced.set(0, "가".repeat(41));
+    voiced.set(0, "가".repeat(Math.max(41, original.get(0).length() + 11)));
+    voiced.set(1, "2. " + voiced.get(1));
     ComicScript v = s.withVoices("허허, 새 제목이오", voiced);
     assertThat(v.title()).isEqualTo("허허, 새 제목이오");
     assertThat(v.lineTexts().get(0)).isEqualTo(original.get(0));
@@ -104,7 +105,9 @@ class ComicScriptTest {
     assertThat(ComicScript.keepsFacts("지하철이 10분 섰어", "가마가 10분이나 멈췄소")).isTrue();
     assertThat(ComicScript.keepsFacts("지하철이 10분 섰어", "가마가 늦게 왔소")).isFalse();
     assertThat(ComicScript.keepsFacts("배고파", " ")).isFalse();
+    assertThat(v.lineTexts().get(1)).isEqualTo(original.get(1) + "소");
     assertThat(s.voiceRejections(voiced)).containsExactly("1번 너무 김");
+    assertThat(ComicScript.keepsFacts("가".repeat(45), "나".repeat(52))).isTrue();
     assertThat(s.voiceRejections(List.of("하나"))).containsExactly("대사 수 1 ≠ " + original.size());
   }
 

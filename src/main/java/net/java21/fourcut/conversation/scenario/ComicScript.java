@@ -296,6 +296,19 @@ public record ComicScript(
 
   private static final java.util.regex.Pattern DIGITS = java.util.regex.Pattern.compile("\\d+");
 
+  /** 입력의 번호("3. ")를 그대로 따라 쓴 것. 지우지 않으면 숫자가 달라져 대사를 버리게 된다. */
+  private static final java.util.regex.Pattern NUMBERED =
+      java.util.regex.Pattern.compile("^\\d+[.)]\\s+");
+
+  static String cleanVoice(String voiced) {
+    return voiced == null ? "" : NUMBERED.matcher(stripJson(voiced)).replaceFirst("").strip();
+  }
+
+  /** 말투 문장 길이 한도. 원래 대사가 길면 그만큼 더 허용한다(말끝이 길어지는 말투가 있다). */
+  static int voiceLimit(String original) {
+    return Math.max(MAX_VOICE_CHARS, original.length() + 10);
+  }
+
   /** 모든 대사를 컷 순서대로. 말투 바꾸기 입력과 결과의 순서다. */
   public List<String> lineTexts() {
     return panels == null
@@ -315,7 +328,7 @@ public record ComicScript(
     List<Panel> fixed =
         mapLines(
             l -> {
-              String v = stripJson(it.next());
+              String v = cleanVoice(it.next());
               return keepsFacts(l.text(), v) ? new Line(l.speaker(), v) : l;
             });
     String t =
@@ -333,14 +346,14 @@ public record ComicScript(
     }
     List<String> out = new java.util.ArrayList<>();
     for (int i = 0; i < original.size(); i++) {
-      String v = stripJson(voices.get(i));
+      String v = cleanVoice(voices.get(i));
       if (!keepsFacts(original.get(i), v)) {
         out.add(
             (i + 1)
                 + "번 "
                 + (v == null || v.isBlank()
                     ? "빈 대사"
-                    : v.length() > MAX_VOICE_CHARS ? "너무 김" : "숫자 다름"));
+                    : v.length() > voiceLimit(original.get(i)) ? "너무 김" : "숫자 다름"));
       }
     }
     return out;
@@ -348,7 +361,7 @@ public record ComicScript(
 
   /** 말투 문장이 원래 대사의 숫자를 그대로 갖고, 말풍선에 들어갈 길이인지. */
   static boolean keepsFacts(String original, String voiced) {
-    if (voiced == null || voiced.isBlank() || voiced.length() > MAX_VOICE_CHARS) {
+    if (voiced == null || voiced.isBlank() || voiced.length() > voiceLimit(original)) {
       return false;
     }
     return digits(original).equals(digits(voiced));
