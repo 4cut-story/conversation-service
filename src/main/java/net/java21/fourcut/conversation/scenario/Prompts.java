@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.10";
+  static final String VERSION = "2026-11-01.11";
 
   private Prompts() {}
 
@@ -32,8 +32,7 @@ final class Prompts {
         visual 그림: 행동, 장소, 물건이 있어 그림으로 보여 줄 수 있는가.
         relatable 공감: 대화한 사람들이 보고 "맞아, 이랬지" 할 장면인가.
       - intro: 인사, 안부, 자리 잡기, 늦은 사과처럼 본론 전 도입부면 true.
-      - concept: 이 장면에 어울리는 그림 컨셉 하나. DAILY(일상 웹툰: 친구·회사·일상 이야기), INSECTS(곤충 친구들:
-        바쁘게 일하거나 모여 사는 이야기), ANIMALS(동물 친구들: 귀엽고 가벼운 다툼·먹는 이야기), WATERCOLOR(수채화
+      - concept: 이 장면에 어울리는 그림 컨셉 하나. DAILY(일상 웹툰: 친구·회사·일상 이야기), ANIMALS(동물 친구들: 귀엽고 가벼운 다툼·먹는 이야기), WATERCOLOR(수채화
         애니메이션: 추억, 여행, 계절, 따뜻한 감정), PICTURE_BOOK(어린이 그림책: 가족, 아이, 소박한 하루),
         NEWSPAPER(흑백 신문 만화: 풍자, 회사·사회 이야기, 어이없는 반전).
       - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
@@ -52,7 +51,7 @@ final class Prompts {
          "summary":{"type":"string"},"reason":{"type":"string"},
          "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
          "relatable":{"type":"integer","minimum":1,"maximum":5},"intro":{"type":"boolean"},
-         "concept":{"type":"string","enum":["DAILY","INSECTS","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER"]}}}},
+         "concept":{"type":"string","enum":["DAILY","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER"]}}}},
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
 
@@ -74,16 +73,21 @@ final class Prompts {
       - look: %LOOK%
 
       컷 (panels, 정확히 4개, role 순서 "기","승","전","결")
+      - 먼저 "장면 요약"의 이야기를 네 순간으로 나눈다. 기: 상황(누가 어디서 무엇을) / 승: 사건이 생김 /
+        전: 반전·감정이 가장 큰 순간 / 결: 결과·여운. 네 컷을 차례로 보면 요약한 이야기가 그대로 읽혀야 한다.
       - 네 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
-        기: 장소와 인물 소개 / 승: 사건이 생김 / 전: 반전·감정이 가장 큰 순간 / 결: 결과·여운.
       - shot: wide, medium, close-up 중 하나. 기는 보통 wide, 전은 보통 close-up. 네 컷이 모두 같으면 안 된다.
-      - scene: 그림 모델용 영어 12단어 이내. 인물은 {A}, {B}처럼 쓰고 동사 하나로 행동을 쓴 뒤 장소를 붙인다.
+      - scene: 그림 모델용 영어 15단어 이내. 그 순간을 그림만 보고 알 수 있게 쓴다. 인물은 {A}, {B}처럼 쓰고,
+        눈에 보이는 행동 하나와 이야기의 핵심 물건을 넣은 뒤 장소를 붙인다.
+        핵심 물건은 이야기에 나온 구체적인 것(예: 물 상자 더미, 합격 문자가 뜬 휴대폰, 불판 위 고기)이고 두 컷
+        이상에 나온다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는 모습만 쓰지 않는다.
         그 컷에서 대사를 하는 인물은 모두 scene에 넣는다.
         장소는 대화 내용에 맞게 하나 정해 네 컷 모두 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
-        예: "{A} drops ice cream, {B} gasps, park"
-      - lines: 컷당 0~2개, 한 문장 30자 이내. [장면 대화]에 있는 말만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
+        예: "{A} drops ice cream cone on ground, {B} gasps, park",
+        "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
+      - lines: 컷당 0~2개, 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
-        길면 앞뒤를 잘라 줄인다.
+        길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다.
         speaker는 A, B…를 쓴다.
         text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
       - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면

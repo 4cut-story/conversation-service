@@ -36,7 +36,7 @@ public final class ConversationApi {
   }
 
   /** 고를 수 있는 컨셉. AUTO는 자동. */
-  static final String CONCEPTS = "AUTO|DAILY|INSECTS|ANIMALS|WATERCOLOR|PICTURE_BOOK|NEWSPAPER";
+  static final String CONCEPTS = "AUTO|DAILY|ANIMALS|WATERCOLOR|PICTURE_BOOK|NEWSPAPER";
 
   /** 만든 대화. id는 공개 ID다. */
   public record Created(String id, ConversationStatus status) {}

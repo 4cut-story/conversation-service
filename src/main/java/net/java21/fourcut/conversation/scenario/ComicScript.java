@@ -149,10 +149,18 @@ public record ComicScript(
     return null;
   }
 
-  /** 네 컷이 서로 다른 순간인지: 구도가 모두 같거나 장면 단어가 거의 같은 컷이 있으면 위반. */
+  /** 네 컷이 서로 다른 순간인지: 구도가 모두 같거나, 같은 대사가 두 번 나오거나, 장면 단어가 거의 같은 컷이 있으면 위반. */
   private String repetition() {
     if (panels.stream().map(Panel::shot).distinct().count() == 1) {
       return "네 컷의 구도가 모두 같다";
+    }
+    Set<String> said = new HashSet<>();
+    for (Panel p : panels) {
+      for (Line l : p.lines() == null ? List.<Line>of() : p.lines()) {
+        if (!said.add(l.text().replaceAll("\\s+", ""))) {
+          return "같은 대사가 두 번 나온다: " + l.text();
+        }
+      }
     }
     for (int i = 0; i < 4; i++) {
       for (int j = i + 1; j < 4; j++) {

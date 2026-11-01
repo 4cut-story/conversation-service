@@ -68,6 +68,17 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 같은 대사를 두 컷에 쓰면 위반이다")
+  void repeatedLine() {
+    var copy = new java.util.ArrayList<>(panels());
+    copy.set(
+        3,
+        new ComicScript.Panel(
+            "결", "medium", "{B} whistles, {A} chases him", List.of(line("A", "배고 프다"))));
+    assertThat(script(cast(), copy).violation()).contains("같은 대사");
+  }
+
+  @Test
   @DisplayName("가명이 대화 원문에 나오면 찾아낸다, 가명이 없는 예전 콘티는 화자 표시를 쓴다")
   void clashesAndFallback() {
     assertThat(script(cast(), panels()).namesFoundIn("어제 민지가 그랬잖아")).containsExactly("민지");

@@ -23,27 +23,17 @@ public enum Concept {
       그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
         때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young woman, long black hair, yellow hoodie").
         실제 외모는 추측하지 않는다. 인물끼리 머리색·옷 색이 모두 달라야 한다."""),
-  INSECTS(
-      "곤충 친구들",
-      "cute storybook illustration, anthropomorphic insect characters, big eyes, soft colors,"
-          + " simple background",
-      "human, person, realistic insect, scary",
-      "cute bug characters, no humans",
-      "another bug",
-      """
-      그림용 영어 6단어 이내. 인물마다 서로 다른 곤충 하나(ladybug, honeybee, ant, butterfly, beetle,
-        grasshopper, snail)로 시작하고 색 있는 소품 하나를 붙인다(예: "ladybug, yellow scarf").
-        성격에 어울리는 곤충을 고른다. 소품 색은 인물끼리 모두 달라야 한다."""),
   ANIMALS(
       "동물 친구들",
       "cute anthropomorphic animal characters, round shapes, pastel colors, simple background",
-      "human, person, realistic animal",
+      "human, person, realistic animal, insect, bug",
       "animal characters, no humans",
       "another animal",
       """
-      그림용 영어 6단어 이내. 인물마다 서로 다른 동물 하나(cat, bear, rabbit, fox, dog, penguin, hamster)로
-        시작하고 색 있는 옷이나 소품 하나를 붙인다(예: "bear, green sweater"). 성격에 어울리는 동물을 고른다.
-        옷·소품 색은 인물끼리 모두 달라야 한다."""),
+      그림용 영어 6단어 이내. 인물마다 서로 다른 동물 하나(rabbit, deer, fox, bear, cat, dog, squirrel,
+        panda)로 시작하고 색 있는 옷이나 소품 하나를 붙인다(예: "bear, green sweater"). 누구나 아는 귀여운
+        동물만 쓰고 곤충·벌레·파충류는 쓰지 않는다. 성격에 어울리는 동물을 고른다. 옷·소품 색은 인물끼리 모두
+        달라야 한다."""),
   WATERCOLOR(
       "수채화 애니메이션",
       "hand-painted anime style, watercolor background, soft warm light, gentle colors",
