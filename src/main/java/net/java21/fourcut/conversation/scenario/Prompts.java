@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.6";
+  static final String VERSION = "2026-11-01.7";
 
   private Prompts() {}
 
@@ -62,7 +62,8 @@ final class Prompts {
         장소는 대화 내용에 맞게 하나 정해 네 컷 모두 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
         예: "{A} drops ice cream, {B} gasps, park"
       - lines: 컷당 0~2개, 한 문장 30자 이내. [장면 대화]에 있는 말만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
-        말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 실제 말투를 살려 짧게, 맞춤법을 맞춘다.
+        말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
+        길면 앞뒤를 잘라 줄인다.
         speaker는 A, B…를 쓴다.
         text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
       - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면

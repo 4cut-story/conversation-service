@@ -34,4 +34,14 @@ class DrawPromptTest {
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo("s, two friends at a table; girl, bob hair; boy, glasses");
   }
+
+  @Test
+  @DisplayName("FR-006: 두 명이 나오는 컷은 two people을 넣고, 없는 인물 자리 표시는 a friend로 바꾼다")
+  void twoPeople() {
+    var panel =
+        new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
+    assertThat(DrawHandler.prompt("s", script, panel))
+        .isEqualTo(
+            "s, close up shot, two people, (boy, glasses) looks at (girl, bob hair), a friend waits, cafe");
+  }
 }
