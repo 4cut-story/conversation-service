@@ -10,7 +10,7 @@ import net.java21.fourcut.conversation.stt.TranscriptStore;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
-/** SCRIPT: 고른 장면과 앞뒤 1분 대화로 4컷 콘티를 만든다 (LLM이 3안을 만들어 스스로 채점해 1안만 낸다). */
+/** SCRIPT: 고른 장면과 앞뒤 1분 대화로 4컷 콘티(가명 인물, 컷별 구도, 다듬은 대사)를 LLM 한 번에 만든다. */
 @Component
 class ScriptHandler implements StepHandler {
 
@@ -45,6 +45,8 @@ class ScriptHandler implements StepHandler {
     String prompt =
         "대화 언어: "
             + transcript.language()
+            + "\n화자: "
+            + String.join(", ", transcript.speakers())
             + "\n장면 종류: "
             + scene.kind()
             + "\n장면 요약: "
@@ -52,9 +54,15 @@ class ScriptHandler implements StepHandler {
             + "\n고른 이유: "
             + scene.reason()
             + "\n\n장면 앞뒤 대화:\n"
-            + Transcript.lines(part);
+            + TranscriptText.compact(part);
     long seed = (long) id.hashCode() + context.attempt();
-    return llm.job(Prompts.SCRIPT_SYSTEM, prompt, Prompts.SCRIPT_SCHEMA, seed, null);
+    return llm.job(
+        Prompts.SCRIPT_SYSTEM,
+        prompt,
+        Prompts.SCRIPT_SCHEMA,
+        Prompts.SCRIPT_MAX_TOKENS,
+        seed,
+        null);
   }
 
   @Override
@@ -64,7 +72,17 @@ class ScriptHandler implements StepHandler {
     if (violation != null) {
       return new StepOutcome.Retry("콘티 규칙 위반: " + violation);
     }
-    return new StepOutcome.Done(
-        store.saveScript(context.conversation().publicId(), script), Step.REVIEW);
+    String id = context.conversation().publicId();
+    List<String> clashes = script.namesFoundIn(spoken(transcripts.load(id)));
+    if (!clashes.isEmpty()) {
+      return new StepOutcome.Retry("가명이 대화에 나온 말과 겹친다: " + String.join(", ", clashes));
+    }
+    return new StepOutcome.Done(store.saveScript(id, script), Step.REVIEW);
+  }
+
+  private static String spoken(Transcript transcript) {
+    StringBuilder sb = new StringBuilder();
+    transcript.utterances().forEach(u -> sb.append(u.text()).append('\n'));
+    return sb.toString();
   }
 }

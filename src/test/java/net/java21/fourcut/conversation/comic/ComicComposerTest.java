@@ -23,6 +23,7 @@ class ComicComposerTest {
     ComicScript.Panel panel =
         new ComicScript.Panel(
             "기",
+            "wide",
             "장면",
             List.of(
                 new ComicScript.Line("A", "내 접시 누가 다 먹었어? 정말 궁금해서 그래, 말해 줘"),
@@ -30,8 +31,10 @@ class ComicComposerTest {
     ComicScript script =
         new ComicScript(
             "접시 미스터리",
-            List.of(new ComicScript.Character("A", "단발"), new ComicScript.Character("B", "안경")),
-            List.of(panel, panel, panel, new ComicScript.Panel("결", "끝", null)),
+            List.of(
+                new ComicScript.Character("A", "민지", "먹보", "girl, bob hair"),
+                new ComicScript.Character("B", "도윤", "능청꾼", "boy, glasses")),
+            List.of(panel, panel, panel, new ComicScript.Panel("결", "close-up", "끝", null)),
             true,
             List.of());
     BufferedImage image = new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);

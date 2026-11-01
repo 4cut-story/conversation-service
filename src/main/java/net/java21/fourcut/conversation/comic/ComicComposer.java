@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.scenario.ComicScript;
@@ -69,13 +70,14 @@ public class ComicComposer {
           (WIDTH - fm.stringWidth(title)) / 2,
           MARGIN + TITLE_HEIGHT / 2 + fm.getAscent() / 2 - 6);
       int y = MARGIN + TITLE_HEIGHT;
+      Map<String, String> names = script.displayNames();
       for (int i = 0; i < panels.size(); i++) {
         g.drawImage(panels.get(i), MARGIN, y, PANEL, PANEL, null);
         g.setStroke(new BasicStroke(4f));
         g.setColor(Color.BLACK);
         g.drawRect(MARGIN, y, PANEL, PANEL);
         List<ComicScript.Line> lines = script.panels().get(i).lines();
-        drawBubbles(g, lines == null ? List.of() : lines, y);
+        drawBubbles(g, lines == null ? List.of() : lines, names, y);
         y += PANEL + GAP;
       }
     } finally {
@@ -84,13 +86,17 @@ public class ComicComposer {
     return new Result(png(out), png(scale(out, THUMB_WIDTH)));
   }
 
-  private void drawBubbles(Graphics2D g, List<ComicScript.Line> lines, int panelTop) {
+  private void drawBubbles(
+      Graphics2D g, List<ComicScript.Line> lines, Map<String, String> names, int panelTop) {
     g.setFont(new Font(family, Font.PLAIN, 28));
     FontMetrics fm = g.getFontMetrics();
     for (int i = 0; i < lines.size(); i++) {
       ComicScript.Line line = lines.get(i);
       List<String> rows =
-          wrap(line.speaker() + ": " + line.text(), fm, BUBBLE_MAX - 2 * BUBBLE_PAD);
+          wrap(
+              names.getOrDefault(line.speaker(), line.speaker()) + ": " + line.text(),
+              fm,
+              BUBBLE_MAX - 2 * BUBBLE_PAD);
       int w = rows.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
       int h = rows.size() * fm.getHeight() + 2 * BUBBLE_PAD;
       boolean top = i % 2 == 0;

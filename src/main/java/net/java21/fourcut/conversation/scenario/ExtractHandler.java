@@ -78,9 +78,15 @@ class ExtractHandler implements StepHandler {
                 + "\n\n전사 ("
                 + (w * size / 60)
                 + "분부터):\n"
-                + Transcript.lines(part);
+                + TranscriptText.compact(part);
         long seed = (long) context.conversation().publicId().hashCode() + w + context.attempt();
-        return llm.job(Prompts.EXTRACT_SYSTEM, prompt, Prompts.EXTRACT_SCHEMA, seed, extra);
+        return llm.job(
+            Prompts.EXTRACT_SYSTEM,
+            prompt,
+            Prompts.EXTRACT_SCHEMA,
+            Prompts.EXTRACT_MAX_TOKENS,
+            seed,
+            extra);
       }
     }
     return new StepOutcome.Done(
