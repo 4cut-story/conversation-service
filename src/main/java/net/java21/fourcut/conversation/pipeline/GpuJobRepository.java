@@ -11,11 +11,14 @@ import org.springframework.data.jpa.repository.Query;
 
 interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
 
-  /** 대기 중인 작업 한 건을 잠근다. 워커가 올려 둔 모델과 같은 종류를 먼저, 그 다음은 들어온 순서. 다른 워커가 잠근 행은 건너뛴다(SKIP LOCKED). */
+  /**
+   * 대기 중인 작업 한 건을 잠근다. 보통 작업을 낮은 우선순위(녹음 중 구간 전사)보다 먼저, 그 안에서는 워커가 올려 둔 모델과 같은 종류를 먼저, 그 다음은 들어온
+   * 순서. 다른 워커가 잠근 행은 건너뛴다(SKIP LOCKED).
+   */
   @Query(
       value =
           "select * from {h-schema}gpu_jobs where state = 'QUEUED' and type in (:types)"
-              + " order by case when type = :preferred then 0 else 1 end, enqueued_at"
+              + " order by priority, case when type = :preferred then 0 else 1 end, enqueued_at"
               + " limit 1 for update skip locked",
       nativeQuery = true)
   Optional<GpuJob> lockNext(Collection<String> types, String preferred);
@@ -34,4 +37,10 @@ interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
   List<GpuJob> lockExpired(Instant now);
 
   boolean existsByConversationIdAndState(Long conversationId, GpuJob.State state);
+
+  boolean existsByConversationIdAndStepAndStateIn(
+      Long conversationId, Step step, Collection<GpuJob.State> states);
+
+  List<GpuJob> findByConversationIdAndStepAndState(
+      Long conversationId, Step step, GpuJob.State state);
 }

@@ -40,6 +40,7 @@ public class PipelineService {
   private final TaskExecutor executor;
   private final TransactionTemplate tx;
   private final ApplicationEventPublisher events;
+  private final PartTranscriber parts;
 
   public PipelineService(
       List<StepHandler> handlerList,
@@ -52,7 +53,8 @@ public class PipelineService {
       Clock clock,
       @Qualifier("applicationTaskExecutor") TaskExecutor executor,
       TransactionTemplate tx,
-      ApplicationEventPublisher events) {
+      ApplicationEventPublisher events,
+      PartTranscriber parts) {
     handlerList.forEach(h -> handlers.put(h.step(), h));
     this.steps = steps;
     this.jobs = jobs;
@@ -64,14 +66,49 @@ public class PipelineService {
     this.executor = executor;
     this.tx = tx;
     this.events = events;
+    this.parts = parts;
   }
 
-  /** 녹음이 끝난 대화의 처리를 시작한다 (전사부터). */
+  /** 녹음이 끝난 대화의 처리를 시작한다 (전사부터). 아직 가져가지 않은 구간 전사는 취소한다. */
   @Transactional
   public void start(Long conversationId) {
     ConversationInfo conversation = observer.find(conversationId);
     if (conversation != null) {
+      jobs.findByConversationIdAndStepAndState(
+              conversationId, Step.TRANSCRIBE_PART, GpuJob.State.QUEUED)
+          .forEach(j -> j.fail("CANCELLED", "녹음이 끝나 마무리 전사로 넘겼다", now()));
       startStep(conversation, Step.TRANSCRIBE, 1);
+    }
+  }
+
+  /**
+   * 녹음 조각이 올라왔다 (FR-015). 진행 중인 구간 전사가 없고 새 조각이 있으면 낮은 우선순위로 구간 전사를 넣는다. 구간 전사는 한 대화에 한 번에 하나만 돈다.
+   *
+   * @param uploadedChunks 다 올라온 조각 수
+   */
+  @Transactional
+  public void chunkUploaded(Long conversationId, int uploadedChunks) {
+    if (!properties.preTranscribe() || uploadedChunks <= 0) {
+      return;
+    }
+    if (jobs.existsByConversationIdAndStepAndStateIn(
+        conversationId, Step.TRANSCRIBE_PART, List.of(GpuJob.State.QUEUED, GpuJob.State.LEASED))) {
+      return;
+    }
+    ConversationInfo conversation = observer.find(conversationId);
+    if (conversation == null) {
+      return;
+    }
+    var payload = parts.partPayload(conversation, uploadedChunks);
+    if (payload != null) {
+      jobs.saveAndFlush(
+          new GpuJob(
+              conversationId,
+              Step.TRANSCRIBE_PART,
+              JobType.TRANSCRIBE,
+              json.writeValueAsString(payload),
+              now(),
+              GpuJob.LOW));
     }
   }
 
@@ -94,6 +131,17 @@ public class PipelineService {
   }
 
   void jobSucceeded(GpuJob job, JsonNode result) {
+    if (job.getStep() == Step.TRANSCRIBE_PART) {
+      ConversationInfo conversation = observer.find(job.getConversationId());
+      if (conversation != null) {
+        try {
+          parts.partDone(conversation, json.readTree(job.getPayload()), result);
+        } catch (RuntimeException e) {
+          log.warn("구간 전사 결과를 쓰지 못했다: job={}", job.getId(), e);
+        }
+      }
+      return;
+    }
     withCurrentStep(
         job,
         (conversation, step) -> {
@@ -106,6 +154,11 @@ public class PipelineService {
   }
 
   void jobFailed(GpuJob job) {
+    if (job.getStep() == Step.TRANSCRIBE_PART) {
+      // 구간 전사가 실패해도 대화는 실패하지 않는다. 다음 조각 때 다시 하거나 마무리 전사가 그 부분을 한다
+      log.info("구간 전사 실패: job={} code={}", job.getId(), job.getErrorCode());
+      return;
+    }
     withCurrentStep(
         job,
         (conversation, step) ->
@@ -272,7 +325,7 @@ public class PipelineService {
 
   static String userMessage(Step step) {
     return switch (step) {
-      case TRANSCRIBE -> "음성을 글로 바꾸지 못했어요. 다시 녹음해 주세요.";
+      case TRANSCRIBE, TRANSCRIBE_PART -> "음성을 글로 바꾸지 못했어요. 다시 녹음해 주세요.";
       case EXTRACT, SELECT -> "대화에서 장면을 고르지 못했어요.";
       case SCRIPT, REVIEW -> "콘티를 만들지 못했어요.";
       case DRAW -> "그림을 그리지 못했어요.";

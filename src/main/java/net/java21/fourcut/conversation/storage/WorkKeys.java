@@ -29,6 +29,11 @@ public final class WorkKeys {
     return work(conversationId, "transcript.json");
   }
 
+  /** 녹음 중 미리 전사한 앞부분 (FR-015). 화자 없이 단어 시각만 있다. */
+  public static String preTranscript(String conversationId) {
+    return work(conversationId, "pre-transcript.json");
+  }
+
   public static String candidates(String conversationId) {
     return work(conversationId, "candidates.json");
   }

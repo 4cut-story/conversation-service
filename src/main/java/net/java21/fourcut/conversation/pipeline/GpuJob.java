@@ -24,6 +24,12 @@ public class GpuJob extends BaseEntity {
     FAILED
   }
 
+  /** 보통 작업. */
+  public static final short NORMAL = 0;
+
+  /** 낮은 우선순위 (녹음 중 구간 전사). 보통 작업이 기다리면 뒤로 밀린다. */
+  public static final short LOW = 1;
+
   /** 임대는 최대 3번까지 준다. */
   public static final int MAX_LEASES = 3;
 
@@ -46,6 +52,9 @@ public class GpuJob extends BaseEntity {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(nullable = false, columnDefinition = "json")
   private String payload;
+
+  @Column(nullable = false)
+  private short priority = NORMAL;
 
   @Column(name = "result_key", length = 500)
   private String resultKey;
@@ -85,11 +94,21 @@ public class GpuJob extends BaseEntity {
   }
 
   public GpuJob(Long conversationId, Step step, JobType type, String payload, Instant now) {
+    this(conversationId, step, type, payload, now, NORMAL);
+  }
+
+  public GpuJob(
+      Long conversationId, Step step, JobType type, String payload, Instant now, short priority) {
     this.conversationId = conversationId;
     this.step = step;
     this.type = type;
     this.payload = payload;
     this.enqueuedAt = now;
+    this.priority = priority;
+  }
+
+  public short getPriority() {
+    return priority;
   }
 
   public Long getConversationId() {

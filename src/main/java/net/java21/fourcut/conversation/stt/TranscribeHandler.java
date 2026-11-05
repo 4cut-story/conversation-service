@@ -20,7 +20,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * TRANSCRIBE: 녹음 조각을 GPU 워커(WhisperX + 화자 분리)에 넘기고, 결과 화자를 A, B, C… 가명으로 바꿔 저장한다. 끝나면 원본 음성을 지운다
- * (FR-009).
+ * (FR-009). 녹음 중 미리 전사한 앞부분({@link PreTranscriber})이 있으면 함께 넘긴다.
  */
 @Component
 class TranscribeHandler implements StepHandler {
@@ -56,6 +56,10 @@ class TranscribeHandler implements StepHandler {
     }
     if (context.conversation().language() != null) {
       payload.put("language", context.conversation().language());
+    }
+    // 녹음 중 미리 전사한 앞부분이 있으면 워커가 그 경계 뒤만 전사해 잇는다 (FR-015)
+    if (storage.exists(WorkKeys.preTranscript(id))) {
+      payload.put("prefixGetKey", WorkKeys.preTranscript(id));
     }
     return new StepOutcome.Enqueue(JobType.TRANSCRIBE, payload, null);
   }
