@@ -3,6 +3,7 @@ package net.java21.fourcut.conversation.character;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -21,7 +22,9 @@ class CharacterVectors {
   static final int CANDIDATES = 5;
 
   private final JdbcClient jdbc;
-  private volatile Optional<String> vectorSchema;
+
+  /** vector 타입의 스키마. 처음 확인한 값을 계속 쓴다(확장을 새로 만들면 재시작해야 컬럼이 생긴다). */
+  private final AtomicReference<Optional<String>> vectorSchema = new AtomicReference<>();
 
   CharacterVectors(JdbcClient jdbc) {
     this.jdbc = jdbc;
@@ -33,7 +36,7 @@ class CharacterVectors {
   }
 
   private Optional<String> schema() {
-    Optional<String> s = vectorSchema;
+    Optional<String> s = vectorSchema.get();
     if (s == null) {
       s =
           jdbc.sql(
@@ -45,7 +48,7 @@ class CharacterVectors {
       if (s.isEmpty()) {
         log.warn("pgvector가 없어 캐릭터를 이름으로만 찾는다 (CREATE EXTENSION vector 뒤 재시작하면 켜진다)");
       }
-      vectorSchema = s;
+      vectorSchema.set(s);
     }
     return s;
   }
