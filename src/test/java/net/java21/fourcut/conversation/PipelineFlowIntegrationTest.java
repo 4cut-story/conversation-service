@@ -510,16 +510,28 @@ class PipelineFlowIntegrationTest {
                 "conversations-candidates",
                 responseFields(
                     fieldWithPath("candidates[].kind")
-                        .description("CORE(대화의 핵심 주제), FUNNY(웃음 포인트), IMPORTANT(결정·약속·소식·감정)"),
+                        .description(
+                            "FUNNY(즐거운 대화), TOUCHING(남기고 싶은 대화), IMPORTANT(결정·약속·소식), MEMORY(추억),"
+                                + " CORE(대화의 핵심 주제)"),
                     fieldWithPath("candidates[].start").description("시작(초)"),
                     fieldWithPath("candidates[].end").description("끝(초)"),
                     fieldWithPath("candidates[].summary").description("한 줄 요약"),
                     fieldWithPath("candidates[].reason").description("고른 이유"),
                     fieldWithPath("candidates[].score")
-                        .description("점수 0~1: (이야기성 0.4 + 그림 0.3 + 공감 0.3) / 5, 도입부는 0.3 감점"),
+                        .description(
+                            "점수 0~1: (이야기성 0.3 + 그림 0.2 + 공감 0.2 + 간직 0.3) / 5, 간직 점수가 없으면"
+                                + " (이야기성 0.4 + 그림 0.3 + 공감 0.3) / 5, 도입부는 0.3 감점"),
                     fieldWithPath("candidates[].story").description("이야기성 1~5").optional(),
                     fieldWithPath("candidates[].visual").description("그림으로 보이는가 1~5").optional(),
                     fieldWithPath("candidates[].relatable").description("공감 1~5").optional(),
+                    fieldWithPath("candidates[].memorable")
+                        .type(JsonFieldType.NUMBER)
+                        .description("간직 1~5: 몇 년 뒤에도 꺼내 보고 싶은 순간인가")
+                        .optional(),
+                    fieldWithPath("candidates[].peak")
+                        .type(JsonFieldType.STRING)
+                        .description("장면을 특별하게 만드는 한 마디(대화 그대로). 콘티의 전 컷에 쓴다")
+                        .optional(),
                     fieldWithPath("candidates[].intro")
                         .description("인사·안부 같은 도입부면 true")
                         .optional(),

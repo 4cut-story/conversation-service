@@ -79,4 +79,31 @@ class RealNamesTest {
     assertThat(prompt.indexOf("[장면 뒤 대화")).isLessThan(prompt.indexOf("최고"));
     assertThat(ScriptHandler.prompt(t, scene, 0, Map.of())).contains("민지야 여기");
   }
+
+  @Test
+  @DisplayName("FR-005: 콘티 입력에 장면 종류별 분위기와 핵심 순간(실명은 가명으로)을 넣는다")
+  void peakAndTone() {
+    Transcript t =
+        new Transcript(
+            "ko",
+            List.of("A", "B"),
+            List.of(
+                new Transcript.Utterance("A", 30, 31, "민지 너 치킨 먹었지"),
+                new Transcript.Utterance("B", 40, 41, "아니야")));
+    SceneCandidate scene =
+        new SceneCandidate(
+            "FUNNY", 30, 60, "치킨", "들통", 0.9, true, 4, 4, 4, false, null, "민지 너 치킨 먹었지", 5);
+    String prompt = ScriptHandler.prompt(t, scene, 0, Map.of("민지", "A"));
+    String alias = ScriptHandler.cast(t, 0).get("A");
+    assertThat(prompt)
+        .contains("만화 분위기: " + Prompts.tone("FUNNY"))
+        .contains("핵심 순간: " + alias)
+        .doesNotContain("민지");
+    SceneCandidate old = new SceneCandidate("MEMORY", 30, 60, "추억", "옛날", 0.9, true);
+    assertThat(ScriptHandler.prompt(t, old, 0, Map.of()))
+        .contains("만화 분위기: " + Prompts.tone("MEMORY"))
+        .doesNotContain("핵심 순간");
+    assertThat(Prompts.tone("TOUCHING")).isNotEqualTo(Prompts.tone("IMPORTANT"));
+    assertThat(Prompts.tone(null)).isEqualTo(Prompts.tone("CORE"));
+  }
 }
