@@ -31,4 +31,26 @@ class SceneCandidateTest {
     assertThat(new SceneCandidate("CORE", 0, 60, "이직 고민", "핵심", 0.5, null).valid()).isTrue();
     assertThat(new SceneCandidate("OTHER", 0, 60, "x", "y", 0.5, null).valid()).isFalse();
   }
+
+  @Test
+  @DisplayName("FR-004: 간직 점수가 있으면 점수에 넣어 웃음이 크게 터진 장면을 잡담보다 앞에 둔다")
+  void memorable() {
+    SceneCandidate big =
+        new SceneCandidate(
+            "FUNNY", 30, 120, "치킨 알림", "들통", 0, null, 4, 4, 4, false, null, "새벽 두 시 알림", 5);
+    SceneCandidate small =
+        new SceneCandidate(
+            "FUNNY", 30, 120, "메뉴 고르기", "잡담", 0, null, 4, 4, 4, false, null, "뭐 먹지", 1);
+    assertThat(big.scored().score()).isEqualTo(0.86);
+    assertThat(small.scored().score()).isEqualTo(0.62);
+    assertThat(big.scored().select().peak()).isEqualTo("새벽 두 시 알림");
+    assertThat(big.scored().select().memorable()).isEqualTo(5);
+  }
+
+  @Test
+  @DisplayName("FR-004: 남기고 싶은 대화(TOUCHING)와 추억(MEMORY) 종류를 받는다")
+  void kinds() {
+    assertThat(new SceneCandidate("TOUCHING", 0, 60, "고마움", "진심", 0.5, null).valid()).isTrue();
+    assertThat(new SceneCandidate("MEMORY", 0, 60, "수학여행", "추억", 0.5, null).valid()).isTrue();
+  }
 }

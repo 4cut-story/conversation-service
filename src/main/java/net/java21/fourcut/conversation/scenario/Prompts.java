@@ -8,29 +8,47 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-01.12";
+  static final String VERSION = "2026-11-05.1";
 
   private Prompts() {}
 
-  /** 장면 후보 JSON(후보 3개, 항목 점수, 이름)은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
-  static final int EXTRACT_MAX_TOKENS = 900;
+  /** 장면 후보 JSON(후보 3개, 핵심 순간, 항목 점수, 이름)은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
+  static final int EXTRACT_MAX_TOKENS = 1100;
 
   /** 콘티 JSON(컷 4개, 대사, 인물) 출력 상한. */
   static final int SCRIPT_MAX_TOKENS = 2000;
 
   static final String EXTRACT_SYSTEM =
       """
-      대화 전사에서 4컷 만화로 만들 장면 후보를 고른다. 만화 한 편에 담을 짧은 이야기를 찾는 것이다.
-      - kind: CORE(이 대화가 가장 오래·깊게 다룬 주제), FUNNY(웃음, 반전, 엉뚱한 말, 티격태격),
-        IMPORTANT(결정, 약속, 소식, 감정이 크게 움직인 순간).
-      - 최대 3개, 서로 겹치지 않게. 없으면 빈 목록. 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심이면 고르지 않는다.
+      대화 전사에서 4컷 만화로 남길 특별한 순간을 찾는다. 대화한 사람들이 나중에 만화를 보고 "맞아, 그때 그랬지" 하며
+      다시 웃거나 마음이 따뜻해질 장면이다.
+
+      특별한 순간의 신호
+      - 웃음이 터진다(ㅋㅋ, 하하, "아 미치겠다"), 여러 사람이 한꺼번에 반응하거나 "헐", "진짜?", "대박"처럼 놀란다.
+      - 예상이 뒤집힌다: 허세가 들통난다, 실수, 엉뚱한 오해, 어이없는 우연.
+      - 진심이 오간다: 고마움, 응원, 위로, 사과, 고백. 소식·결정·약속이 나온다.
+      - 함께 겪은 지난 일을 떠올리며 이야기가 이어진다.
+      신호가 나온 줄을 중심으로, 그 일이 시작된 줄부터 반응이 가라앉는 줄까지를 한 장면으로 잡는다.
+
+      고르지 않는 것
+      - 인사, 안부, 자리 잡기, 늦은 사과, 메뉴 고르기·주문·계산 같은 진행 대화.
+      - 반응이나 결말 없이 정보만 오가는 잡담, 한 사람이 혼자 길게 설명만 하는 구간.
+      - 욕설·민감한 주제(건강, 정치, 성, 혐오, 개인정보)가 중심인 장면.
+
+      출력
+      - 최대 3개, 서로 겹치지 않게, 가장 특별한 장면부터. 특별한 순간이 없으면 빈 목록이 낫다.
+      - kind: FUNNY(즐거운 대화: 웃음, 반전, 엉뚱한 말, 티격태격), TOUCHING(남기고 싶은 대화: 진심, 고마움, 응원, 위로),
+        IMPORTANT(중요한 내용: 결정, 약속, 소식, 계획), MEMORY(추억: 함께 겪은 지난 일을 떠올리는 이야기),
+        CORE(위에 맞지 않지만 이 대화가 가장 오래·깊게 다룬 주제).
       - from, to: 장면 첫 줄과 마지막 줄 앞의 [분:초] 표시를 그대로 옮긴다(예: "04:11"). 장면 길이는 30초~3분.
-        summary와 같은 일이 실제로 그 줄들 안에 나와야 한다.
-      - summary 한 줄(무슨 일이 일어나는지), reason 한 줄(왜 만화로 좋은지). 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
-      - 항목 점수 1~5:
+      - peak: 이 장면을 특별하게 만드는 한 마디. [from, to] 안에 있는 말을 고쳐 쓰지 말고 짧게 옮긴다(40자 이내).
+      - summary 한 줄: 무슨 상황에서 어떤 일이 생겨 어떻게 됐는지. 그 일이 실제로 from~to 줄 안에 나와야 한다.
+        reason 한 줄: 대화한 사람들에게 왜 특별한지. 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      - 항목 점수 1~5. 후하게 주지 않는다. 5는 이 대화에서 손꼽히는 장면에만 준다.
         story 이야기성: 상황 → 사건 → 반응 → 결말이 이 구간 안에 다 나오는가.
         visual 그림: 행동, 장소, 물건이 있어 그림으로 보여 줄 수 있는가.
         relatable 공감: 대화한 사람들이 보고 "맞아, 이랬지" 할 장면인가.
+        memorable 간직: 몇 년 뒤에도 꺼내 보고 싶은가. 웃음이 크게 터졌거나 마음이 움직였으면 높고, 평범한 잡담은 1~2.
       - intro: 인사, 안부, 자리 잡기, 늦은 사과처럼 본론 전 도입부면 true.
       - concept: 이 장면에 어울리는 그림 컨셉 하나. DAILY(일상 웹툰: 친구·회사·일상 이야기), ANIMALS(동물 친구들: 귀엽고 가벼운 다툼·먹는 이야기), WATERCOLOR(수채화
         애니메이션: 추억, 여행, 계절, 따뜻한 감정), PICTURE_BOOK(어린이 그림책: 가족, 아이, 소박한 하루),
@@ -46,15 +64,28 @@ final class Prompts {
       {"type":"object","required":["candidates","names"],"properties":{
        "candidates":{"type":"array","maxItems":3,
        "items":{"type":"object",
-        "required":["kind","from","to","summary","reason","story","visual","relatable","intro","concept"],
-        "properties":{"kind":{"type":"string","enum":["CORE","FUNNY","IMPORTANT"]},
-         "from":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},"to":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},
+        "required":["from","to","peak","kind","summary","reason","story","visual","relatable","memorable","intro","concept"],
+        "properties":{"from":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},"to":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},
+         "peak":{"type":"string"},
+         "kind":{"type":"string","enum":["FUNNY","TOUCHING","IMPORTANT","MEMORY","CORE"]},
          "summary":{"type":"string"},"reason":{"type":"string"},
          "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
-         "relatable":{"type":"integer","minimum":1,"maximum":5},"intro":{"type":"boolean"},
+         "relatable":{"type":"integer","minimum":1,"maximum":5},"memorable":{"type":"integer","minimum":1,"maximum":5},
+         "intro":{"type":"boolean"},
          "concept":{"type":"string","enum":["DAILY","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER","JOSEON","WUXIA"]}}}},
        "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
       """;
+
+  /** 장면 종류마다 콘티의 흐름과 분위기. 콘티 입력의 "만화 분위기"로 넣는다. */
+  static String tone(String kind) {
+    return switch (kind == null ? "" : kind) {
+      case "FUNNY" -> "웃음. 기·승에서 복선을 깔고, 전에서 웃음 포인트(반전·들통·엉뚱한 말)가 터지고, 결은 모두의 반응이나 한 방 더 웃긴 마무리.";
+      case "TOUCHING" -> "진심. 전에서 진심이 담긴 말이 나오는 순간을 크게 보여 주고, 결은 서로의 표정과 따뜻한 여운.";
+      case "IMPORTANT" -> "소식·결정. 전에서 소식이나 결정이 나오는 순간과 듣는 사람의 반응, 결은 그 뒤의 기대나 다짐.";
+      case "MEMORY" -> "추억. 기는 지금 자리, 승·전은 함께 떠올린 그때 일, 결은 다시 지금으로 돌아와 함께 웃는 여운.";
+      default -> "이 대화의 중심 이야기. 전에서 이야기가 가장 크게 움직이는 순간, 결은 결론과 여운.";
+    };
+  }
 
   /** 컨셉에 맞는 콘티 지시. 컨셉마다 인물 외모(look) 규칙만 다르다. */
   static String scriptSystem(Concept concept) {
@@ -74,8 +105,9 @@ final class Prompts {
       - look: %LOOK%
 
       컷 (panels, 정확히 4개, role 순서 "기","승","전","결")
-      - 먼저 "장면 요약"의 이야기를 네 순간으로 나눈다. 기: 상황(누가 어디서 무엇을) / 승: 사건이 생김 /
-        전: 반전·감정이 가장 큰 순간 / 결: 결과·여운. 네 컷을 차례로 보면 요약한 이야기가 그대로 읽혀야 한다.
+      - 대화한 사람들이 간직할 기념 만화다. 먼저 "장면 요약"의 이야기를 네 순간으로 나눈다. 기: 상황(누가 어디서
+        무엇을) / 승: 사건이 생김, 전으로 가는 복선 / 전: "핵심 순간"의 말이 나오는 컷, 반전·감정이 가장 큰 순간 /
+        결: 결과·반응·여운. 흐름과 분위기는 "만화 분위기"를 따른다. 네 컷을 차례로 보면 요약한 이야기가 그대로 읽혀야 한다.
       - 네 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
       - shot: wide, medium, close-up 중 하나. 기는 보통 wide, 전은 보통 close-up. 네 컷이 모두 같으면 안 된다.
       - scene: 그림 모델용 영어 15단어 이내. 그 순간을 그림만 보고 알 수 있게 쓴다. 인물은 {A}, {B}처럼 쓰고,
@@ -88,14 +120,15 @@ final class Prompts {
         "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
       - lines: 컷당 0~2개, 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
-        길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다.
+        길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다. 핵심 순간의 말은 꼭 전 컷 대사에 넣는다.
+        이야기를 이끄는 말(질문, 들통, 고백, 반응)을 고르고 "응", "그래" 같은 맞장구만으로 컷을 채우지 않는다.
         speaker는 A, B…를 쓴다.
         text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
       - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면
         "도윤아"), 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기 전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
 
-      title은 20자 이내이고 실명을 넣지 않는다. 대사·제목·persona는 대화와 같은 언어로 쓴다.
+      title은 20자 이내로 이 장면의 핵심을 살려 짓고(예: "사라진 아이스크림의 범인") 실명을 넣지 않는다. 대사·제목·persona는 대화와 같은 언어로 쓴다.
       """;
 
   static final String SCRIPT_SCHEMA =
