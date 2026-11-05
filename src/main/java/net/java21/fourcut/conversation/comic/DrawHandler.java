@@ -1,9 +1,15 @@
 package net.java21.fourcut.conversation.comic;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.java21.fourcut.conversation.character.CharacterLibrary;
+import net.java21.fourcut.conversation.character.CharacterRef;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -23,6 +29,9 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * DRAW: 콘티의 컷 4장을 GPU 워커(SDXL)에 그리게 한다. 워커는 사전 서명 PUT 주소로 PNG를 올린다. 컷마다 구도와 시드가 다르고, 인물 모습은 외모 문구로
  * 맞춘다. 그림에는 글자를 넣지 않고, 말풍선은 COMPOSE에서 코드로 그린다.
+ *
+ * <p>캐릭터 DB(REQ-018)에서 찾은 인물은 외모 문구를 캐릭터의 문구로 바꾸고, 그 인물이 나오는 컷에 IP-Adapter 참조({@code references})를
+ * 붙인다. 워커는 참조 그림의 embedding이 있으면 받아 쓰고, 없으면 참조 그림으로 계산해 올린다.
  */
 @Component
 class DrawHandler implements StepHandler {
@@ -33,13 +42,19 @@ class DrawHandler implements StepHandler {
   private final ObjectStorage storage;
   private final ComicProperties properties;
   private final JsonMapper json;
+  private final CharacterLibrary characters;
 
   DrawHandler(
-      ScenarioStore scenarios, ObjectStorage storage, ComicProperties properties, JsonMapper json) {
+      ScenarioStore scenarios,
+      ObjectStorage storage,
+      ComicProperties properties,
+      JsonMapper json,
+      CharacterLibrary characters) {
     this.scenarios = scenarios;
     this.storage = storage;
     this.properties = properties;
     this.json = json;
+    this.characters = characters;
   }
 
   @Override
@@ -50,7 +65,9 @@ class DrawHandler implements StepHandler {
   @Override
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
-    ComicScript script = scenarios.script(id);
+    ComicScript written = scenarios.script(id);
+    Map<String, CharacterRef> cast = characters.match(wanted(written), concept(written));
+    ComicScript script = withLooks(written, cast);
     long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
@@ -65,10 +82,18 @@ class DrawHandler implements StepHandler {
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));
+      ArrayNode refs = references(script, script.panels().get(i), cast);
+      if (!refs.isEmpty()) {
+        image.set("references", refs);
+      }
     }
     ObjectNode info = json.createObjectNode();
     info.put("seed", seed);
     info.put("size", properties.imageSize());
+    if (!cast.isEmpty()) {
+      ObjectNode chars = info.putObject("characters");
+      cast.forEach((speaker, ref) -> chars.put(speaker, ref.publicId()));
+    }
     return new StepOutcome.Enqueue(JobType.IMAGE, payload, json.writeValueAsString(info));
   }
 
@@ -82,6 +107,7 @@ class DrawHandler implements StepHandler {
         return new StepOutcome.Retry(panelName(i) + " 그림이 올라오지 않았다");
       }
     }
+    characters.embedsUploaded(computedEmbeds(context.jobPayload()));
     return new StepOutcome.Done(WorkKeys.workPrefix(id), Step.COMPOSE);
   }
 
@@ -113,6 +139,109 @@ class DrawHandler implements StepHandler {
             : "";
     return style + ", " + shot + count + scene + cast;
   }
+
+  /** 캐릭터 DB에서 찾을 콘티 인물. */
+  static List<CharacterLibrary.Wanted> wanted(ComicScript script) {
+    return script.characters().stream()
+        .map(c -> new CharacterLibrary.Wanted(c.speaker(), c.displayName(), c.look()))
+        .toList();
+  }
+
+  static String concept(ComicScript script) {
+    return Concept.of(script.concept()).name();
+  }
+
+  /** 캐릭터를 찾은 인물은 참조 그림과 맞도록 캐릭터의 외모 문구로 그린다. */
+  static ComicScript withLooks(ComicScript script, Map<String, CharacterRef> cast) {
+    if (cast.isEmpty()) {
+      return script;
+    }
+    List<ComicScript.Character> looks =
+        script.characters().stream()
+            .map(
+                c ->
+                    cast.containsKey(c.speaker())
+                        ? new ComicScript.Character(
+                            c.speaker(), c.name(), c.persona(), cast.get(c.speaker()).look())
+                        : c)
+            .toList();
+    return new ComicScript(
+        script.title(),
+        looks,
+        script.panels(),
+        script.reviewed(),
+        script.nameWarnings(),
+        script.concept());
+  }
+
+  /** IP-Adapter 참조는 한 컷에 두 명까지 (두 명이면 왼쪽·오른쪽 마스크). */
+  static final int MAX_REFERENCES = 2;
+
+  /**
+   * 컷에 나오는 인물(장면에 처음 나온 순서, 예전 콘티는 등장인물 순서) 중 캐릭터를 찾은 인물의 참조. 두 명 이상 나오는 컷은 먼저 나온 인물을 왼쪽, 다음 인물을
+   * 오른쪽에 둔다. 참조가 한 명뿐이어도 자리를 정해 다른 인물까지 그 얼굴로 그리지 않게 한다.
+   */
+  ArrayNode references(
+      ComicScript script, ComicScript.Panel panel, Map<String, CharacterRef> cast) {
+    ArrayNode refs = json.createArrayNode();
+    if (cast.isEmpty()) {
+      return refs;
+    }
+    List<String> people = people(script, panel);
+    for (int i = 0; i < people.size() && i < MAX_REFERENCES; i++) {
+      CharacterRef ref = cast.get(people.get(i));
+      if (ref == null) {
+        continue;
+      }
+      ObjectNode r = refs.addObject();
+      r.put("character", ref.publicId());
+      r.put("scale", ref.scale());
+      r.put("region", people.size() < 2 ? "full" : i == 0 ? "left" : "right");
+      if (ref.embedReady()) {
+        r.put("embedGetKey", ref.embedKey());
+      } else {
+        r.put("imageGetKey", ref.referenceImageKey());
+        r.put("embedUploadPutKey", ref.embedTargetKey());
+      }
+    }
+    return refs;
+  }
+
+  /** 컷에 나오는 화자 표시, 장면에 처음 나온 순서. */
+  static List<String> people(ComicScript script, ComicScript.Panel panel) {
+    String scene = panel.scene() == null ? "" : panel.scene();
+    Set<String> known = new HashSet<>();
+    script.characters().forEach(c -> known.add(c.speaker()));
+    if (!scene.contains("{")) {
+      return script.characters().stream().map(ComicScript.Character::speaker).toList();
+    }
+    Set<String> order = new LinkedHashSet<>();
+    Matcher m = MARK.matcher(scene);
+    while (m.find()) {
+      if (known.contains(m.group(1))) {
+        order.add(m.group(1));
+      }
+    }
+    return new ArrayList<>(order);
+  }
+
+  /** 워커가 이번 작업에서 계산해 올렸어야 할 embedding의 캐릭터. */
+  static Set<String> computedEmbeds(JsonNode payload) {
+    Set<String> ids = new HashSet<>();
+    if (payload == null) {
+      return ids;
+    }
+    for (JsonNode image : payload.path("images")) {
+      for (JsonNode ref : image.path("references")) {
+        if (ref.has("embedUploadPutKey")) {
+          ids.add(ref.path("character").asString());
+        }
+      }
+    }
+    return ids;
+  }
+
+  private static final Pattern MARK = Pattern.compile("\\{([A-Z])\\}");
 
   private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
 
