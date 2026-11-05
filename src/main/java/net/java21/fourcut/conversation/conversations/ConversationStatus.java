@@ -45,7 +45,7 @@ public enum ConversationStatus {
 
   static ConversationStatus of(Step step) {
     return switch (step) {
-      case TRANSCRIBE -> TRANSCRIBING;
+      case TRANSCRIBE, TRANSCRIBE_PART -> TRANSCRIBING;
       case EXTRACT, SELECT -> SELECTING;
       case SCRIPT, REVIEW -> SCRIPTING;
       case DRAW -> DRAWING;

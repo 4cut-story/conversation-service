@@ -75,8 +75,11 @@ public class ConversationService {
     return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
   }
 
-  /** 녹음 조각 하나를 올릴 사전 서명 PUT 주소. web 서버가 받아 조각을 대신 올린다. */
-  @Transactional(readOnly = true)
+  /**
+   * 녹음 조각 하나를 올릴 사전 서명 PUT 주소. web 서버가 받아 조각을 대신 올린다. 조각은 순서대로 하나씩 올라오므로, index번 조각을 물으면 그 앞 조각은 다
+   * 올라온 것이다. 녹음이면 그 조각들로 구간 전사를 예약한다 (FR-015).
+   */
+  @Transactional
   public ConversationApi.ChunkUpload chunk(
       String owner, String id, ConversationApi.ChunkRequest request) {
     Conversation c = owned(owner, id);
@@ -89,6 +92,12 @@ public class ConversationService {
       throw new ApiException(ErrorCode.UNSUPPORTED_AUDIO);
     }
     String url = storage.presignPut(WorkKeys.audioChunk(id, request.index()), null, CHUNK_URL_TTL);
+    int uploaded = request.index();
+    if (c.getSource() == Conversation.Source.RECORDING
+        && uploaded > 0
+        && storage.exists(WorkKeys.audioChunk(id, uploaded - 1))) {
+      pipeline.chunkUploaded(c.getId(), uploaded);
+    }
     return new ConversationApi.ChunkUpload(url, CHUNK_URL_TTL.toSeconds());
   }
 

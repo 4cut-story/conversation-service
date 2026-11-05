@@ -63,7 +63,7 @@ class GeminiRunnerTest {
         jobs,
         service,
         new PipelineProperties(
-            Duration.ofSeconds(90), Duration.ofSeconds(60), Duration.ofMinutes(5)),
+            Duration.ofSeconds(90), Duration.ofSeconds(60), Duration.ofMinutes(5), true),
         json,
         Clock.fixed(NOW, ZoneOffset.UTC),
         Runnable::run,
