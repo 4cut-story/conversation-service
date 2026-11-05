@@ -8,6 +8,7 @@ import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -23,7 +24,8 @@ public class TestcontainersConfiguration {
   @Bean
   @ServiceConnection
   PostgreSQLContainer postgres() {
-    return new PostgreSQLContainer("postgres:17-alpine");
+    return new PostgreSQLContainer(
+        DockerImageName.parse("pgvector/pgvector:pg17").asCompatibleSubstituteFor("postgres"));
   }
 
   /** S3 API 호환 저장소 (MinIO 이미지는 공개 레지스트리에서 받을 수 없어 S3Mock을 쓴다). */
