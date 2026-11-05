@@ -79,16 +79,27 @@ class ScriptHandler implements StepHandler {
         + CastNames.line(cast)
         + "\n장면 종류: "
         + scene.kind()
+        + "\n만화 분위기: "
+        + Prompts.tone(scene.kind())
         + "\n장면 요약: "
         + RealNames.apply(scene.summary(), rename)
         + "\n고른 이유: "
         + RealNames.apply(scene.reason(), rename)
+        + peak(scene, rename)
         + "\n\n[장면 앞 대화 (참고만)]\n"
         + before
         + "\n\n[장면 대화 (대사는 여기서 고른다)]\n"
         + during
         + "\n\n[장면 뒤 대화 (참고만)]\n"
         + after;
+  }
+
+  /** 장면 추출이 찾은 핵심 순간(없으면 빈 문자열). 전 컷의 기준이 된다. */
+  private static String peak(SceneCandidate scene, Map<String, String> rename) {
+    String peak = scene.peak();
+    return peak == null || peak.isBlank()
+        ? ""
+        : "\n핵심 순간: " + RealNames.apply(peak.strip(), rename);
   }
 
   /** 발화 시작 시각으로 나눈 구간(겹치지 않는다). */
