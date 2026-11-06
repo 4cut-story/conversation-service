@@ -49,10 +49,10 @@ class DrawReferencesTest {
           0.2);
 
   @Test
-  @DisplayName("REQ-018: 캐릭터를 찾은 인물은 캐릭터의 외모 문구로 그린다")
+  @DisplayName("REQ-018: 캐릭터를 찾은 인물은 캐릭터의 외모 문구로 그리고, 성별이 빠졌으면 콘티 첫 마디를 붙인다")
   void looks() {
     ComicScript drawn = DrawHandler.withLooks(script, Map.of("A", ready));
-    assertThat(drawn.characters().get(0).look()).isEqualTo("red bob hair, round glasses");
+    assertThat(drawn.characters().get(0).look()).isEqualTo("girl, red bob hair, round glasses");
     assertThat(drawn.characters().get(0).name()).isEqualTo("민지");
     assertThat(drawn.characters().get(1).look()).isEqualTo("boy, glasses");
     assertThat(DrawHandler.withLooks(script, Map.of())).isSameAs(script);

@@ -60,6 +60,27 @@ public class CharacterLibrary {
     this.properties = properties;
   }
 
+  /**
+   * 그림에 쓸 외모 문구. 캐릭터의 외모 문구로 그리되, 성별이 빠져 있으면("curly brown hair, navy hoodie") 콘티 외모의 첫 마디("boy")를
+   * 앞에 붙인다. 성별이 없으면 두 명 컷에서 옆 사람의 성별이 번져 남자아이가 여자로 그려졌다.
+   *
+   * @param characterLook 캐릭터 DB 모습 문구
+   * @param scriptLook 콘티 외모 문구
+   */
+  public static String drawLook(String characterLook, String scriptLook) {
+    String look = characterLook == null ? "" : characterLook.strip();
+    if (scriptLook == null || scriptLook.isBlank()) {
+      return look;
+    }
+    LookHead own = LookHead.of(look);
+    String head = scriptLook.split(",", 2)[0].strip();
+    LookHead wanted = LookHead.of(head);
+    if (own.animal() != null || own.gender() != null || wanted.gender() == null) {
+      return look;
+    }
+    return look.isEmpty() ? head : head + ", " + look;
+  }
+
   /** 콘티 인물 하나. key는 화자 표시(A, B…), look은 그림용 영어 외모. */
   public record Wanted(String key, String name, String look) {}
 

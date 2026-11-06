@@ -68,4 +68,20 @@ class LookHeadTest {
         .isEqualTo(new LookHead(null, "F", "YOUNG"));
     assertThat(blonde.orDb(null, null)).isEqualTo(blonde);
   }
+
+  @Test
+  @DisplayName("REQ-018: 캐릭터 외모에 성별이 없을 때만 콘티 외모 첫 마디를 앞에 붙여 그린다")
+  void drawLook() {
+    assertThat(
+            CharacterLibrary.drawLook("curly brown hair, navy hoodie", "boy, curly hair, hoodie"))
+        .isEqualTo("boy, curly brown hair, navy hoodie");
+    assertThat(CharacterLibrary.drawLook("young man, navy hoodie", "boy, hoodie"))
+        .isEqualTo("young man, navy hoodie");
+    assertThat(CharacterLibrary.drawLook("fox, red scarf", "girl, scarf"))
+        .isEqualTo("fox, red scarf");
+    assertThat(CharacterLibrary.drawLook("blue hoodie", "gray hair, hoodie"))
+        .isEqualTo("blue hoodie");
+    assertThat(CharacterLibrary.drawLook("blue hoodie", null)).isEqualTo("blue hoodie");
+    assertThat(CharacterLibrary.drawLook(null, "old man")).isEqualTo("old man");
+  }
 }
