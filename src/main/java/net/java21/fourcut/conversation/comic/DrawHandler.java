@@ -76,7 +76,7 @@ class DrawHandler implements StepHandler {
     }
     ComicScript script = withLooks(named, cast);
     List<Map<String, Staging.Side>> stages = Staging.panels(script);
-    long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt() * 10L;
+    long seed = Math.floorMod(seedOf(written), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
     for (int i = 0; i < PANELS; i++) {
@@ -459,6 +459,15 @@ class DrawHandler implements StepHandler {
    * 2·4컷). Lightning(guidance 0)은 negative를 읽지 않아 구도는 이 말로만 잡는다.
    */
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
+
+  /** 콘티 내용(제목과 컷 장면)으로 정한 그림 시드. 같은 콘티면 대화 ID가 달라도 같은 시드로 그려 고정 시험 세트로 수정 전후를 비교할 수 있다. */
+  static long seedOf(ComicScript script) {
+    StringBuilder sb = new StringBuilder(String.valueOf(script.title()));
+    if (script.panels() != null) {
+      script.panels().forEach(p -> sb.append('\n').append(p.scene()));
+    }
+    return sb.toString().hashCode();
+  }
 
   /** 컨셉 그림체. 일상 웹툰(기본·예전 콘티)은 설정의 그림체를 쓴다. */
   static String style(ComicScript script, ComicProperties properties) {

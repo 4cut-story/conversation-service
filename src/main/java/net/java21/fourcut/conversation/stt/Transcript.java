@@ -12,6 +12,16 @@ public record Transcript(String language, List<String> speakers, List<Utterance>
   /** 발화 하나. 시각은 대화 시작부터의 초. */
   public record Utterance(String speaker, double start, double end, String text) {}
 
+  /**
+   * 대화 내용으로 정한 시드. 같은 녹음이면 대화 ID가 달라도 같은 장면·콘티·그림이 나와, 고정 시험 세트로 수정 전후를 비교할 수 있다. 발화 화자와 글만 쓴다
+   * (String.hashCode는 JVM이 달라도 같다).
+   */
+  public long seed() {
+    StringBuilder sb = new StringBuilder();
+    utterances.forEach(u -> sb.append(u.speaker()).append(':').append(u.text()).append('\n'));
+    return sb.toString().hashCode();
+  }
+
   /** 마지막 발화가 끝난 시각(초). */
   public int durationSec() {
     return (int) Math.ceil(utterances.stream().mapToDouble(Utterance::end).max().orElse(0));
