@@ -457,6 +457,45 @@ public record ComicScript(
     return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
   }
 
+  /**
+   * 그림 단계에서 캐릭터 DB의 캐릭터를 찾은 인물은 그 캐릭터 이름을 쓴다. 등장인물 이름과 제목·대사·원문 속 가명을 함께 바꾸고 조사는 새 이름의 받침에 맞춘다. 다른
+   * 인물이 이미 쓰는 이름은 겹치므로 바꾸지 않는다.
+   *
+   * @param names 화자 표시(A, B…) → 캐릭터 이름
+   */
+  public ComicScript withCharacterNames(Map<String, String> names) {
+    if (names.isEmpty() || characters == null) {
+      return this;
+    }
+    Map<String, String> rename = new java.util.LinkedHashMap<>();
+    Set<String> taken = new HashSet<>();
+    for (Character c : characters) {
+      String to = names.get(c.speaker());
+      if (to == null || to.isBlank() || to.strip().equals(c.displayName())) {
+        taken.add(c.displayName());
+      }
+    }
+    List<Character> cast = new java.util.ArrayList<>();
+    for (Character c : characters) {
+      String to = names.get(c.speaker());
+      String from = c.displayName();
+      if (to == null || to.isBlank() || to.strip().equals(from) || !taken.add(to.strip())) {
+        cast.add(c);
+        continue;
+      }
+      if (!from.equals(c.speaker())) {
+        rename.put(from, to.strip());
+      }
+      cast.add(new Character(c.speaker(), to.strip(), c.persona(), c.look()));
+    }
+    if (rename.isEmpty() && cast.equals(characters)) {
+      return this;
+    }
+    UnaryOperator<String> f = t -> CastNames.rename(t, rename);
+    return new ComicScript(
+        f.apply(title), cast, mapLines(l -> l.mapped(f)), reviewed, nameWarnings, concept);
+  }
+
   /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
   public ComicScript replaced(Map<String, String> rename) {
     if (rename.isEmpty()) {

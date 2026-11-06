@@ -57,7 +57,8 @@ public class ScenarioStore {
     return json.readValue(bytes, ComicScript.class);
   }
 
-  String saveScript(String id, ComicScript script) {
+  /** 콘티를 저장한다. comic 모듈은 캐릭터 이름으로 바꾼 콘티를 다시 저장한다. */
+  public String saveScript(String id, ComicScript script) {
     return put(WorkKeys.script(id), script);
   }
 

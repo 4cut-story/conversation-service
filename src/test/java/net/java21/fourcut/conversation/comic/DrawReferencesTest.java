@@ -116,4 +116,13 @@ class DrawReferencesTest {
     assertThat(DrawHandler.computedEmbeds(payload)).containsExactly("x");
     assertThat(DrawHandler.computedEmbeds(null)).isEmpty();
   }
+
+  @Test
+  @DisplayName("REQ-018: 캐릭터를 찾은 인물은 가명 대신 캐릭터 이름을 쓰고, 못 찾은 인물은 가명을 둔다")
+  void names() {
+    ComicScript named = DrawHandler.withNames(script, Map.of("A", ready));
+    assertThat(named.characters().get(0).name()).isEqualTo("하늘");
+    assertThat(named.characters().get(1).name()).isEqualTo("도윤");
+    assertThat(DrawHandler.withNames(script, Map.of())).isSameAs(script);
+  }
 }
