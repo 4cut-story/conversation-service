@@ -159,6 +159,25 @@ class CharacterLibraryTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 성별을 아는 인물에는 가까운 모습이 성별을 모르는 것뿐이면 캐릭터를 쓰지 않는다")
+  void knownGenderSkipsUnknown() {
+    StoryCharacter nobody = new StoryCharacter("민준", "glasses", null, null, null, 0.6);
+    CharacterLook glasses =
+        new CharacterLook(nobody, "DAILY", NEUTRAL, "short brown hair, round glasses", "student");
+    when(storage.exists(embedKey(glasses))).thenReturn(false);
+    when(looks.findByPublicId(glasses.publicId())).thenReturn(Optional.of(glasses));
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
+    when(vectors.nearest(any(), any()))
+        .thenReturn(
+            List.of(new CharacterVectors.Nearest(glasses.publicId(), 0.05, glasses.look())));
+    assertThat(
+            library.match(
+                List.of(new CharacterLibrary.Wanted("A", "지윤", "young woman, long black hair")),
+                "DAILY"))
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("REQ-018: 거리 한도보다 멀면 캐릭터를 쓰지 않는다")
   void tooFar() {
     when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
