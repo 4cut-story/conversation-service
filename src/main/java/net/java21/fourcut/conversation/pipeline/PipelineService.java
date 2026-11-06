@@ -33,7 +33,7 @@ public class PipelineService {
    */
   static final int SCRIPT_MAX_ATTEMPTS = 5;
 
-  static int maxAttempts(Step step) {
+  public static int maxAttempts(Step step) {
     return step == Step.SCRIPT ? SCRIPT_MAX_ATTEMPTS : MAX_ATTEMPTS;
   }
 

@@ -743,6 +743,29 @@ class PipelineFlowIntegrationTest {
   }
 
   @Test
+  @DisplayName("FR-006: 콘티 단계의 다섯 번째 시도까지 저장할 수 있다")
+  void scriptAttemptsFitSchema() throws Exception {
+    String owner = PublicId.generate();
+    String id = startedConversation(owner);
+    Long internalId =
+        jdbc.queryForObject("SELECT id FROM conversations WHERE public_id = ?", Long.class, id);
+    int max =
+        net.java21.fourcut.conversation.pipeline.PipelineService.maxAttempts(
+            net.java21.fourcut.conversation.pipeline.Step.SCRIPT);
+    jdbc.update(
+        "INSERT INTO pipeline_steps (conversation_id, status, started_at, step, attempt)"
+            + " VALUES (?, 'FAILED', CURRENT_TIMESTAMP, 'SCRIPT', ?)",
+        internalId,
+        max);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT max(attempt) FROM pipeline_steps WHERE conversation_id = ? AND step = 'SCRIPT'",
+                Integer.class,
+                internalId))
+        .isEqualTo(max);
+  }
+
+  @Test
   @DisplayName("Edge: 장면 후보가 없으면 NO_SCENE")
   void noScene() throws Exception {
     String owner = PublicId.generate();
