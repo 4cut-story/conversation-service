@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import net.java21.fourcut.conversation.pipeline.DirectLlm;
 import net.java21.fourcut.conversation.stt.Transcript;
@@ -25,8 +26,11 @@ class TranscriptCorrector {
   /** 한 번에 보내는 발화 수. 응답에는 고친 줄만 오므로 출력은 짧다. */
   static final int BATCH = 150;
 
-  /** 교정에 쓰는 시간 한도. 서버 단계 시간 초과(5분) 안에 끝나도록 남은 줄은 원문으로 둔다. */
+  /** 교정에 쓰는 시간 한도. 서버 단계 시간 초과(8분) 안에 끝나도록 남은 줄은 원문으로 둔다. */
   static final java.time.Duration MAX_TIME = java.time.Duration.ofMinutes(3);
+
+  /** 묶음을 동시에 부르는 수. 외부 API 동시 호출 한도를 넘지 않게 작게 둔다. */
+  static final int CONCURRENCY = 4;
 
   /** 묶음 앞에 참고로 보여 주는 앞 발화 수 (고치지는 않는다). 묶음 경계에서 맥락이 끊기지 않게 한다. */
   static final int CONTEXT = 5;
@@ -93,21 +97,28 @@ class TranscriptCorrector {
   /** 교정한 전사. 고친 것이 없거나 호출이 모두 실패하면 받은 전사 그대로다. */
   Transcript correct(Transcript transcript) {
     List<Transcript.Utterance> utterances = transcript.utterances();
-    Map<Integer, String> fixes = new HashMap<>();
-    long deadline = System.nanoTime() + MAX_TIME.toNanos();
+    // 묶음끼리는 서로 기대지 않으므로(참고 줄은 원문) 동시에 부른다. 시간 한도 안에 못 끝낸 묶음은 원문으로 둔다
+    List<Callable<Map<Integer, String>>> batches = new ArrayList<>();
     for (int from = 0; from < utterances.size(); from += BATCH) {
-      if (System.nanoTime() > deadline) {
-        log.warn("전사 교정 시간 한도를 넘겨 {}번 발화부터는 원문으로 둔다", from);
-        break;
-      }
+      int start = from;
       int to = Math.min(from + BATCH, utterances.size());
-      Optional<String> answer = llm.chat(SYSTEM, prompt(transcript, from, to), SCHEMA);
-      if (answer.isPresent()) {
-        fixes.putAll(fixes(answer.get(), from, to, utterances));
-      } else if (!llm.available()) {
-        // 한도 초과 등으로 쉬는 중이면 나머지도 원문으로 둔다
-        break;
+      batches.add(
+          () -> {
+            if (!llm.available()) {
+              // 한도 초과 등으로 쉬는 중이면 원문으로 둔다
+              return Map.of();
+            }
+            Optional<String> answer = llm.chat(SYSTEM, prompt(transcript, start, to), SCHEMA);
+            return answer.map(a -> fixes(a, start, to, utterances)).orElse(Map.of());
+          });
+    }
+    Map<Integer, String> fixes = new HashMap<>();
+    List<Optional<Map<Integer, String>>> results = Parallel.run(batches, CONCURRENCY, MAX_TIME);
+    for (int b = 0; b < results.size(); b++) {
+      if (results.get(b).isEmpty()) {
+        log.warn("전사 교정 {}번째 묶음은 실패하거나 시간 한도를 넘겨 원문으로 둔다", b + 1);
       }
+      results.get(b).ifPresent(fixes::putAll);
     }
     if (fixes.isEmpty()) {
       log.info("전사 교정: 발화 {}개, 고친 줄 없음", utterances.size());

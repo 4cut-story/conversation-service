@@ -40,7 +40,11 @@ class LlmJobs {
 
   /** 결과 {@code {content: "<JSON 문자열>"}}에서 JSON을 꺼낸다. 앞뒤 군더더기는 버린다. */
   JsonNode content(JsonNode result) {
-    String content = result.path("content").asString("");
+    return parse(result.path("content").asString(""));
+  }
+
+  /** LLM 응답 본문(JSON 문자열)에서 JSON을 꺼낸다. 앞뒤 군더더기는 버린다. */
+  JsonNode parse(String content) {
     int from = content.indexOf('{');
     int to = content.lastIndexOf('}');
     if (from < 0 || to < from) {

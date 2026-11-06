@@ -48,7 +48,8 @@ management:
 pipeline:
   lease-time: 90s
   worker-seen-within: 60s
-  local-step-timeout: 5m
+  # 장면 추출의 서버 단계(전사 교정 3분 + 구간 동시 호출 3분)가 다 들어가게 둔다
+  local-step-timeout: 8m
 
 scenario:
   llm-model: ${LLM_MODEL:qwen3:8b}

@@ -2,6 +2,7 @@ package net.java21.fourcut.conversation.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,17 +33,90 @@ class ExtractCorrectionTest {
   private final MemoryStorage storage = new MemoryStorage();
   private final TranscriptStore transcripts = new TranscriptStore(storage, json);
   private final DirectLlm llm = mock(DirectLlm.class);
+
+  /** 교정 뒤 대기열로 장면 추출 (구간 동시 호출 끔). */
   private final ScenarioProperties properties =
-      new ScenarioProperties("qwen3:8b", 600, 16384, 0.4, true);
-  private final ExtractHandler handler =
-      new ExtractHandler(
-          transcripts,
-          new ScenarioStore(storage, json),
-          new LlmJobs(properties, json),
-          properties,
-          new TranscriptCorrector(llm, json));
+      new ScenarioProperties("qwen3:8b", 600, 16384, 0.4, true, false);
+
+  private final ScenarioStore scenarios = new ScenarioStore(storage, json);
+  private final ExtractHandler handler = handler(properties);
+  private final ExtractHandler parallel =
+      handler(new ScenarioProperties("qwen3:8b", 600, 16384, 0.4, true, true));
   private final StepContext context =
       new StepContext(new ConversationInfo(1L, ID, "u", "ko", 1), Step.EXTRACT, 1, null);
+
+  private ExtractHandler handler(ScenarioProperties p) {
+    return new ExtractHandler(
+        transcripts, scenarios, new LlmJobs(p, json), p, new TranscriptCorrector(llm, json), llm);
+  }
+
+  private static String candidate(String from, String to, String summary) {
+    return "{\"from\":\""
+        + from
+        + "\",\"to\":\""
+        + to
+        + "\",\"peak\":\"p\",\"kind\":\"FUNNY\",\"summary\":\""
+        + summary
+        + "\",\"reason\":\"r\",\"story\":4,\"visual\":4,\"relatable\":4,\"memorable\":4,"
+        + "\"intro\":false,\"concept\":\"DAILY\"}";
+  }
+
+  /** 0분 구간과 10분 구간에 발화가 있는 전사. */
+  private void twoWindows() {
+    List<Transcript.Utterance> lines = new java.util.ArrayList<>();
+    for (int i = 0; i < 12; i++) {
+      lines.add(new Transcript.Utterance(i % 2 == 0 ? "A" : "B", i * 5, i * 5 + 4, "앞 구간 말 " + i));
+    }
+    for (int i = 0; i < 12; i++) {
+      lines.add(
+          new Transcript.Utterance(
+              i % 2 == 0 ? "A" : "B", 600 + i * 5, 604 + i * 5, "뒤 구간 말 " + i));
+    }
+    transcripts.save(ID, new Transcript("ko", List.of("A", "B"), lines));
+  }
+
+  @Test
+  @DisplayName("FR-004: 외부 API를 쓸 수 있으면 10분 구간들을 동시에 불러 후보를 모으고 바로 장면 선택으로 넘어간다")
+  void extractsWindowsAtOnce() {
+    twoWindows();
+    when(llm.available()).thenReturn(true);
+    when(llm.chat(anyString(), contains("(0분부터)"), anyString()))
+        .thenReturn(
+            Optional.of(
+                "{\"candidates\":[" + candidate("00:00", "00:55", "앞 장면") + "],\"names\":[]}"));
+    when(llm.chat(anyString(), contains("(10분부터)"), anyString()))
+        .thenReturn(
+            Optional.of(
+                "{\"candidates\":[" + candidate("10:00", "10:55", "뒤 장면") + "],\"names\":[]}"));
+    when(llm.chat(anyString(), contains("고칠 전사"), anyString()))
+        .thenReturn(Optional.of("{\"fixes\":[]}"));
+
+    assertThat(parallel.start(context)).isInstanceOf(StepOutcome.RunLocal.class);
+    StepOutcome outcome = parallel.runLocal(context);
+
+    assertThat(outcome).isInstanceOf(StepOutcome.Done.class);
+    assertThat(((StepOutcome.Done) outcome).next()).isEqualTo(Step.SELECT);
+    assertThat(scenarios.candidates(ID))
+        .extracting(SceneCandidate::summary)
+        .containsExactly("앞 장면", "뒤 장면");
+  }
+
+  @Test
+  @DisplayName("FR-004: 구간 동시 호출 중 하나라도 실패하면 예전처럼 첫 구간부터 대기열에 넣는다")
+  void fallsBackToQueue() {
+    twoWindows();
+    when(llm.available()).thenReturn(true);
+    when(llm.chat(anyString(), contains("(0분부터)"), anyString()))
+        .thenReturn(Optional.of("{\"candidates\":[],\"names\":[]}"));
+    when(llm.chat(anyString(), contains("(10분부터)"), anyString())).thenReturn(Optional.empty());
+    when(llm.chat(anyString(), contains("고칠 전사"), anyString()))
+        .thenReturn(Optional.of("{\"fixes\":[]}"));
+
+    StepOutcome outcome = parallel.runLocal(context);
+
+    assertThat(outcome).isInstanceOf(StepOutcome.Enqueue.class);
+    assertThat(((StepOutcome.Enqueue) outcome).payload().path("window").asInt()).isZero();
+  }
 
   @BeforeEach
   void setUp() {

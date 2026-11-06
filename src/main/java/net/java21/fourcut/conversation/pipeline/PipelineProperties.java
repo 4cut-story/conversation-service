@@ -16,5 +16,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record PipelineProperties(
     @DefaultValue("90s") Duration leaseTime,
     @DefaultValue("60s") Duration workerSeenWithin,
-    @DefaultValue("5m") Duration localStepTimeout,
+    @DefaultValue("8m") Duration localStepTimeout,
     @DefaultValue("true") boolean preTranscribe) {}
