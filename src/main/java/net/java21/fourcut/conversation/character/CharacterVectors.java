@@ -41,7 +41,7 @@ class CharacterVectors {
       s =
           jdbc.sql(
                   "select udt_schema from information_schema.columns where table_schema ="
-                      + " current_schema() and table_name = 'characters' and column_name ="
+                      + " current_schema() and table_name = 'character_looks' and column_name ="
                       + " 'description_embedding'")
               .query(String.class)
               .optional();
@@ -53,46 +53,48 @@ class CharacterVectors {
     return s;
   }
 
-  void save(String publicId, float[] embedding, String model) {
+  void save(String lookId, float[] embedding, String model) {
     schema()
         .ifPresent(
             s ->
                 jdbc.sql(
-                        "update characters set description_embedding = cast(:v as "
+                        "update character_looks set description_embedding = cast(:v as "
                             + quote(s)
                             + ".vector), embedding_model = :m, updated_at = current_timestamp"
                             + " where public_id = :id")
                     .param("v", literal(embedding))
                     .param("m", model)
-                    .param("id", publicId)
+                    .param("id", lookId)
                     .update());
   }
 
-  /** 임베딩이 없는 캐릭터의 공개 ID. */
+  /** 임베딩이 없는 활성 캐릭터의 기본 표정 모습 공개 ID. */
   List<String> missing() {
     if (!available()) {
       return List.of();
     }
     return jdbc.sql(
-            "select public_id from characters where active and description_embedding is null"
-                + " order by id")
+            "select l.public_id from character_looks l join characters c on c.id = l.character_id"
+                + " where c.active and l.expression = 'NEUTRAL' and l.description_embedding is null"
+                + " order by l.id")
         .query(String.class)
         .list();
   }
 
-  /** 가까운 순 후보 (활성, 같은 컨셉 또는 컨셉 없음). */
+  /** 가까운 순 후보: 활성 캐릭터의 그 컨셉 기본 표정 모습. 캐릭터 하나에 모습 하나만 나온다. */
   List<Nearest> nearest(float[] query, String concept) {
     return schema()
         .map(
             s ->
                 jdbc.sql(
-                        "select public_id, description_embedding operator("
+                        "select l.public_id, l.description_embedding operator("
                             + quote(s)
                             + ".<=>) cast(:v as "
                             + quote(s)
-                            + ".vector) as distance from characters where active and"
-                            + " description_embedding is not null and (concept is null or concept"
-                            + " = :c) order by distance limit "
+                            + ".vector) as distance from character_looks l join characters c on"
+                            + " c.id = l.character_id where c.active and l.expression = 'NEUTRAL'"
+                            + " and l.description_embedding is not null and l.concept = :c"
+                            + " order by distance limit "
                             + CANDIDATES)
                     .param("v", literal(query))
                     .param("c", concept == null ? "DAILY" : concept)
