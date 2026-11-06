@@ -11,8 +11,6 @@ interface StoryCharacterRepository extends JpaRepository<StoryCharacter, Long> {
 
   List<StoryCharacter> findByActiveTrueAndNameIn(Collection<String> names);
 
-  List<StoryCharacter> findByPublicIdIn(Collection<String> publicIds);
-
   boolean existsByName(String name);
 
   List<StoryCharacter> findAllByOrderByIdAsc();

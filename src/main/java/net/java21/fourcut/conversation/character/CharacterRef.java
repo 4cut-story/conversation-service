@@ -3,7 +3,7 @@ package net.java21.fourcut.conversation.character;
 /**
  * 콘티 인물에 맞춘 캐릭터.
  *
- * @param publicId 캐릭터 공개 ID
+ * @param publicId 캐릭터 모습 공개 ID (컨셉·표정별 그림 하나)
  * @param name 캐릭터 이름
  * @param look 그림용 영어 외모. 참조 그림과 맞도록 콘티 외모 대신 쓴다
  * @param scale IP-Adapter 강도 (0~1)
