@@ -171,6 +171,33 @@ class ExtractCorrectionTest {
   }
 
   /** 메모리 객체 저장소. */
+  @Test
+  @DisplayName("FR-004: 구간이 하나뿐인 짧은 대화에서 후보가 없으면 한 번 더 물어 가장 나은 장면 하나를 받는다")
+  void shortTalkAsksAgain() {
+    List<Transcript.Utterance> lines = new java.util.ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      lines.add(new Transcript.Utterance(i % 2 == 0 ? "A" : "B", i * 4, i * 4 + 3, "짧은 말 " + i));
+    }
+    transcripts.save(ID, new Transcript("ko", List.of("A", "B"), lines));
+    when(llm.available()).thenReturn(true);
+    when(llm.chat(anyString(), contains("(0분부터)"), anyString()))
+        .thenReturn(Optional.of("{\"candidates\":[],\"names\":[]}"));
+    when(llm.chat(anyString(), contains("가장 나은 장면 하나"), anyString()))
+        .thenReturn(
+            Optional.of(
+                "{\"candidates\":[" + candidate("00:00", "00:20", "짧은 장면") + "],\"names\":[]}"));
+    when(llm.chat(anyString(), contains("고칠 전사"), anyString()))
+        .thenReturn(Optional.of("{\"fixes\":[]}"));
+
+    parallel.start(context);
+    StepOutcome outcome = parallel.runLocal(context);
+
+    assertThat(outcome).isInstanceOf(StepOutcome.Done.class);
+    assertThat(scenarios.candidates(ID))
+        .extracting(SceneCandidate::summary)
+        .containsExactly("짧은 장면");
+  }
+
   static class MemoryStorage implements ObjectStorage {
     private final Map<String, byte[]> objects = new HashMap<>();
 

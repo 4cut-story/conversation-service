@@ -40,6 +40,10 @@ class ExtractHandler implements StepHandler {
   /** 구간 동시 호출의 시간 한도. 교정(3분)과 합쳐 서버 단계 시간 초과(pipeline.local-step-timeout) 안에 끝나게 한다. */
   static final Duration DIRECT_TIME = Duration.ofMinutes(3);
 
+  /** 구간이 하나뿐인 짧은 대화에서 후보가 없을 때 다시 물으며 붙이는 말. */
+  static final String SHORT_HINT =
+      "\n\n이 대화는 사용자가 만화로 만들려고 따로 녹음한 짧은 대화다. 빈 목록 대신 이 안에서 가장 나은 장면 하나를 고른다.";
+
   private final TranscriptStore transcripts;
   private final ScenarioStore store;
   private final LlmJobs llm;
@@ -134,6 +138,20 @@ class ExtractHandler implements StepHandler {
     store.saveNames(id, List.of());
     for (int i = 0; i < windows.size(); i++) {
       absorb(id, transcript, windows.get(i), results.get(i).orElseThrow());
+    }
+    if (windows.size() == 1 && store.candidates(id).isEmpty()) {
+      // 짧은 녹음은 사용자가 만화로 만들려고 고른 장면이다. "특별한 순간이 없으면 빈 목록" 규칙에 걸려 30초짜리 웃긴 대화도
+      // 장면 없음으로 끝났다(office-13, office-16). 한 번만 다시 물어 가장 나은 장면 하나를 받는다
+      int w = windows.get(0);
+      Optional<String> again =
+          direct.chat(
+              Prompts.EXTRACT_SYSTEM.strip(),
+              prompt(transcript, w) + SHORT_HINT,
+              Prompts.EXTRACT_SCHEMA);
+      if (again.isPresent()) {
+        absorb(id, transcript, w, llm.parse(again.get()));
+        log.info("짧은 대화라 장면을 다시 물었다: 후보 {}개, conversation={}", store.candidates(id).size(), id);
+      }
     }
     log.info(
         "장면 추출: 구간 {}개를 동시에 처리 {}ms, conversation={}",
