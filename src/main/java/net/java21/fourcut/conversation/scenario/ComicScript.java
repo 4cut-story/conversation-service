@@ -49,12 +49,40 @@ public record ComicScript(
    * @param name 말풍선에 보이는 가명 (예: 민지). 예전 콘티에는 없을 수 있다
    * @param persona 한 줄 인물 설정
    * @param look 그림용 영어 외모
+   * @param role 대사와 말풍선에서 이 인물을 부르는 호칭(할머니, 손녀, 친구…). 예전 콘티에는 없다
+   * @param lookId 그림 단계에서 찾은 캐릭터 모습 공개 ID. 못 찾았거나 그리기 전이면 null
    */
-  public record Character(String speaker, String name, String persona, String look) {
+  public record Character(
+      String speaker, String name, String persona, String look, String role, String lookId) {
 
-    /** 말풍선에 쓰는 이름. 가명이 없으면 화자 표시. */
+    public Character(String speaker, String name, String persona, String look) {
+      this(speaker, name, persona, look, null, null);
+    }
+
+    /** 등장인물 이름(가명, 그림 단계 뒤에는 캐릭터 이름). 이름이 없으면 화자 표시. */
     public String displayName() {
       return name == null || name.isBlank() ? speaker : name.strip();
+    }
+
+    /** 말풍선 앞과 대사에서 부르는 말: 호칭, 없으면(예전 콘티) 이름. */
+    public String callName() {
+      return role == null || role.isBlank() ? displayName() : role.strip();
+    }
+
+    public Character withName(String newName) {
+      return new Character(speaker, newName, persona, look, role, lookId);
+    }
+
+    public Character withLook(String newLook) {
+      return new Character(speaker, name, persona, newLook, role, lookId);
+    }
+
+    public Character withRole(String newRole) {
+      return new Character(speaker, name, persona, look, newRole, lookId);
+    }
+
+    public Character withLookId(String newLookId) {
+      return new Character(speaker, name, persona, look, role, newLookId);
     }
   }
 
@@ -137,6 +165,68 @@ public record ComicScript(
         .collect(
             Collectors.toMap(
                 Character::speaker, Character::displayName, (a, b) -> a, HashMap::new));
+  }
+
+  /** 등장인물만 바꾼 콘티. */
+  public ComicScript withCharacters(List<Character> cast) {
+    return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
+  }
+
+  /** 화자 표시 → 말풍선 앞에 붙는 호칭(호칭이 없는 예전 콘티는 이름). */
+  public Map<String, String> callNames() {
+    return characters.stream()
+        .collect(
+            Collectors.toMap(Character::speaker, Character::callName, (a, b) -> a, HashMap::new));
+  }
+
+  /** 호칭으로 쓰기에 너무 길면 버린다(이름으로 부른다). */
+  static final int MAX_ROLE_CHARS = 8;
+
+  /**
+   * 대사·제목에서 인물을 이름 대신 호칭(role)으로 부른다. 이름은 만화 아래 등장인물 소개에만 쓴다. 호칭은 다듬고, 겹치면 뒤 인물에 번호를 붙인다("친구",
+   * "친구2"). 대사(text)와 제목 속 이름은 호칭으로 바꾸고 조사를 맞춘다("하늘아" → "할머니", "하늘이가" → "손녀가"). 원문(quote)은 대조용이라
+   * 그대로 둔다. 호칭이 없는 인물은 그대로다.
+   */
+  public ComicScript withRoleCalls() {
+    if (characters == null) {
+      return this;
+    }
+    Set<String> used = new HashSet<>();
+    List<Character> cast = new java.util.ArrayList<>();
+    Map<String, String> calls = new java.util.LinkedHashMap<>();
+    for (Character c : characters) {
+      String role = cleanRole(c.role());
+      if (role != null) {
+        String base = role;
+        for (int n = 2; !used.add(role); n++) {
+          role = base + n;
+        }
+        if (!c.displayName().equals(c.speaker())) {
+          calls.put(c.displayName(), role);
+        }
+      }
+      cast.add(java.util.Objects.equals(role, c.role()) ? c : c.withRole(role));
+    }
+    UnaryOperator<String> f = t -> CastNames.toRoles(t, calls);
+    List<Panel> fixed =
+        calls.isEmpty()
+            ? panels
+            : mapLines(l -> new Line(l.speaker(), f.apply(l.text()), l.quote()));
+    String called = calls.isEmpty() ? title : f.apply(title);
+    if (cast.equals(characters)
+        && fixed.equals(panels)
+        && java.util.Objects.equals(called, title)) {
+      return this;
+    }
+    return new ComicScript(called, cast, fixed, reviewed, nameWarnings, concept);
+  }
+
+  private static String cleanRole(String role) {
+    if (role == null) {
+      return null;
+    }
+    String r = role.strip().replaceAll("[\\s\"'.,:!?~]+$", "").strip();
+    return r.isEmpty() || r.length() > MAX_ROLE_CHARS ? null : r;
   }
 
   /** 화자 표시 → 인물. */
@@ -267,7 +357,7 @@ public record ComicScript(
                   if (c.name() != null && !c.name().isBlank() && !c.name().strip().equals(name)) {
                     rename.put(c.name().strip(), name);
                   }
-                  return new Character(c.speaker(), name, c.persona(), c.look());
+                  return c.withName(name);
                 })
             .toList();
     List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
@@ -299,8 +389,7 @@ public record ComicScript(
             .map(
                 c ->
                     rename.containsKey(c.displayName())
-                        ? new Character(
-                            c.speaker(), rename.get(c.displayName()), c.persona(), c.look())
+                        ? c.withName(rename.get(c.displayName()))
                         : c)
             .toList();
     List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
@@ -473,9 +562,7 @@ public record ComicScript(
       String look = c.look() == null ? "" : c.look().strip();
       int comma = look.indexOf(',');
       String rest = comma < 0 ? "" : look.substring(comma);
-      cast.add(
-          new Character(
-              c.speaker(), c.name(), c.persona(), animals.get(i % animals.size()) + rest));
+      cast.add(c.withLook(animals.get(i % animals.size()) + rest));
     }
     return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
   }
@@ -509,7 +596,7 @@ public record ComicScript(
       if (!from.equals(c.speaker())) {
         rename.put(from, to.strip());
       }
-      cast.add(new Character(c.speaker(), to.strip(), c.persona(), c.look()));
+      cast.add(c.withName(to.strip()));
     }
     if (rename.isEmpty() && cast.equals(characters)) {
       return this;

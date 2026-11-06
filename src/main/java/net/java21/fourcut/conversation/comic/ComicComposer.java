@@ -84,7 +84,7 @@ public class ComicComposer {
           (WIDTH - fm.stringWidth(title)) / 2,
           MARGIN + TITLE_HEIGHT / 2 + fm.getAscent() / 2 - 6);
       int y = MARGIN + TITLE_HEIGHT;
-      Map<String, String> names = script.displayNames();
+      Map<String, String> names = script.callNames();
       List<Map<String, Staging.Side>> stages = Staging.panels(script);
       for (int i = 0; i < panels.size(); i++) {
         g.drawImage(panels.get(i), MARGIN, y, PANEL, PANEL, null);
@@ -209,7 +209,7 @@ public class ComicComposer {
     return cut.strip() + "…";
   }
 
-  /** 말풍선 글: "이름: 대사". LLM이 대사 앞에 화자("A:", "민지:")를 붙여 내도 한 번만 보이게 지운다. */
+  /** 말풍선 글: "호칭: 대사"(호칭이 없는 예전 콘티는 "이름: 대사"). LLM이 대사 앞에 화자("A:", "민지:")를 붙여 내도 한 번만 보이게 지운다. */
   static String bubbleText(String name, ComicScript.Line line) {
     String text = line.text().strip();
     boolean stripped = true;

@@ -54,6 +54,26 @@ final class CastNames {
    * @param names 옛 이름 → 새 이름
    */
   static String rename(String text, Map<String, String> names) {
+    return replace(text, names, false);
+  }
+
+  /** 높여 부르는 호칭은 부를 때 "아/야"를 붙이지 않는다("하늘아" → "할머니"). */
+  private static final List<String> NO_VOCATIVE =
+      List.of(
+          "님", "머니", "버지", "엄마", "아빠", "언니", "오빠", "누나", "형", "이모", "고모", "삼촌", "선배", "사장", "선생",
+          "부장", "과장", "팀장", "대리", "아저씨", "아줌마", "할매", "할배");
+
+  /**
+   * 글 속 이름을 호칭으로 바꾼다("하늘아" → "할머니", "하늘이가" → "손녀가", "하늘은" → "형은"). 이름 뒤 구어체 "이"는 버리고 조사는 호칭의 받침에
+   * 맞춘다. 높여 부르는 호칭({@link #NO_VOCATIVE})은 부르는 "아/야"를 뺀다.
+   *
+   * @param roles 이름 → 호칭
+   */
+  static String toRoles(String text, Map<String, String> roles) {
+    return replace(text, roles, true);
+  }
+
+  private static String replace(String text, Map<String, String> names, boolean roles) {
     if (text == null || names.isEmpty()) {
       return text;
     }
@@ -79,7 +99,10 @@ final class CastNames {
       }
       String to = names.get(from);
       out.append(to);
-      i = afterName(text, i + from.length(), RealNames.hasFinal(from), to, out);
+      i =
+          roles
+              ? afterRole(text, i + from.length(), RealNames.hasFinal(from), to, out)
+              : afterName(text, i + from.length(), RealNames.hasFinal(from), to, out);
     }
     return out.toString();
   }
@@ -104,6 +127,28 @@ final class CastNames {
       }
     }
     return j;
+  }
+
+  /** 이름 바로 뒤(j)의 구어체 "이"를 버리고, 조사는 호칭 to에 맞춘다. 높여 부르는 호칭이면 부르는 "아/야"를 뺀다. */
+  private static int afterRole(
+      String text, int j, boolean fromFinal, String to, StringBuilder out) {
+    int at = j;
+    if (fromFinal
+        && at + 1 < text.length()
+        && text.charAt(at) == '이'
+        && AFTER_FILLER.indexOf(text.charAt(at + 1)) >= 0) {
+      at++;
+    }
+    boolean toFinal = RealNames.hasFinal(to);
+    for (String[] p : PARTICLES) {
+      String found = text.startsWith(p[0], at) ? p[0] : text.startsWith(p[1], at) ? p[1] : null;
+      if (found != null) {
+        boolean dropVocative = "아".equals(p[0]) && NO_VOCATIVE.stream().anyMatch(to::endsWith);
+        out.append(dropVocative ? "" : particle(p, to, toFinal));
+        return at + found.length();
+      }
+    }
+    return at;
   }
 
   private static String particle(String[] p, String to, boolean toFinal) {
