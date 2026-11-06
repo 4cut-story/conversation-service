@@ -81,11 +81,13 @@ public enum Concept {
       "어린이 그림책",
       "children's picture book, crayon and colored pencil drawing, simple shapes, white paper",
       "",
-      "children",
+      "people",
       "another child",
       """
-      그림용 영어 6단어 이내. "little girl", "little boy"로 시작하고 머리 하나와 옷 하나를 색과 함께 쓴다
-        (예: "little girl, pigtails, red dress"). 인물끼리 머리 모양·옷 색이 모두 달라야 한다.\
+      그림용 영어 6단어 이내. 아이는 "little girl", "little boy"로 시작하고, 선생님·엄마·아빠 같은 어른은
+        "woman", "man", 할머니·할아버지는 "old woman", "old man"으로 시작한다. 머리 하나와 옷 하나를 색과 함께
+        쓴다(예: "little girl, pigtails, red dress", "woman, brown bun, green apron"). 인물끼리 머리 모양·옷 색이
+        모두 달라야 한다.\
       """,
       """
       너는 아이들이 소리 내어 읽는 그림책 작가다. 어떤 이야기든 아이가 바로 알아듣는 쉽고 다정한 말로
