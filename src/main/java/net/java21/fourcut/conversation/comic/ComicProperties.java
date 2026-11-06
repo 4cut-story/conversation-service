@@ -32,7 +32,7 @@ public record ComicProperties(
       "simple cartoon, thick outlines, flat colors, simple background";
 
   public static final String DEFAULT_NEGATIVE =
-      "text, letters, watermark, speech bubble, comic panels, multiple panels, grid, collage,"
-          + " split screen, picture frame, border, photo, realistic, 3d, cluttered background,"
+      "text, letters, watermark, signature, logo, speech bubble, comic panels, multiple panels,"
+          + " grid, collage, split screen, picture frame, border, photo, realistic, 3d, cluttered background,"
           + " nsfw, extra fingers, deformed";
 }
