@@ -167,11 +167,12 @@ class DrawHandler implements StepHandler {
     // 여럿이 나오는 컷은 medium으로 그린다.
     String kind = people >= 2 && "close-up".equals(panel.shot()) ? "medium" : panel.shot();
     String shot = kind == null ? "" : kind.replace('-', ' ') + " shot, ";
+    String who = people >= 2 && stage.size() >= 2 ? who(stage, looks, concept) : null;
     String count =
         people >= 2
-            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1)
-                + " "
-                + concept.crowd()
+            ? (who != null
+                    ? who
+                    : COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd())
                 + ", "
                 + SIDE_BY_SIDE
                 + ", "
@@ -207,6 +208,49 @@ class DrawHandler implements StepHandler {
   static String setting(ComicScript.Panel panel) {
     String s = panel.setting();
     return s == null || s.isBlank() ? "" : ", " + s.strip();
+  }
+
+  private static final java.util.regex.Pattern PERSON =
+      java.util.regex.Pattern.compile("(?:(young|old|little) )?(woman|man|girl|boy)");
+
+  /**
+   * 사람 컨셉에서 인물 모두의 외모 첫 마디가 나이·성별이면 "two people" 대신 그 사람들로 센다("two young women", "a young woman and
+   * an old man", 왼쪽부터). "two people"은 남녀 한 쌍으로 그리는 버릇이 있어, 여자 둘이 나오는 컷에서 한 명이 남자로 그려졌다(office-11,
+   * office-15). 셀 수 없으면 null.
+   */
+  static String who(Map<String, Staging.Side> stage, Map<String, String> looks, Concept concept) {
+    if (!"people".equals(concept.crowd())) {
+      return null;
+    }
+    List<String> heads = new ArrayList<>();
+    for (Staging.Side side : List.of(Staging.Side.LEFT, Staging.Side.CENTER, Staging.Side.RIGHT)) {
+      for (Map.Entry<String, Staging.Side> e : stage.entrySet()) {
+        if (e.getValue() == side && looks.containsKey(e.getKey())) {
+          heads.add(looks.get(e.getKey()).split(",")[0].strip().toLowerCase(java.util.Locale.ROOT));
+        }
+      }
+    }
+    if (heads.size() < 2 || heads.size() > COUNTS.size()) {
+      return null;
+    }
+    for (String h : heads) {
+      if (!PERSON.matcher(h).matches()) {
+        return null;
+      }
+    }
+    if (heads.stream().distinct().count() == 1) {
+      String h = heads.get(0);
+      String plural =
+          h.endsWith("woman")
+              ? h.replaceAll("woman$", "women")
+              : h.endsWith("man") ? h.replaceAll("man$", "men") : h + "s";
+      return COUNTS.get(heads.size() - 1) + " " + plural;
+    }
+    List<String> each = new ArrayList<>();
+    for (String h : heads) {
+      each.add((h.matches("^[aeiou].*") ? "an " : "a ") + h);
+    }
+    return String.join(", ", each.subList(0, each.size() - 1)) + " and " + each.getLast();
   }
 
   /**
