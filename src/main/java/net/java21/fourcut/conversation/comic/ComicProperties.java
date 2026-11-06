@@ -22,7 +22,7 @@ public record ComicProperties(
     @DefaultValue(DEFAULT_NEGATIVE) String negativePrompt,
     @DefaultValue("http://localhost:8083") String contentUrl,
     @DefaultValue("0.2") double ipEarlyScale,
-    @DefaultValue("3") int ipEarlySteps,
+    @DefaultValue("2") int ipEarlySteps,
     @DefaultValue("0.2") double ipLateBoost) {
 
   public static final int DEFAULT_IMAGE_SIZE = 768;
