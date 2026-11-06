@@ -221,7 +221,7 @@ class ExtractHandler implements StepHandler {
       if (w > after) {
         ObjectNode extra = llm.object();
         extra.put("window", w);
-        long seed = (long) context.conversation().publicId().hashCode() + w + context.attempt();
+        long seed = transcript.seed() + w + context.attempt();
         return llm.job(
             Prompts.EXTRACT_SYSTEM,
             prompt(transcript, w),

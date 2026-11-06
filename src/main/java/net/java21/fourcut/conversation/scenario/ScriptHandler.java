@@ -46,13 +46,10 @@ class ScriptHandler implements StepHandler {
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
     SceneCandidate scene = chosen(id);
+    Transcript transcript = transcripts.load(id);
     String prompt =
-        prompt(
-            transcripts.load(id),
-            scene,
-            id.hashCode(),
-            RealNames.whose(store.names(id), transcripts.load(id)));
-    long seed = (long) id.hashCode() + context.attempt();
+        prompt(transcript, scene, transcript.seed(), RealNames.whose(store.names(id), transcript));
+    long seed = transcript.seed() + context.attempt();
     return llm.job(
         Prompts.scriptSystem(concept(context, scene), Dialect.of(context.conversation().dialect())),
         prompt,
@@ -122,7 +119,7 @@ class ScriptHandler implements StepHandler {
   public StepOutcome onResult(StepContext context, JsonNode result) {
     String id = context.conversation().publicId();
     Transcript transcript = transcripts.load(id);
-    Map<String, String> cast = cast(transcript, id.hashCode());
+    Map<String, String> cast = cast(transcript, transcript.seed());
     Map<String, String> rename =
         RealNames.replacements(RealNames.whose(store.names(id), transcript), cast);
     List<String> source = SpokenLines.sentences(RealNames.apply(spoken(transcript), rename));
@@ -156,7 +153,7 @@ class ScriptHandler implements StepHandler {
             .withRoleCalls()
             .withConcept(concept);
     if (concept == Concept.ANIMALS) {
-      script = script.withAnimals(animals(id.hashCode()));
+      script = script.withAnimals(animals(transcript.seed()));
     }
     String violation = script.violation();
     if (violation != null) {
