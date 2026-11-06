@@ -123,8 +123,8 @@ class DrawHandler implements StepHandler {
   /**
    * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 인원 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾸고, 두 명
    * 이상이면 "two people"(컨셉별 crowd)을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"(컨셉별
-   * friend)로 바꾼다. 자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다. 두 명이 나오는 컷은 인물이 처음 나오는 곳에 "on the left"/"on the
-   * right"를 붙여 IP-Adapter 마스크·말풍선과 같은 자리에 세운다({@link Staging}).
+   * friend)로 바꾼다. 자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다. 두 명 이상 나오는 컷은 장면 앞에 인물 줄(왼쪽부터 외모 + 자리)을 두고 장면 문장의
+   * 인물은 짧은 이름으로 쓴다({@link #lineup}). IP-Adapter 마스크·말풍선과 같은 자리다({@link Staging}).
    */
   static String prompt(String style, ComicScript script, ComicScript.Panel panel) {
     return prompt(style, script, panel, Staging.panel(script, panel));
@@ -137,24 +137,26 @@ class DrawHandler implements StepHandler {
     boolean legacy = !scene.contains("{");
     StringBuilder cast = new StringBuilder();
     int people = 0;
+    Map<String, String> looks = new java.util.HashMap<>();
     for (ComicScript.Character c : script.characters()) {
       String mark = "{" + c.speaker() + "}";
       if (legacy) {
         cast.append("; ").append(c.look().strip());
       } else if (scene.contains(mark)) {
         people++;
-        String look = "(" + c.look().strip() + ")";
-        Staging.Side side = stage.get(c.speaker());
-        String where =
-            side == Staging.Side.CENTER && stage.size() > 2
-                ? " in the middle"
-                : WHERE.getOrDefault(side, "");
-        int at = scene.indexOf(mark);
-        scene =
-            scene.substring(0, at)
-                + look
-                + where
-                + scene.substring(at + mark.length()).replace(mark, look);
+        looks.put(c.speaker(), c.look().strip());
+      }
+    }
+    String lineup = "";
+    if (people >= 2 && stage.size() >= 2) {
+      lineup = lineup(stage, looks);
+      Map<String, String> heads = heads(stage, looks);
+      for (Map.Entry<String, String> e : heads.entrySet()) {
+        scene = scene.replace("{" + e.getKey() + "}", e.getValue());
+      }
+    } else {
+      for (Map.Entry<String, String> e : looks.entrySet()) {
+        scene = scene.replace("{" + e.getKey() + "}", "(" + e.getValue() + ")");
       }
     }
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
@@ -163,8 +165,56 @@ class DrawHandler implements StepHandler {
         people >= 2
             ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
             : "";
-    return style + ", " + shot + count + scene + cast;
+    return style + ", " + shot + count + lineup + scene + cast;
   }
+
+  /**
+   * 두 명 이상 컷의 인물 줄: 왼쪽 → 가운데 → 오른쪽 순서로 외모와 자리를 먼저 적는다. SDXL은 "on the left" 같은 위치 낱말보다 먼저 나온 인물을 왼쪽에
+   * 그리는 경향이 커서, 장면 문장 순서대로 외모를 넣으면 오른쪽 인물이 왼쪽에 그려져 IP-Adapter 마스크(그 자리의 캐릭터 얼굴)가 다른 인물에 씌워졌다.
+   */
+  static String lineup(Map<String, Staging.Side> stage, Map<String, String> looks) {
+    StringBuilder out = new StringBuilder();
+    for (Staging.Side side : List.of(Staging.Side.LEFT, Staging.Side.CENTER, Staging.Side.RIGHT)) {
+      stage.forEach(
+          (who, s) -> {
+            if (s == side && looks.containsKey(who)) {
+              out.append('(')
+                  .append(looks.get(who))
+                  .append(')')
+                  .append(PLACE.get(side))
+                  .append(", ");
+            }
+          });
+    }
+    return out.toString();
+  }
+
+  /**
+   * 장면 문장에서 인물 표시를 짧은 이름(외모 첫 마디, "the old woman")으로 바꾼다. 외모는 인물 줄에 한 번만 적어 77토큰을 아낀다. 첫 마디가 같은 인물이
+   * 있으면 자리를 붙인다("the woman on the left").
+   */
+  static Map<String, String> heads(Map<String, Staging.Side> stage, Map<String, String> looks) {
+    Map<String, String> head = new java.util.LinkedHashMap<>();
+    looks.forEach((who, look) -> head.put(who, look.split(",")[0].strip()));
+    Map<String, String> out = new java.util.LinkedHashMap<>();
+    head.forEach(
+        (who, h) -> {
+          long same = head.values().stream().filter(h::equalsIgnoreCase).count();
+          Staging.Side side = stage.get(who);
+          String place = same > 1 && side != null ? PLACE.get(side) : "";
+          out.put(who, "the " + h + place);
+        });
+    return out;
+  }
+
+  private static final Map<Staging.Side, String> PLACE =
+      Map.of(
+          Staging.Side.LEFT,
+          " on the left",
+          Staging.Side.CENTER,
+          " in the middle",
+          Staging.Side.RIGHT,
+          " on the right");
 
   /** 캐릭터 DB에서 찾을 콘티 인물. */
   static List<CharacterLibrary.Wanted> wanted(ComicScript script) {
@@ -209,10 +259,6 @@ class DrawHandler implements StepHandler {
 
   /** IP-Adapter 참조는 한 컷에 두 명까지 (두 명이면 왼쪽·오른쪽 마스크). */
   static final int MAX_REFERENCES = 2;
-
-  /** 프롬프트 위치 문구. 가운데(혼자)는 붙이지 않는다. */
-  private static final Map<Staging.Side, String> WHERE =
-      Map.of(Staging.Side.LEFT, " on the left", Staging.Side.RIGHT, " on the right");
 
   /**
    * 컷에 나오는 인물 중 캐릭터를 찾은 인물의 참조. 자리는 {@link Staging}이 정한다: 한 만화 안에서 같은 인물은 늘 같은 쪽에 서고, 혼자면 전체다. 참조가

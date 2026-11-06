@@ -36,14 +36,14 @@ class DrawPromptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 두 명이 나오는 컷은 two people을 넣고, 없는 인물 자리 표시는 a friend로 바꾼다")
+  @DisplayName("FR-006: 두 명이 나오는 컷은 two people과 왼쪽부터 인물 줄을 넣고, 장면은 짧은 이름으로 쓴다. 없는 인물은 a friend다")
   void twoPeople() {
     var panel =
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, close up shot, two people, (boy, glasses) on the right looks at (girl, bob hair) on the left,"
-                + " a friend waits, cafe");
+            "s, close up shot, two people, (girl, bob hair) on the left, (boy, glasses) on the right,"
+                + " the boy looks at the girl, a friend waits, cafe");
   }
 
   @Test
@@ -56,8 +56,8 @@ class DrawPromptTest {
                 script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS),
                 panel))
         .isEqualTo(
-            "bugs, wide shot, two animal characters, no humans, (girl, bob hair) on the left and"
-                + " (boy, glasses) on the right talk, another animal waits, cafe");
+            "bugs, wide shot, two animal characters, no humans, (girl, bob hair) on the left,"
+                + " (boy, glasses) on the right, the girl and the boy talk, another animal waits, cafe");
   }
 
   @Test
@@ -72,12 +72,42 @@ class DrawPromptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 같은 인물이 장면에 여러 번 나오면 위치 문구는 처음 한 번만 붙인다")
-  void positionOnce() {
-    var panel = new ComicScript.Panel("승", "medium", "{A} waves at {B}, {A} smiles", List.of());
-    assertThat(DrawHandler.prompt("s", script, panel))
+  @DisplayName("FR-006: 외모 첫 마디가 같은 두 인물은 장면에서도 자리를 붙여 구분한다")
+  void sameHead() {
+    ComicScript twins =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "민지", "", "young woman, bob hair"),
+                new ComicScript.Character("B", "하린", "", "young woman, ponytail")),
+            List.of(),
+            true,
+            List.of());
+    var panel = new ComicScript.Panel("승", "medium", "{B} hugs {A}, {B} smiles", List.of());
+    assertThat(DrawHandler.prompt("s", twins, panel))
         .isEqualTo(
-            "s, medium shot, two people, (girl, bob hair) on the left waves at (boy, glasses) on the right,"
-                + " (girl, bob hair) smiles");
+            "s, medium shot, two people, (young woman, bob hair) on the left, (young woman, ponytail)"
+                + " on the right, the young woman on the right hugs the young woman on the left,"
+                + " the young woman on the right smiles");
+  }
+
+  @Test
+  @DisplayName("FR-006: 세 명이 나오는 컷의 인물 줄은 왼쪽, 가운데, 오른쪽 순서다")
+  void three() {
+    ComicScript trio =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "민지", "", "girl"),
+                new ComicScript.Character("B", "도윤", "", "boy"),
+                new ComicScript.Character("C", "하준", "", "old man")),
+            List.of(),
+            true,
+            List.of());
+    var panel = new ComicScript.Panel("전", "wide", "{C} scolds {B} and {A}", List.of());
+    assertThat(DrawHandler.prompt("s", trio, panel))
+        .isEqualTo(
+            "s, wide shot, three people, (girl) on the left, (old man) in the middle, (boy) on the right,"
+                + " the old man scolds the boy and the girl");
   }
 }
