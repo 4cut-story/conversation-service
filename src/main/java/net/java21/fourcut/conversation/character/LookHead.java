@@ -167,6 +167,32 @@ record LookHead(String animal, String gender, String age) {
     return new LookHead(animal, g, a);
   }
 
+  /**
+   * 성별 없이 시작하는 모습 문구 앞에 캐릭터 DB 성별·나이대 명사("boy", "old woman")를 붙인다. 동물이거나 이미 성별이 있거나 DB 성별을 모르면 그대로
+   * 둔다. "curly brown hair, white hoodie"인 오빠가 그림책 컷에서 양 갈래 머리 여자아이로 그려졌다.
+   */
+  static String withNoun(String look, String dbGender, String dbAge) {
+    String l = look == null ? "" : look.strip();
+    LookHead h = of(l);
+    if (h.animal != null || h.gender != null || dbGender == null) {
+      return l;
+    }
+    boolean f = "FEMALE".equals(dbGender);
+    if (!f && !"MALE".equals(dbGender)) {
+      return l;
+    }
+    String age = dbAge == null ? "" : dbAge;
+    String noun =
+        switch (age) {
+          case "CHILD" -> f ? "girl" : "boy";
+          case "YOUNG" -> f ? "young woman" : "young man";
+          case "MIDDLE" -> f ? "middle-aged woman" : "middle-aged man";
+          case "OLD" -> f ? "old woman" : "old man";
+          default -> f ? "woman" : "man";
+        };
+    return l.isEmpty() ? noun : noun + ", " + l;
+  }
+
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */
   boolean accepts(LookHead other) {
     if (animal != null || other.animal != null) {

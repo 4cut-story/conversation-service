@@ -84,4 +84,18 @@ class LookHeadTest {
     assertThat(CharacterLibrary.drawLook("blue hoodie", null)).isEqualTo("blue hoodie");
     assertThat(CharacterLibrary.drawLook(null, "old man")).isEqualTo("old man");
   }
+
+  @Test
+  @DisplayName("REQ-018: 성별 없이 시작하는 캐릭터 외모에는 DB 성별·나이대 명사를 붙인다")
+  void withNoun() {
+    assertThat(LookHead.withNoun("curly brown hair, white hoodie", "MALE", "CHILD"))
+        .isEqualTo("boy, curly brown hair, white hoodie");
+    assertThat(LookHead.withNoun("gray bun, green apron", "FEMALE", "OLD"))
+        .isEqualTo("old woman, gray bun, green apron");
+    assertThat(LookHead.withNoun("navy suit", "MALE", null)).isEqualTo("man, navy suit");
+    assertThat(LookHead.withNoun("young woman, red bob", "MALE", "OLD"))
+        .isEqualTo("young woman, red bob");
+    assertThat(LookHead.withNoun("fox, red scarf", "FEMALE", "CHILD")).isEqualTo("fox, red scarf");
+    assertThat(LookHead.withNoun("navy suit", null, "OLD")).isEqualTo("navy suit");
+  }
 }
