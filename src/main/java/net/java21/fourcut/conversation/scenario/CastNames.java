@@ -73,7 +73,8 @@ final class CastNames {
         }
       }
       if (from == null) {
-        out.append(text.charAt(i++));
+        out.append(text.charAt(i));
+        i++;
         continue;
       }
       String to = names.get(from);
