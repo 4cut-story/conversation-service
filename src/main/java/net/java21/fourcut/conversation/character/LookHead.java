@@ -99,8 +99,22 @@ record LookHead(String animal, String gender, String age) {
             .filter(Objects::nonNull)
             .findFirst()
             .orElse(null);
-    return new LookHead(animal, gender(t), age(t));
+    String age = age(t);
+    if (age == null || "ADULT".equals(age)) {
+      // 첫 마디에 나이가 없어도("woman, gray hair bun") 뒤쪽에 노인 표시가 있으면 노인으로 본다
+      Set<String> all =
+          Arrays.stream(look.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}-]+"))
+              .filter(x -> !x.isEmpty())
+              .collect(Collectors.toSet());
+      if (any(all, OLD) || any(all, WRINKLES) || (any(all, GRAY) && all.contains("hair"))) {
+        age = "OLD";
+      }
+    }
+    return new LookHead(animal, gender(t), age);
   }
+
+  private static final Set<String> WRINKLES = Set.of("wrinkles", "wrinkled", "wrinkly");
+  private static final Set<String> GRAY = Set.of("gray", "grey", "silver", "white");
 
   private static String gender(Set<String> t) {
     if (any(t, FEMALE)) {

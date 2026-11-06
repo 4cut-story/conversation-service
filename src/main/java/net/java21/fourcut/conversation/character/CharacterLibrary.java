@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 캐릭터 DB (REQ-018). 캐릭터 한 명은 컨셉(테마)·표정마다 모습(외모 문구 + 참조 그림)을 가진다. 콘티 인물마다 만화 컨셉의 기본 표정 모습을 찾는다: 이름이
- * 정확히 같은 캐릭터가 있으면 그 캐릭터, 아니면 외모 문구의 설명 임베딩과 가장 가까운 모습(거리 한도 안). 한 만화에서 캐릭터 하나는 인물 하나에만 쓴다.
+ * 정확히 같고 외모 첫 마디(성별·나이)가 맞는 캐릭터가 있으면 그 캐릭터, 아니면 외모 문구의 설명 임베딩과 가장 가까운 모습(거리 한도 안). 한 만화에서 캐릭터 하나는
+ * 인물 하나에만 쓴다.
  */
 @Service
 public class CharacterLibrary {
@@ -88,7 +89,12 @@ public class CharacterLibrary {
     List<Wanted> rest = new ArrayList<>();
     for (Wanted w : wanted) {
       CharacterLook l = w.name() == null ? null : byName.get(w.name().strip());
-      if (l != null && !used.contains(l.character().publicId()) && hasReference(l)) {
+      // 이름이 같아도 외모 첫 마디(성별·나이)가 어긋나면 쓰지 않는다. 콘티가 할머니에게 "유진" 같은 흔한 가명을 붙이면
+      // 같은 이름의 젊은 캐릭터가 붙었다(funny-03)
+      if (l != null
+          && !used.contains(l.character().publicId())
+          && LookHead.of(w.look()).accepts(LookHead.of(l.look()))
+          && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
       } else {
