@@ -31,7 +31,8 @@ import tools.jackson.databind.node.ObjectNode;
  * 맞춘다. 그림에는 글자를 넣지 않고, 말풍선은 COMPOSE에서 코드로 그린다.
  *
  * <p>캐릭터 DB(REQ-018)에서 찾은 인물은 외모 문구를 캐릭터의 문구로 바꾸고, 그 인물이 나오는 컷에 IP-Adapter 참조({@code references})를
- * 붙인다. 워커는 참조 그림의 embedding이 있으면 받아 쓰고, 없으면 참조 그림으로 계산해 올린다.
+ * 붙인다. 워커는 참조 그림의 embedding이 있으면 받아 쓰고, 없으면 참조 그림으로 계산해 올린다. 찾은 인물의 가명은 캐릭터 이름으로 바꿔 콘티에 다시 저장해,
+ * 말풍선과 제목에도 캐릭터 이름이 나오게 한다.
  */
 @Component
 class DrawHandler implements StepHandler {
@@ -67,7 +68,12 @@ class DrawHandler implements StepHandler {
     String id = context.conversation().publicId();
     ComicScript written = scenarios.script(id);
     Map<String, CharacterRef> cast = characters.match(wanted(written), concept(written));
-    ComicScript script = withLooks(written, cast);
+    ComicScript named = withNames(written, cast);
+    if (!named.equals(written)) {
+      // 말풍선(COMPOSE)과 만화 제목도 캐릭터 이름을 쓰게 저장한다. 다시 그릴 때는 이 이름으로 같은 캐릭터를 찾는다
+      scenarios.saveScript(id, named);
+    }
+    ComicScript script = withLooks(named, cast);
     long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
@@ -149,6 +155,13 @@ class DrawHandler implements StepHandler {
 
   static String concept(ComicScript script) {
     return Concept.of(script.concept()).name();
+  }
+
+  /** 캐릭터를 찾은 인물은 가명 대신 캐릭터 이름을 쓴다(등장인물, 제목, 대사). */
+  static ComicScript withNames(ComicScript script, Map<String, CharacterRef> cast) {
+    Map<String, String> names = new java.util.LinkedHashMap<>();
+    cast.forEach((speaker, ref) -> names.put(speaker, ref.name()));
+    return script.withCharacterNames(names);
   }
 
   /** 캐릭터를 찾은 인물은 참조 그림과 맞도록 캐릭터의 외모 문구로 그린다. */

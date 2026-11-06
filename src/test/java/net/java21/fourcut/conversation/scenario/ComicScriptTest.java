@@ -312,4 +312,62 @@ class ComicScriptTest {
             .normalized();
     assertThat(s.panels().get(0).lines()).containsExactly(styled("A", "도윤 소협, 어디 가오", "도윤아 어디 가"));
   }
+
+  @Test
+  @DisplayName("REQ-018: 캐릭터 이름을 쓰면 조사와 구어체 '이'를 새 이름의 받침에 맞춘다")
+  void characterNameParticles() {
+    java.util.Map<String, String> toFinal = java.util.Map.of("하늘", "준혁");
+    assertThat(CastNames.rename("하늘아, 하늘이가 왔어. 하늘은 몰라", toFinal)).isEqualTo("준혁아, 준혁이가 왔어. 준혁은 몰라");
+    java.util.Map<String, String> toOpen = java.util.Map.of("한결", "민지");
+    assertThat(CastNames.rename("한결아 한결이가 한결을 한결과 한결이랑 한결으로", toOpen))
+        .isEqualTo("민지야 민지가 민지를 민지와 민지랑 민지로");
+    assertThat(CastNames.rename("다온아 다온이 다온는", java.util.Map.of("다온", "서율")))
+        .isEqualTo("서율아 서율이 서율은");
+    assertThat(CastNames.rename("하늘로 가자", java.util.Map.of("하늘", "가을"))).isEqualTo("가을로 가자");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 두 가명을 서로의 이름으로 바꿔도 한 번에 바뀌어 다시 바뀌지 않는다")
+  void characterNameSwap() {
+    assertThat(CastNames.rename("민지가 도윤을 불렀다", java.util.Map.of("민지", "도윤", "도윤", "민지")))
+        .isEqualTo("도윤이 민지를 불렀다");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 캐릭터를 찾은 인물은 등장인물·제목·대사·원문 모두 캐릭터 이름을 쓴다")
+  void withCharacterNames() {
+    ComicScript s =
+        new ComicScript(
+            "민지의 접시",
+            cast(),
+            List.of(
+                new ComicScript.Panel(
+                    "기",
+                    "wide",
+                    "{A} eats",
+                    List.of(new ComicScript.Line("B", "민지야 그거 내 거야", "민지야 그거 내 거"))),
+                new ComicScript.Panel("승", "medium", "{B} laughs", List.of())),
+            true,
+            List.of("지현"));
+    ComicScript named = s.withCharacterNames(java.util.Map.of("A", "서준"));
+    assertThat(named.title()).isEqualTo("서준의 접시");
+    assertThat(named.characters().get(0).name()).isEqualTo("서준");
+    assertThat(named.characters().get(1).name()).isEqualTo("도윤");
+    assertThat(named.panels().get(0).lines())
+        .containsExactly(new ComicScript.Line("B", "서준아 그거 내 거야", "서준아 그거 내 거"));
+    assertThat(named.nameWarnings()).containsExactly("지현");
+    assertThat(named.reviewed()).isTrue();
+    assertThat(named.withCharacterNames(java.util.Map.of("A", "서준"))).isEqualTo(named);
+  }
+
+  @Test
+  @DisplayName("REQ-018: 다른 인물이 쓰는 이름이나 빈 이름으로는 바꾸지 않는다")
+  void withCharacterNamesKeepsClash() {
+    ComicScript s = script(cast(), List.of());
+    assertThat(s.withCharacterNames(java.util.Map.of("A", "도윤"))).isSameAs(s);
+    assertThat(s.withCharacterNames(java.util.Map.of("A", " "))).isSameAs(s);
+    assertThat(s.withCharacterNames(java.util.Map.of())).isSameAs(s);
+    ComicScript swapped = s.withCharacterNames(java.util.Map.of("A", "도윤", "B", "민지"));
+    assertThat(swapped.characters().get(0).name()).isEqualTo("도윤");
+  }
 }

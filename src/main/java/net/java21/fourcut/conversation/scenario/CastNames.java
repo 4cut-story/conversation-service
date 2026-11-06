@@ -31,6 +31,92 @@ final class CastNames {
     return names;
   }
 
+  /** 받침에 따라 모양이 바뀌는 조사: 받침 있을 때, 없을 때. 긴 것부터 찾는다. */
+  private static final List<String[]> PARTICLES =
+      List.of(
+          new String[] {"이에요", "예요"},
+          new String[] {"이랑", "랑"},
+          new String[] {"이나", "나"},
+          new String[] {"으로", "로"},
+          new String[] {"은", "는"},
+          new String[] {"이", "가"},
+          new String[] {"을", "를"},
+          new String[] {"과", "와"},
+          new String[] {"아", "야"});
+
+  /** 받침 있는 이름 뒤 구어체 "이"("하늘이가", "하늘이도") 다음에 오는 말의 첫 글자. */
+  private static final String AFTER_FILLER = "가는도랑를한만와야나의께";
+
+  /**
+   * 글 속 이름을 새 이름으로 한 번에 바꾸고(긴 이름부터), 뒤의 조사와 구어체 "이"를 새 이름의 받침에 맞춘다("하늘아" → "민지야", "하늘이가" → "민지가",
+   * "하늘은" → "민지는"). 바꾼 이름이 다른 옛 이름과 같아도 다시 바뀌지 않는다.
+   *
+   * @param names 옛 이름 → 새 이름
+   */
+  static String rename(String text, Map<String, String> names) {
+    if (text == null || names.isEmpty()) {
+      return text;
+    }
+    List<String> keys =
+        names.keySet().stream()
+            .filter(k -> k != null && !k.isEmpty())
+            .sorted((x, y) -> y.length() - x.length())
+            .toList();
+    StringBuilder out = new StringBuilder();
+    int i = 0;
+    while (i < text.length()) {
+      String from = null;
+      for (String k : keys) {
+        if (text.startsWith(k, i)) {
+          from = k;
+          break;
+        }
+      }
+      if (from == null) {
+        out.append(text.charAt(i++));
+        continue;
+      }
+      String to = names.get(from);
+      out.append(to);
+      i = afterName(text, i + from.length(), RealNames.hasFinal(from), to, out);
+    }
+    return out.toString();
+  }
+
+  /** 이름 바로 뒤(j)의 구어체 "이"나 조사를 새 이름 to에 맞춰 붙이고, 다음에 읽을 위치를 돌려준다. */
+  private static int afterName(
+      String text, int j, boolean fromFinal, String to, StringBuilder out) {
+    boolean toFinal = RealNames.hasFinal(to);
+    if (fromFinal
+        && j + 1 < text.length()
+        && text.charAt(j) == '이'
+        && AFTER_FILLER.indexOf(text.charAt(j + 1)) >= 0) {
+      // "하늘이가": 받침 있는 이름 뒤 "이" 다음 조사는 이미 받침 없는 꼴이다
+      out.append(toFinal ? "이" : "");
+      return j + 1;
+    }
+    for (String[] p : PARTICLES) {
+      String found = text.startsWith(p[0], j) ? p[0] : text.startsWith(p[1], j) ? p[1] : null;
+      if (found != null) {
+        out.append(particle(p, to, toFinal));
+        return j + found.length();
+      }
+    }
+    return j;
+  }
+
+  private static String particle(String[] p, String to, boolean toFinal) {
+    if ("으로".equals(p[0]) && toFinal && endsWithRieul(to)) {
+      return "로";
+    }
+    return toFinal ? p[0] : p[1];
+  }
+
+  private static boolean endsWithRieul(String word) {
+    char c = word.charAt(word.length() - 1);
+    return (c - '가') % 28 == 8;
+  }
+
   /** 프롬프트 한 줄: {@code A=하늘, B=도윤}. */
   static String line(Map<String, String> names) {
     StringBuilder sb = new StringBuilder();
