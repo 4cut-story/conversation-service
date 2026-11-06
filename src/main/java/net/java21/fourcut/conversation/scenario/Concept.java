@@ -104,7 +104,7 @@ public enum Concept {
       "black and white ink illustration, clean pen lines, light hatching, white paper,"
           + " simple background",
       "color, colorful, red, blue, halftone, screentone, dot pattern, film grain, noise,"
-          + " signboard, distorted face",
+          + " scan lines, glitch, blurry, signboard, distorted face",
       "people",
       "a friend",
       """
