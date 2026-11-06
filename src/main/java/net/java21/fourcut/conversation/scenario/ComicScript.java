@@ -195,7 +195,7 @@ public record ComicScript(
     List<Character> cast = new java.util.ArrayList<>();
     Map<String, String> calls = new java.util.LinkedHashMap<>();
     for (Character c : characters) {
-      String role = cleanRole(c.role());
+      String role = cleanRole(c.role(), c.speaker());
       if (role != null) {
         String base = role;
         for (int n = 2; !used.add(role); n++) {
@@ -221,12 +221,16 @@ public record ComicScript(
     return new ComicScript(called, cast, fixed, reviewed, nameWarnings, concept);
   }
 
-  private static String cleanRole(String role) {
+  /** 호칭을 다듬는다. 비었거나 길거나, 화자 표시("A")나 영문 한 글자라 호칭이 아니면 null(이름으로 부른다). */
+  static String cleanRole(String role, String speaker) {
     if (role == null) {
       return null;
     }
     String r = role.strip().replaceAll("[\\s\"'.,:!?~]+$", "").strip();
-    return r.isEmpty() || r.length() > MAX_ROLE_CHARS ? null : r;
+    if (r.isEmpty() || r.length() > MAX_ROLE_CHARS || r.matches("[A-Za-z]") || r.equals(speaker)) {
+      return null;
+    }
+    return r;
   }
 
   /** 화자 표시 → 인물. */
@@ -678,7 +682,7 @@ public record ComicScript(
                     l.speaker() == null
                         ? null
                         : byName.getOrDefault(l.speaker().strip(), l.speaker().strip()),
-                    l.text(),
+                    withoutSpeakerTag(l.text()),
                     l.quote()));
     return new ComicScript(
         title,
@@ -687,6 +691,11 @@ public record ComicScript(
         reviewed,
         nameWarnings,
         concept);
+  }
+
+  /** 대사 앞에 LLM이 붙인 화자 표시("A: ", "{B}：")를 뗀다. */
+  static String withoutSpeakerTag(String text) {
+    return text == null ? null : text.replaceFirst("^\\s*\\{?[A-Z]}?\\s*[:：]\\s*", "");
   }
 
   /** 대사가 있는 인물이 장면 설명에 없으면 그림에도 나오도록 붙인다("{B} looks surprised" + ", {A} nearby"). */
