@@ -27,6 +27,16 @@ public class PipelineService {
   /** 단계마다 처음 1번 + 재시도 2번. */
   public static final int MAX_ATTEMPTS = 3;
 
+  /**
+   * 콘티는 LLM 출력이 규칙(반복·화자·대사 수)을 어기면 다시 쓰는데, 세 번 안에 못 넘겨 만화가 실패하는 일이 열 몇 편에 두 번 나왔다. 콘티 한 번은 짧으므로 다섯
+   * 번까지 쓴다.
+   */
+  static final int SCRIPT_MAX_ATTEMPTS = 5;
+
+  static int maxAttempts(Step step) {
+    return step == Step.SCRIPT ? SCRIPT_MAX_ATTEMPTS : MAX_ATTEMPTS;
+  }
+
   private static final Logger log = LoggerFactory.getLogger(PipelineService.class);
 
   private final Map<Step, StepHandler> handlers = new EnumMap<>(Step.class);
@@ -275,7 +285,7 @@ public class PipelineService {
         step.getAttempt(),
         reason);
     step.fail(reason, now());
-    if (step.getAttempt() < MAX_ATTEMPTS) {
+    if (step.getAttempt() < maxAttempts(step.getStep())) {
       startStep(conversation, step.getStep(), step.getAttempt() + 1);
     } else {
       observer.failed(conversation.id(), userMessage(step.getStep()));
