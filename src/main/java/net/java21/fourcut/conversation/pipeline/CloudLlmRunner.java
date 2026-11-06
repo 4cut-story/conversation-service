@@ -156,37 +156,41 @@ class CloudLlmRunner implements DirectLlm {
   private void process(Lease lease) {
     JsonNode payload = json.readTree(lease.payload());
     for (Provider provider : providers) {
-      if (!provider.active()) {
-        continue;
+      if (provider.active() && attempt(provider, lease, payload)) {
+        return;
       }
-      long start = System.nanoTime();
-      JsonNode result;
-      try {
-        result = provider.client.chat(payload);
-      } catch (RuntimeException e) {
-        provider.pause();
-        log.warn(
-            "{} 실패, 다음으로 넘김: job={} reason={} ({} 동안 쉼)",
-            provider.client.name(),
-            lease.jobId(),
-            e.getClass().getSimpleName() + ": " + e.getMessage(),
-            provider.client.cooldown());
-        continue;
-      }
-      boolean ok =
-          Boolean.TRUE.equals(
-              tx.execute(status -> service.complete(lease.jobId(), lease.token(), result)));
-      log.info(
-          "{} 처리: job={} model={} ok={} {}ms",
-          provider.client.name(),
-          lease.jobId(),
-          provider.client.model(),
-          ok,
-          (System.nanoTime() - start) / 1_000_000);
-      return;
     }
     log.warn("외부 LLM API가 모두 실패, GPU 워커(qwen)로 넘김: job={}", lease.jobId());
     tx.executeWithoutResult(status -> release(lease));
+  }
+
+  /** API 하나로 작업을 처리해 본다. 실패하면 그 API를 쉬게 하고 false. */
+  private boolean attempt(Provider provider, Lease lease, JsonNode payload) {
+    long start = System.nanoTime();
+    JsonNode result;
+    try {
+      result = provider.client.chat(payload);
+    } catch (RuntimeException e) {
+      provider.pause();
+      log.warn(
+          "{} 실패, 다음으로 넘김: job={} reason={} ({} 동안 쉼)",
+          provider.client.name(),
+          lease.jobId(),
+          e.getClass().getSimpleName() + ": " + e.getMessage(),
+          provider.client.cooldown());
+      return false;
+    }
+    boolean ok =
+        Boolean.TRUE.equals(
+            tx.execute(status -> service.complete(lease.jobId(), lease.token(), result)));
+    log.info(
+        "{} 처리: job={} model={} ok={} {}ms",
+        provider.client.name(),
+        lease.jobId(),
+        provider.client.model(),
+        ok,
+        (System.nanoTime() - start) / 1_000_000);
+    return true;
   }
 
   private Lease lease(Long jobId) {
