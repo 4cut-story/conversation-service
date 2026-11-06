@@ -331,7 +331,6 @@ class DrawHandler implements StepHandler {
   private static final Map<Staging.Side, String> REGION =
       Map.of(Staging.Side.LEFT, "left", Staging.Side.RIGHT, "right", Staging.Side.CENTER, "full");
 
-  /** 컷에 나오는 화자 표시, 장면에 처음 나온 순서. */
   /** 장면에 캐릭터 말고 다른 사람이 나오는지: 등장인물에 없는 자리 표시나 사람을 가리키는 낱말. */
   static boolean othersInScene(ComicScript script, ComicScript.Panel panel) {
     String scene = panel.scene() == null ? "" : panel.scene();
@@ -354,6 +353,7 @@ class DrawHandler implements StepHandler {
               + "|shopkeeper|owner|chef|neighbor|someone|everyone)s?\\b",
           Pattern.CASE_INSENSITIVE);
 
+  /** 컷에 나오는 화자 표시, 장면에 처음 나온 순서. */
   static List<String> people(ComicScript script, ComicScript.Panel panel) {
     String scene = panel.scene() == null ? "" : panel.scene();
     Set<String> known = new HashSet<>();
