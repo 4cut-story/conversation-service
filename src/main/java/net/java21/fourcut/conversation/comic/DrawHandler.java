@@ -94,6 +94,7 @@ class DrawHandler implements StepHandler {
       ArrayNode refs = references(stages.get(i), cast);
       if (!refs.isEmpty()) {
         image.set("references", refs);
+        image.set("ipSchedule", ipSchedule(properties));
       }
     }
     ObjectNode info = json.createObjectNode();
@@ -255,6 +256,15 @@ class DrawHandler implements StepHandler {
         script.reviewed(),
         script.nameWarnings(),
         script.concept());
+  }
+
+  /** 캐릭터 참조 강도 스케줄. 설정으로 고쳐 GPU PC 워커를 다시 띄우지 않고 조정한다. */
+  ObjectNode ipSchedule(ComicProperties p) {
+    ObjectNode s = json.createObjectNode();
+    s.put("earlyScale", p.ipEarlyScale());
+    s.put("earlySteps", p.ipEarlySteps());
+    s.put("lateBoost", p.ipLateBoost());
+    return s;
   }
 
   /** IP-Adapter 참조는 한 컷에 두 명까지 (두 명이면 왼쪽·오른쪽 마스크). */

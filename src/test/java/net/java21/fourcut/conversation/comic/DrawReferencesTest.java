@@ -149,4 +149,13 @@ class DrawReferencesTest {
     assertThat(named.characters().get(1).name()).isEqualTo("도윤");
     assertThat(DrawHandler.withNames(script, Map.of())).isSameAs(script);
   }
+
+  @Test
+  @DisplayName("REQ-018: 참조가 있는 컷에는 설정의 IP-Adapter 강도 스케줄을 함께 보낸다")
+  void ipSchedule() {
+    JsonNode s = handler.ipSchedule(new ComicProperties(768, "s", "n", "http://x", 0.25, 3, 0.15));
+    assertThat(s.path("earlyScale").asDouble()).isEqualTo(0.25);
+    assertThat(s.path("earlySteps").asInt()).isEqualTo(3);
+    assertThat(s.path("lateBoost").asDouble()).isEqualTo(0.15);
+  }
 }

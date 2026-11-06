@@ -73,6 +73,10 @@ gemini:
 comic:
   image-size: ${COMIC_IMAGE_SIZE:768}
   content-url: ${SERVICES_CONTENT_URL:http://localhost:8083}
+  # 캐릭터 참조 강도 스케줄 (model-runtime이 그림 작업의 ipSchedule로 받는다)
+  ip-early-scale: ${COMIC_IP_EARLY_SCALE:0.2}
+  ip-early-steps: ${COMIC_IP_EARLY_STEPS:3}
+  ip-late-boost: ${COMIC_IP_LATE_BOOST:0.2}
 
 # 캐릭터 DB (REQ-018). 콘티 인물을 이름이나 설명 임베딩(pgvector, BGE-M3 1024차원)으로 찾아 IP-Adapter 참조로 그린다
 characters:
