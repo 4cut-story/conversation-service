@@ -470,6 +470,73 @@ public record ComicScript(
   }
 
   /**
+   * 대사 화자를 원문 화자로 맞춘다. 원문(quote)이 장면 발화 중 한 화자의 말과만 맞으면 그 화자로 바꾸고, 그 화자가 등장인물에 없으면 대사를 뺀다. LLM이 세
+   * 번째 화자(시식 아주머니)의 말을 엄마 대사로 넣어 말풍선 주인이 틀렸다(funny-12). 여러 화자가 한 말("응")이나 원문에 없는 말은 그대로 둔다. 비게 된 컷은
+   * {@link #withEmptyPanelsFilled}가 채운다.
+   *
+   * @param spoken 장면 구간 발화. speaker는 화자 표시
+   */
+  public ComicScript withSourceSpeakers(List<Line> spoken) {
+    if (panels == null || characters == null || spoken == null || spoken.isEmpty()) {
+      return this;
+    }
+    Set<String> cast = new HashSet<>(characters.stream().map(Character::speaker).toList());
+    List<Panel> fixed = new java.util.ArrayList<>();
+    for (Panel p : panels) {
+      if (p.lines() == null) {
+        fixed.add(p);
+        continue;
+      }
+      List<Line> lines = new java.util.ArrayList<>();
+      for (Line l : p.lines()) {
+        String who = sourceSpeaker(l.source(), spoken);
+        if (who == null || who.equals(l.speaker())) {
+          lines.add(l);
+        } else if (cast.contains(who)) {
+          lines.add(new Line(who, l.text(), l.quote()));
+        }
+      }
+      fixed.add(lines.equals(p.lines()) ? p : withSpeakersInScene(p.withLines(lines)));
+    }
+    return fixed.equals(panels)
+        ? this
+        : new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+  }
+
+  /** 원문이 등장인물에 없는 화자의 말인 대사들의 화자(정렬). 없으면 빈 목록. */
+  public List<String> uncastSourceSpeakers(List<Line> spoken) {
+    if (panels == null || characters == null || spoken == null) {
+      return List.of();
+    }
+    Set<String> cast = new HashSet<>(characters.stream().map(Character::speaker).toList());
+    return panels.stream()
+        .flatMap(
+            p -> p.lines() == null ? java.util.stream.Stream.<Line>empty() : p.lines().stream())
+        .map(l -> sourceSpeaker(l.source(), spoken))
+        .filter(w -> w != null && !cast.contains(w))
+        .distinct()
+        .sorted()
+        .toList();
+  }
+
+  /** 말(첫 문장)이 나온 장면 발화의 화자. 한 화자의 말에서만 나오면 그 화자, 없거나 여러 화자면 null. */
+  private static String sourceSpeaker(String text, List<Line> spoken) {
+    List<String> parts = text == null ? List.of() : SpokenLines.sentences(text);
+    if (parts.isEmpty() || SpokenLines.shortReply(parts.get(0))) {
+      return null;
+    }
+    Set<String> who = new HashSet<>();
+    for (Line u : spoken) {
+      if (u.speaker() != null
+          && u.text() != null
+          && SpokenLines.indexIn(text, List.of(u.text())) == 0) {
+        who.add(u.speaker());
+      }
+    }
+    return who.size() == 1 ? who.iterator().next() : null;
+  }
+
+  /**
    * 앞 컷에서 이미 나온 대사를 뒤 컷에서 뺀다(공백 무시). 실제 대화가 같은 말을 되풀이하면 대사가 같은 발화로 맞춰져 "같은 대사가 두 번 나온다" 위반이 되고, 다시
    * 써도 같은 결과라 만화가 실패했다(mystery-04). 비게 된 컷은 {@link #withEmptyPanelsFilled}가 채운다.
    */
