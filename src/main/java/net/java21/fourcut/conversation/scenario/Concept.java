@@ -101,8 +101,9 @@ public enum Concept {
       """),
   NEWSPAPER(
       "흑백 신문 만화",
-      "black and white cartoon, bold clean outlines, flat solid gray fills, plain white"
-          + " background, simple background",
+      // 흑백은 합성 단계에서 바꾼다(ComposeHandler.gray). 흑백을 바로 그리게 하면 망점·잡티가 생겼다
+      "simple cartoon, bold clean outlines, flat muted colors, plain white background,"
+          + " simple background",
       "color, colorful, red, blue, halftone, screentone, dot pattern, film grain, noise,"
           + " scan lines, glitch, blurry, signboard, distorted face",
       "people",
