@@ -53,6 +53,16 @@ class LookHeadTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 무협·조선 외모도 나이 낱말로 시작하면 노인 자리에 젊은 캐릭터를, 젊은 자리에 노인을 붙이지 않는다")
+  void wuxiaJoseonAge() {
+    assertThat(accepts("old swordsman, gray robe", "young swordsman, green robe")).isFalse();
+    assertThat(accepts("young swordsman, white robe", "old swordsman, gray beard")).isFalse();
+    assertThat(accepts("old woman in hanbok, white bun", "young woman in hanbok")).isFalse();
+    assertThat(accepts("little swordsman, blue robe", "young swordsman")).isFalse();
+    assertThat(accepts("young swordsman, red robe", "young swordsman, blue robe")).isTrue();
+  }
+
+  @Test
   @DisplayName("REQ-018: 첫 마디에 나이가 없어도 흰머리·주름이 있으면 노인으로 보고 젊은 캐릭터를 쓰지 않는다")
   void oldFromDetails() {
     assertThat(LookHead.of("woman, gray hair bun, purple cardigan"))
