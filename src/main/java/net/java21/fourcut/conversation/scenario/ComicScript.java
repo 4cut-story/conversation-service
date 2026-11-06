@@ -67,8 +67,29 @@ public record ComicScript(
    */
   public record Panel(String role, String shot, String scene, List<Line> lines) {}
 
-  /** 말풍선 하나. speaker는 화자 표시(A, B…). */
-  public record Line(String speaker, String text) {}
+  /**
+   * 말풍선 하나.
+   *
+   * @param speaker 화자 표시(A, B…)
+   * @param text 말풍선에 보이는 대사. 컨셉 말투로 다듬은 말
+   * @param quote 대화 원문에서 고른 말(다듬기 전). 원문 대조·장면 확인·빈 컷 채우기의 기준이 된다. 예전 콘티에는 없다
+   */
+  public record Line(String speaker, String text, String quote) {
+
+    public Line(String speaker, String text) {
+      this(speaker, text, null);
+    }
+
+    /** 원문 대조에 쓰는 말: 원문(quote)이 있으면 그것, 없으면 대사. */
+    public String source() {
+      return quote == null || quote.isBlank() ? text : quote;
+    }
+
+    /** 대사와 원문 모두에 f를 적용한다(실명 바꾸기 등). */
+    Line mapped(UnaryOperator<String> f) {
+      return new Line(speaker, f.apply(text), quote == null ? null : f.apply(quote));
+    }
+  }
 
   /** 컷당 최대 말풍선 수. */
   public static final int MAX_LINES = 2;
@@ -223,7 +244,7 @@ public record ComicScript(
                   return new Character(c.speaker(), name, c.persona(), c.look());
                 })
             .toList();
-    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
+    List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
   }
 
@@ -256,7 +277,7 @@ public record ComicScript(
                             c.speaker(), rename.get(c.displayName()), c.persona(), c.look())
                         : c)
             .toList();
-    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
+    List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
     return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
   }
 
@@ -276,22 +297,44 @@ public record ComicScript(
       rename.put(stem, RealNames.UNKNOWN);
     }
     ComicScript out = replaced(rename);
-    List<Panel> fixed = out.mapLines(l -> new Line(l.speaker(), stripJson(l.text())));
+    List<Panel> fixed = out.mapLines(l -> l.mapped(ComicScript::stripJson));
     return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings, concept);
   }
 
-  /** 모든 대사 문장을 f로 바꾼다. */
+  /** 모든 대사의 원문을 f로 바꾼다(원문 대조). 원문(quote)이 없는 대사는 대사 자체를 바꾼다. */
   public ComicScript withLineTexts(UnaryOperator<String> f) {
     return new ComicScript(
         title,
         characters,
-        mapLines(l -> new Line(l.speaker(), f.apply(l.text()))),
+        mapLines(
+            l ->
+                l.quote() == null || l.quote().isBlank()
+                    ? new Line(l.speaker(), f.apply(l.text()), null)
+                    : new Line(l.speaker(), l.text(), f.apply(l.quote()))),
         reviewed,
         nameWarnings,
         concept);
   }
 
-  /** keep을 통과한 대사만 남긴다(장면 밖 대화에서 가져온 대사를 버린다). */
+  /** 컨셉 말투로 다듬은 대사가 비었거나 말풍선 길이(maxChars)를 넘으면 원문으로 되돌린다. 다듬기에 실패해도 말풍선이 비거나 넘치지 않게 한다. */
+  public ComicScript withStyledLines(int maxChars) {
+    return new ComicScript(
+        title,
+        characters,
+        mapLines(
+            l -> {
+              String styled = l.text() == null ? "" : l.text().strip();
+              boolean usable = !styled.isEmpty() && styled.length() <= maxChars;
+              return usable || l.quote() == null || l.quote().isBlank()
+                  ? l
+                  : new Line(l.speaker(), l.quote().strip(), l.quote());
+            }),
+        reviewed,
+        nameWarnings,
+        concept);
+  }
+
+  /** 원문(quote, 없으면 대사)이 keep을 통과한 대사만 남긴다(장면 밖 대화에서 가져온 대사를 버린다). */
   public ComicScript withLinesWhere(Predicate<String> keep) {
     List<Panel> fixed =
         panels == null
@@ -305,7 +348,7 @@ public record ComicScript(
                             p.scene(),
                             p.lines() == null
                                 ? null
-                                : p.lines().stream().filter(l -> keep.test(l.text())).toList()))
+                                : p.lines().stream().filter(l -> keep.test(l.source())).toList()))
                 .toList();
     return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
   }
@@ -330,7 +373,7 @@ public record ComicScript(
     panels.stream()
         .flatMap(
             p -> p.lines() == null ? java.util.stream.Stream.<Line>empty() : p.lines().stream())
-        .forEach(l -> said.add(key(l.text())));
+        .forEach(l -> said.add(key(l.source())));
     List<Panel> out = new java.util.ArrayList<>(panels);
     for (int i = 0; i < out.size(); i++) {
       Panel p = out.get(i);
@@ -345,7 +388,8 @@ public record ComicScript(
       }
       if (pick != null) {
         said.add(key(pick.text()));
-        out.set(i, withSpeakersInScene(new Panel(p.role(), p.shot(), p.scene(), List.of(pick))));
+        Line filled = new Line(pick.speaker(), pick.text(), pick.text());
+        out.set(i, withSpeakersInScene(new Panel(p.role(), p.shot(), p.scene(), List.of(filled))));
       }
     }
     return new ComicScript(title, characters, out, reviewed, nameWarnings, concept);
@@ -369,7 +413,7 @@ public record ComicScript(
     int at = -1;
     for (int k = 0; k < i; k++) {
       for (Line l : ps.get(k).lines() == null ? List.<Line>of() : ps.get(k).lines()) {
-        at = Math.max(at, SpokenLines.indexIn(l.text(), texts));
+        at = Math.max(at, SpokenLines.indexIn(l.source(), texts));
       }
     }
     return at;
@@ -379,7 +423,7 @@ public record ComicScript(
     for (int k = i + 1; k < ps.size(); k++) {
       int best = none;
       for (Line l : ps.get(k).lines() == null ? List.<Line>of() : ps.get(k).lines()) {
-        int at = SpokenLines.indexIn(l.text(), texts);
+        int at = SpokenLines.indexIn(l.source(), texts);
         if (at >= 0) {
           best = Math.min(best, at);
         }
@@ -418,7 +462,7 @@ public record ComicScript(
     if (rename.isEmpty()) {
       return this;
     }
-    List<Panel> fixed = mapLines(l -> new Line(l.speaker(), replaceAll(l.text(), rename)));
+    List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
     return new ComicScript(
         replaceAll(title, rename), characters, fixed, reviewed, nameWarnings, concept);
   }
@@ -465,7 +509,8 @@ public record ComicScript(
                     l.speaker() == null
                         ? null
                         : byName.getOrDefault(l.speaker().strip(), l.speaker().strip()),
-                    l.text()));
+                    l.text(),
+                    l.quote()));
     return new ComicScript(
         title,
         characters,
