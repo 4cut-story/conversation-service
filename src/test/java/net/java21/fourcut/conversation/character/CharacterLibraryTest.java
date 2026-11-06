@@ -66,7 +66,7 @@ class CharacterLibraryTest {
         vectors,
         embedder,
         storage,
-        new CharacterProperties(enabled, 0.35, "http://emb", "bge-m3", ADAPTER));
+        new CharacterProperties(enabled, 0.30, "http://emb", "bge-m3", ADAPTER));
   }
 
   @Test
@@ -91,16 +91,32 @@ class CharacterLibraryTest {
     when(vectors.nearest(any(), any()))
         .thenReturn(
             List.of(
-                new CharacterVectors.Nearest(haneulDaily.publicId(), 0.1),
-                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2)));
+                new CharacterVectors.Nearest(haneulDaily.publicId(), 0.1, haneulDaily.look()),
+                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2, haesolDaily.look())));
     Map<String, CharacterRef> cast =
         library.match(
             List.of(
-                new CharacterLibrary.Wanted("A", "민지", "girl with red hair"),
-                new CharacterLibrary.Wanted("B", "도윤", "girl with red bob")),
+                new CharacterLibrary.Wanted("A", "민지", "young woman with red hair"),
+                new CharacterLibrary.Wanted("B", "도윤", "man with red bob")),
             "DAILY");
     assertThat(cast.get("A").publicId()).isEqualTo(haneulDaily.publicId());
     assertThat(cast.get("B").publicId()).isEqualTo(haesolDaily.publicId());
+  }
+
+  @Test
+  @DisplayName("REQ-018: 가까워도 외모 첫 마디의 성별·나이가 다른 모습은 건너뛴다")
+  void skipsOtherHead() {
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
+    when(vectors.nearest(any(), any()))
+        .thenReturn(
+            List.of(
+                new CharacterVectors.Nearest(haneulDaily.publicId(), 0.05, haneulDaily.look()),
+                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2, haesolDaily.look())));
+    Map<String, CharacterRef> cast =
+        library.match(
+            List.of(new CharacterLibrary.Wanted("A", "민지", "old man, red bob, white coat")),
+            "DAILY");
+    assertThat(cast.get("A").publicId()).isEqualTo(haesolDaily.publicId());
   }
 
   @Test
@@ -108,7 +124,8 @@ class CharacterLibraryTest {
   void tooFar() {
     when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
     when(vectors.nearest(any(), any()))
-        .thenReturn(List.of(new CharacterVectors.Nearest(haneulDaily.publicId(), 0.5)));
+        .thenReturn(
+            List.of(new CharacterVectors.Nearest(haneulDaily.publicId(), 0.5, haneulDaily.look())));
     assertThat(library.match(List.of(new CharacterLibrary.Wanted("A", "민지", "cat")), "DAILY"))
         .isEmpty();
   }

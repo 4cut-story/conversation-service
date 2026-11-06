@@ -111,9 +111,13 @@ public class CharacterLibrary {
     if (query.isEmpty()) {
       return Optional.empty();
     }
+    LookHead wanted = LookHead.of(look);
     for (CharacterVectors.Nearest n : vectors.nearest(query.get(), concept)) {
       if (n.distance() > properties.maxDistance()) {
         return Optional.empty();
+      }
+      if (!wanted.accepts(LookHead.of(n.look()))) {
+        continue;
       }
       Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
       if (l.isPresent()

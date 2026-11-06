@@ -67,7 +67,7 @@ comic:
 # 캐릭터 DB (REQ-018). 콘티 인물을 이름이나 설명 임베딩(pgvector, BGE-M3 1024차원)으로 찾아 IP-Adapter 참조로 그린다
 characters:
   enabled: ${CHARACTERS_ENABLED:true}
-  max-distance: ${CHARACTERS_MAX_DISTANCE:0.35}
+  max-distance: ${CHARACTERS_MAX_DISTANCE:0.30}
   embedding-url: ${CHARACTERS_EMBEDDING_URL:https://emb.java21.net}
   embedding-model: ${CHARACTERS_EMBEDDING_MODEL:bge-m3}
   ip-adapter: ${CHARACTERS_IP_ADAPTER:plus-face-sdxl-vit-h}

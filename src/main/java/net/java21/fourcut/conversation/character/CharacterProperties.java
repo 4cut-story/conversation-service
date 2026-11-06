@@ -15,7 +15,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("characters")
 public record CharacterProperties(
     @DefaultValue("true") boolean enabled,
-    @DefaultValue("0.35") double maxDistance,
+    @DefaultValue("0.30") double maxDistance,
     @DefaultValue("https://emb.java21.net") String embeddingUrl,
     @DefaultValue("bge-m3") String embeddingModel,
     @DefaultValue("plus-face-sdxl-vit-h") String ipAdapter) {

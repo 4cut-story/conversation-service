@@ -97,7 +97,7 @@ class CharacterDbIntegrationTest {
 
     // 참조 그림이 없으면 쓰지 않는다
     List<CharacterLibrary.Wanted> wanted =
-        List.of(new CharacterLibrary.Wanted("A", "민지", "girl with red hair"));
+        List.of(new CharacterLibrary.Wanted("A", "민지", "young woman with red hair"));
     assertThat(library.match(wanted, "DAILY")).isEmpty();
 
     storage.put(CharacterKeys.reference(id, dailyLook), new byte[] {1, 2, 3}, "image/png");
