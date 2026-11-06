@@ -147,10 +147,11 @@ class DrawHandler implements StepHandler {
       }
     }
     String lineup = "";
+    Map<String, String> names = new java.util.HashMap<>();
     if (people >= 2 && stage.size() >= 2) {
       lineup = lineup(stage, looks);
-      Map<String, String> heads = heads(stage, looks);
-      for (Map.Entry<String, String> e : heads.entrySet()) {
+      names = heads(stage, looks);
+      for (Map.Entry<String, String> e : names.entrySet()) {
         scene = scene.replace("{" + e.getKey() + "}", e.getValue());
       }
     } else {
@@ -158,13 +159,43 @@ class DrawHandler implements StepHandler {
         scene = scene.replace("{" + e.getKey() + "}", "(" + e.getValue() + ")");
       }
     }
+    String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
     String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
     String count =
         people >= 2
             ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
             : "";
-    return style + ", " + shot + count + lineup + scene + cast;
+    return style + ", " + shot + count + lineup + scene + detail + cast;
+  }
+
+  /**
+   * 콘티의 인물별 표정·몸짓. 두 명 이상이면 장면 문장과 같은 짧은 이름("the old woman laughing")으로, 혼자면 표정만 붙인다. 긴 프롬프트는 워커가
+   * 75토큰 조각으로 나눠 읽으므로 콘티 내용을 줄이지 않고 넘긴다.
+   */
+  static String faces(ComicScript.Panel panel, Set<String> inScene, Map<String, String> names) {
+    if (panel.faces() == null) {
+      return "";
+    }
+    StringBuilder out = new StringBuilder();
+    for (ComicScript.Face f : panel.faces()) {
+      if (f == null || f.face() == null || f.face().isBlank() || !inScene.contains(f.speaker())) {
+        continue;
+      }
+      out.append(", ");
+      String who = names.get(f.speaker());
+      if (who != null) {
+        out.append(who).append(' ');
+      }
+      out.append(f.face().strip());
+    }
+    return out.toString();
+  }
+
+  /** 콘티의 배경(장소와 배경 물건). */
+  static String setting(ComicScript.Panel panel) {
+    String s = panel.setting();
+    return s == null || s.isBlank() ? "" : ", " + s.strip();
   }
 
   /**

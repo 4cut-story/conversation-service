@@ -142,6 +142,12 @@ final class Prompts {
         장소는 대화 내용에 맞게 하나 정해 네 컷 모두 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
         예: "{A} drops ice cream cone on ground, {B} gasps, park",
         "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
+      - setting: 그 컷의 배경을 그림 모델용 영어 10단어 이내로 자세히 쓴다. 장소와, 이야기에 맞는 눈에 보이는 배경
+        물건 2~3개(예: "burger shop, ordering kiosk with menu screen, trays of burgers", "city bus aisle,
+        hanging straps, rainy window"). 장소가 같은 컷은 같은 장소 낱말로 시작한다. 인물과 표정은 쓰지 않는다.
+      - faces: 그 컷 scene에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
+        쓴다(예: "wide-eyed, hands on cheeks", "laughing, pointing at phone", "teary smile"). 대사와 상황에 맞게
+        컷마다 바꾸고, 네 컷 모두 같은 표정으로 두지 않는다. 성격·외모·이름은 쓰지 않는다.
       - lines: 컷당 1~2개(대사 없는 컷은 만들지 않는다), 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
         길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다. 핵심 순간의 말은 꼭 전 컷 대사에 넣는다.
@@ -175,9 +181,11 @@ final class Prompts {
         "required":["speaker","name","persona","look"],"properties":{"speaker":{"type":"string"},
          "name":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"}}}},
        "panels":{"type":"array","minItems":4,"maxItems":4,"items":{"type":"object",
-        "required":["role","shot","scene","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
+        "required":["role","shot","scene","setting","faces","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
-         "scene":{"type":"string"},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
+         "scene":{"type":"string"},"setting":{"type":"string"},
+         "faces":{"type":"array","items":{"type":"object","required":["speaker","face"],
+          "properties":{"speaker":{"type":"string"},"face":{"type":"string"}}}},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
           "required":["speaker","quote","text"],"properties":{"speaker":{"type":"string"},
            "quote":{"type":"string"},"text":{"type":"string"}}}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
