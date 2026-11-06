@@ -13,10 +13,13 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import net.java21.fourcut.conversation.storage.ObjectStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -77,7 +80,8 @@ class CloudLlmRunnerTest {
         Clock.fixed(NOW, ZoneOffset.UTC),
         Runnable::run,
         tx,
-        clients);
+        clients,
+        LlmCache.off(json));
   }
 
   @Test
@@ -94,6 +98,44 @@ class CloudLlmRunnerTest {
     verify(service).complete(5L, job.getLeaseToken(), result);
     verify(gemini, never()).chat(any());
     assertThat(runner.active()).isTrue();
+  }
+
+  @Test
+  @DisplayName("같은 입력의 LLM 작업과 직접 호출은 처음 받은 답을 다시 쓴다 (시험 세트 짝 비교)")
+  void cached() {
+    Map<String, byte[]> store = new HashMap<>();
+    ObjectStorage storage = mock(ObjectStorage.class);
+    org.mockito.Mockito.doAnswer(i -> store.put(i.getArgument(0), i.getArgument(1)))
+        .when(storage)
+        .put(any(), any(), any());
+    when(storage.get(any())).thenAnswer(i -> Optional.ofNullable(store.get(i.getArgument(0))));
+    runner =
+        new CloudLlmRunner(
+            jobs,
+            service,
+            new PipelineProperties(
+                Duration.ofSeconds(90), Duration.ofSeconds(60), Duration.ofMinutes(5), true),
+            json,
+            Clock.fixed(NOW, ZoneOffset.UTC),
+            Runnable::run,
+            tx,
+            List.of(claude),
+            new LlmCache(storage, json, "claude-model"));
+    ObjectNode result = json.createObjectNode().put("content", "{\"a\":1}");
+    when(claude.chat(any())).thenReturn(result);
+    when(service.complete(any(), any(UUID.class), any())).thenReturn(true);
+
+    runner.onQueued(new LlmJobQueued(5L));
+    job = new GpuJob(1L, Step.EXTRACT, JobType.LLM, "{\"prompt\":\"p\"}", NOW);
+    when(jobs.lockById(6L)).thenReturn(Optional.of(job));
+    runner.onQueued(new LlmJobQueued(6L));
+
+    verify(claude, times(1)).chat(any());
+    verify(service, times(2)).complete(any(), any(UUID.class), eq(result));
+
+    assertThat(runner.chat("s", "q", "{}")).contains("{\"a\":1}");
+    assertThat(runner.chat("s", "q", "{}")).contains("{\"a\":1}");
+    verify(claude, times(2)).chat(any());
   }
 
   @Test

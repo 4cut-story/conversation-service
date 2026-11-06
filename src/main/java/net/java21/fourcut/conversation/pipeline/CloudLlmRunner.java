@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import net.java21.fourcut.conversation.storage.ObjectStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -43,6 +45,7 @@ class CloudLlmRunner implements DirectLlm {
   private final TaskExecutor executor;
   private final TransactionTemplate tx;
   private final List<Provider> providers;
+  private final LlmCache cache;
 
   @Autowired
   CloudLlmRunner(
@@ -55,9 +58,21 @@ class CloudLlmRunner implements DirectLlm {
       Clock clock,
       @Qualifier("applicationTaskExecutor") TaskExecutor executor,
       TransactionTemplate tx,
-      RestClient.Builder builder) {
+      RestClient.Builder builder,
+      ObjectStorage storage,
+      @Value("${pipeline.llm-cache:true}") boolean cacheEnabled) {
     this(
-        jobs, service, pipeline, json, clock, executor, tx, clients(claude, gemini, builder, json));
+        jobs,
+        service,
+        pipeline,
+        json,
+        clock,
+        executor,
+        tx,
+        clients(claude, gemini, builder, json),
+        cacheEnabled
+            ? new LlmCache(storage, json, claude.model() + "," + gemini.model())
+            : LlmCache.off(json));
   }
 
   CloudLlmRunner(
@@ -68,7 +83,9 @@ class CloudLlmRunner implements DirectLlm {
       Clock clock,
       TaskExecutor executor,
       TransactionTemplate tx,
-      List<? extends LlmClient> clients) {
+      List<? extends LlmClient> clients,
+      LlmCache cache) {
+    this.cache = cache;
     this.jobs = jobs;
     this.service = service;
     this.pipeline = pipeline;
@@ -135,13 +152,20 @@ class CloudLlmRunner implements DirectLlm {
       ArrayNode array = job.putArray("images");
       images.forEach(b -> array.add(Base64.getEncoder().encodeToString(b)));
     }
+    Optional<JsonNode> cached = cache.get(job);
+    if (cached.isPresent()) {
+      log.info("직접 호출 캐시 사용");
+      return Optional.of(cached.get().path("content").asString(""));
+    }
     for (Provider provider : providers) {
       if (!provider.active()) {
         continue;
       }
       long start = System.nanoTime();
       try {
-        String content = provider.client.chat(job).path("content").asString("");
+        JsonNode answer = provider.client.chat(job);
+        cache.put(job, answer);
+        String content = answer.path("content").asString("");
         log.info(
             "{} 직접 호출: model={} {}ms",
             provider.client.name(),
@@ -173,6 +197,14 @@ class CloudLlmRunner implements DirectLlm {
 
   private void process(Lease lease) {
     JsonNode payload = json.readTree(lease.payload());
+    Optional<JsonNode> cached = cache.get(payload);
+    if (cached.isPresent()) {
+      boolean ok =
+          Boolean.TRUE.equals(
+              tx.execute(status -> service.complete(lease.jobId(), lease.token(), cached.get())));
+      log.info("LLM 캐시 사용: job={} ok={}", lease.jobId(), ok);
+      return;
+    }
     for (Provider provider : providers) {
       if (provider.active() && attempt(provider, lease, payload)) {
         return;
@@ -201,6 +233,9 @@ class CloudLlmRunner implements DirectLlm {
     boolean ok =
         Boolean.TRUE.equals(
             tx.execute(status -> service.complete(lease.jobId(), lease.token(), result)));
+    if (ok) {
+      cache.put(payload, result);
+    }
     log.info(
         "{} 처리: job={} model={} ok={} {}ms",
         provider.client.name(),
