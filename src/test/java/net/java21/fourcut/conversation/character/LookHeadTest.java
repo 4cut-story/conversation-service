@@ -117,4 +117,31 @@ class LookHeadTest {
     assertThat(LookHead.withNoun("fox, red scarf", "FEMALE", "CHILD")).isEqualTo("fox, red scarf");
     assertThat(LookHead.withNoun("navy suit", null, "OLD")).isEqualTo("navy suit");
   }
+
+  @Test
+  @DisplayName("REQ-018: 그림체 모습 첫 마디에 나이가 없으면 캐릭터 DB 나이대를 넣는다")
+  void withAge() {
+    assertThat(LookHead.withAge("man in hanbok, topknot, purple jeogori", "MALE", "OLD"))
+        .isEqualTo("old man in hanbok, topknot, purple jeogori");
+    assertThat(LookHead.withAge("woman in hanbok, bun", "FEMALE", "YOUNG"))
+        .isEqualTo("young woman in hanbok, bun");
+    assertThat(LookHead.withAge("swordsman, yellow robe, long sword", "MALE", "CHILD"))
+        .isEqualTo("little swordsman, yellow robe, long sword");
+    assertThat(LookHead.withAge("swordswoman, red robe", "FEMALE", "OLD"))
+        .isEqualTo("old swordswoman, red robe");
+    assertThat(LookHead.withAge("bear, florist apron", "MALE", "OLD"))
+        .isEqualTo("old bear, florist apron");
+    assertThat(LookHead.withAge("cat, teal hoodie", "FEMALE", "YOUNG"))
+        .isEqualTo("cat, teal hoodie");
+    // 나이가 이미 있으면 참조 그림도 그 나이라 그대로 둔다
+    assertThat(LookHead.withAge("little boy, black crew cut", "MALE", "OLD"))
+        .isEqualTo("little boy, black crew cut");
+    assertThat(LookHead.withAge("boy in hanbok, braid", "MALE", "CHILD"))
+        .isEqualTo("boy in hanbok, braid");
+    assertThat(LookHead.withAge("old man, gray crew cut", "MALE", "OLD"))
+        .isEqualTo("old man, gray crew cut");
+    assertThat(LookHead.withAge("navy suit", "MALE", "MIDDLE"))
+        .isEqualTo("middle-aged man, navy suit");
+    assertThat(LookHead.withAge("man, navy suit", "MALE", null)).isEqualTo("man, navy suit");
+  }
 }
