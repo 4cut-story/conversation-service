@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -91,12 +92,15 @@ class GeminiClient implements LlmClient {
         .putArray("parts")
         .addObject()
         .put("text", job.path("system").asString(""));
-    body.putArray("contents")
-        .addObject()
-        .put("role", "user")
-        .putArray("parts")
-        .addObject()
-        .put("text", job.path("prompt").asString(""));
+    ArrayNode parts = body.putArray("contents").addObject().put("role", "user").putArray("parts");
+    for (JsonNode image : job.path("images")) {
+      parts
+          .addObject()
+          .putObject("inline_data")
+          .put("mime_type", "image/png")
+          .put("data", image.asString(""));
+    }
+    parts.addObject().put("text", job.path("prompt").asString(""));
     ObjectNode config = body.putObject("generationConfig");
     JsonNode options = job.path("options");
     config.put("temperature", options.path("temperature").asDouble(0.4));

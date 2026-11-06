@@ -1,5 +1,6 @@
 package net.java21.fourcut.conversation.pipeline;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,4 +17,12 @@ public interface DirectLlm {
    * @return 응답 본문(JSON 문자열). 키가 없거나, 쉬는 중이거나, 호출이 실패하면 빈 값
    */
   Optional<String> chat(String system, String prompt, String jsonSchema);
+
+  /**
+   * 그림을 함께 보내 묻는다(말풍선 자리를 맞추려고 컷에 그려진 인물 위치를 확인할 때 등).
+   *
+   * @param images PNG 바이트. 질문 글 앞에 순서대로 붙인다
+   * @return 응답 본문(JSON 문자열). 키가 없거나, 쉬는 중이거나, 호출이 실패하면 빈 값
+   */
+  Optional<String> see(String system, String prompt, String jsonSchema, List<byte[]> images);
 }

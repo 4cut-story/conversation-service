@@ -69,6 +69,12 @@ public class ComicComposer {
   public record Result(byte[] full, byte[] thumb) {}
 
   public Result compose(ComicScript script, List<BufferedImage> panels) {
+    return compose(script, panels, Staging.panels(script));
+  }
+
+  /** stages: 컷별 인물 자리(그림에서 확인해 고친 자리). 말풍선을 그 쪽에 둔다. */
+  Result compose(
+      ComicScript script, List<BufferedImage> panels, List<Map<String, Staging.Side>> stages) {
     int height = MARGIN + TITLE_HEIGHT + panels.size() * (PANEL + GAP) - GAP + MARGIN;
     BufferedImage out = new BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = out.createGraphics();
@@ -85,7 +91,6 @@ public class ComicComposer {
           MARGIN + TITLE_HEIGHT / 2 + fm.getAscent() / 2 - 6);
       int y = MARGIN + TITLE_HEIGHT;
       Map<String, String> names = script.callNames();
-      List<Map<String, Staging.Side>> stages = Staging.panels(script);
       for (int i = 0; i < panels.size(); i++) {
         g.drawImage(panels.get(i), MARGIN, y, PANEL, PANEL, null);
         g.setStroke(new BasicStroke(4f));

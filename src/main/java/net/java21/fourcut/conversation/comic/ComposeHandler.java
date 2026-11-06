@@ -29,16 +29,19 @@ class ComposeHandler implements StepHandler {
   private final ObjectStorage storage;
   private final ComicComposer composer;
   private final ContentClient content;
+  private final PanelPlacement placement;
 
   ComposeHandler(
       ScenarioStore scenarios,
       ObjectStorage storage,
       ComicComposer composer,
-      ContentClient content) {
+      ContentClient content,
+      PanelPlacement placement) {
     this.scenarios = scenarios;
     this.storage = storage;
     this.composer = composer;
     this.content = content;
+    this.placement = placement;
   }
 
   @Override
@@ -61,7 +64,9 @@ class ComposeHandler implements StepHandler {
       byte[] bytes = storage.get(key).orElseThrow(() -> new IllegalStateException(key + " 그림이 없다"));
       panels.add(read(bytes));
     }
-    ComicComposer.Result result = composer.compose(script, panels);
+    // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리를 확인해 맞춘다
+    ComicComposer.Result result =
+        composer.compose(script, panels, placement.check(script, panels, Staging.panels(script)));
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);
     storage.put(full, result.full(), PNG);

@@ -82,6 +82,19 @@ class GeminiClientTest {
   }
 
   @Test
+  @DisplayName("FR-006: 그림이 있으면 inline_data 조각을 질문 글 앞에 보낸다")
+  void imageRequest() {
+    var parts =
+        client
+            .request(json.readTree("{\"prompt\":\"p\",\"images\":[\"QUJD\"]}"))
+            .path("contents")
+            .path(0)
+            .path("parts");
+    assertThat(parts.path(0).path("inline_data").path("data").asString()).isEqualTo("QUJD");
+    assertThat(parts.path(1).path("text").asString()).isEqualTo("p");
+  }
+
+  @Test
   @DisplayName("무료 등급 한도 초과(429)는 RateLimited로 알린다")
   void rateLimited() {
     server.expect(requestTo(URL)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));

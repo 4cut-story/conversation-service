@@ -111,10 +111,22 @@ class ClaudeClient implements LlmClient {
     if (!system.isBlank()) {
       body.put("system", system);
     }
-    body.putArray("messages")
-        .addObject()
-        .put("role", "user")
-        .put("content", job.path("prompt").asString(""));
+    ObjectNode message = body.putArray("messages").addObject().put("role", "user");
+    if (job.path("images").isArray() && !job.path("images").isEmpty()) {
+      ArrayNode content = message.putArray("content");
+      for (JsonNode image : job.path("images")) {
+        content
+            .addObject()
+            .put("type", "image")
+            .putObject("source")
+            .put("type", "base64")
+            .put("media_type", "image/png")
+            .put("data", image.asString(""));
+      }
+      content.addObject().put("type", "text").put("text", job.path("prompt").asString(""));
+    } else {
+      message.put("content", job.path("prompt").asString(""));
+    }
     ObjectNode output = body.putObject("output_config");
     output.put("effort", properties.effort());
     if (job.path("jsonSchema").isObject()) {
