@@ -169,9 +169,14 @@ class DrawHandler implements StepHandler {
     String shot = kind == null ? "" : kind.replace('-', ' ') + " shot, ";
     String count =
         people >= 2
-            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
+            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1)
+                + " "
+                + concept.crowd()
+                + ", "
+                + SIDE_BY_SIDE
+                + ", "
             : "";
-    return style + ", " + shot + count + lineup + scene + detail + cast;
+    return style + ", " + SINGLE + ", " + shot + count + lineup + scene + detail + cast;
   }
 
   /**
@@ -442,6 +447,18 @@ class DrawHandler implements StepHandler {
   private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
 
   private static final List<String> COUNTS = List.of("one", "two", "three", "four");
+
+  /**
+   * 한 컷이 한 장면이 되게 하는 말. 컷 안이 네 칸 격자로 그려졌다(무협 '문 앞의 수상한 보물 상자' 1컷). negative의 grid·multiple panels는
+   * guidance 0이라 쓰이지 않는다.
+   */
+  static final String SINGLE = "one single scene";
+
+  /**
+   * 여럿이 나오는 컷의 구도 말. 두 사람이 말하는 컷에 한 사람만 그려져 말풍선 자리(왼쪽·오른쪽)와 그림이 어긋났다(그림책 '밤마다 그려진 담벼락 그림의 비밀'
+   * 2·4컷). Lightning(guidance 0)은 negative를 읽지 않아 구도는 이 말로만 잡는다.
+   */
+  static final String SIDE_BY_SIDE = "side by side, both fully visible";
 
   /** 콘티 내용(제목과 컷 장면)으로 정한 그림 시드. 같은 콘티면 대화 ID가 달라도 같은 시드로 그려 고정 시험 세트로 수정 전후를 비교할 수 있다. */
   static long seedOf(ComicScript script) {
