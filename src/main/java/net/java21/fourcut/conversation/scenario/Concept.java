@@ -19,7 +19,7 @@ import java.util.List;
 public enum Concept {
   DAILY(
       "일상 웹툰",
-      "simple cartoon, thick outlines, flat colors, plain background",
+      "simple cartoon, thick outlines, flat colors, simple background",
       "",
       "people",
       "a friend",

@@ -28,9 +28,10 @@ public record ComicProperties(
   public static final int DEFAULT_IMAGE_SIZE = 768;
 
   public static final String DEFAULT_STYLE =
-      "simple cartoon, thick outlines, flat colors, plain background";
+      "simple cartoon, thick outlines, flat colors, simple background";
 
   public static final String DEFAULT_NEGATIVE =
-      "text, letters, watermark, speech bubble, photo, realistic, 3d, detailed background,"
-          + " intricate, nsfw, extra fingers, deformed";
+      "text, letters, watermark, speech bubble, comic panels, multiple panels, grid, collage,"
+          + " split screen, photo, realistic, 3d, cluttered background, nsfw, extra fingers,"
+          + " deformed";
 }
