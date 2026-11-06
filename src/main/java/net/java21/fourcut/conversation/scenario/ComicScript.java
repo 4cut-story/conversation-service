@@ -466,6 +466,32 @@ public record ComicScript(
   }
 
   /**
+   * 앞 컷에서 이미 나온 대사를 뒤 컷에서 뺀다(공백 무시). 실제 대화가 같은 말을 되풀이하면 대사가 같은 발화로 맞춰져 "같은 대사가 두 번 나온다" 위반이 되고, 다시
+   * 써도 같은 결과라 만화가 실패했다(mystery-04). 비게 된 컷은 {@link #withEmptyPanelsFilled}가 채운다.
+   */
+  public ComicScript withoutRepeatedLines() {
+    if (panels == null) {
+      return this;
+    }
+    Set<String> said = new HashSet<>();
+    List<Panel> fixed =
+        panels.stream()
+            .map(
+                p ->
+                    p.lines() == null
+                        ? p
+                        : p.withLines(
+                            p.lines().stream()
+                                .filter(
+                                    l ->
+                                        l.text() == null
+                                            || said.add(l.text().replaceAll("\\s+", "")))
+                                .toList()))
+            .toList();
+    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+  }
+
+  /**
    * 대사가 하나도 없는 컷(LLM이 비웠거나 장면 밖 대사를 버려 비게 된 컷)을 장면 대화의 실제 발화로 채운다. 앞뒤 컷 대사 사이에 한 말 중 아직 쓰지 않은 말을
    * 고르고(맞장구보다 긴 말을 먼저), 그 사이에 없으면 장면 전체에서 고른다. 채울 말이 없으면 그대로 둔다.
    *
