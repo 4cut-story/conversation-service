@@ -13,7 +13,7 @@ import tools.jackson.databind.node.ObjectNode;
  * Gemini generateContent 호출. 입력은 워커에 넘기는 LLM 작업과 같다(system, prompt, jsonSchema, options). 결과는 워커와
  * 같은 모양 {@code {content, model}}이다. 키는 헤더로만 보내고 로그에 남기지 않는다.
  */
-class GeminiClient {
+class GeminiClient implements LlmClient {
 
   private final RestClient client;
   private final GeminiProperties properties;
@@ -41,8 +41,29 @@ class GeminiClient {
     return new GeminiClient(client, properties, json);
   }
 
+  @Override
+  public String name() {
+    return "gemini";
+  }
+
+  @Override
+  public String model() {
+    return properties.model();
+  }
+
+  @Override
+  public Duration timeout() {
+    return properties.timeout();
+  }
+
+  @Override
+  public Duration cooldown() {
+    return properties.cooldown();
+  }
+
   /** LLM 작업 하나를 실행한다. 실패하면 예외 (한도 초과는 {@link RateLimited}). */
-  JsonNode chat(JsonNode job) {
+  @Override
+  public JsonNode chat(JsonNode job) {
     ObjectNode body = request(job);
     JsonNode response =
         client
@@ -112,7 +133,7 @@ class GeminiClient {
   }
 
   /** 무료 등급 한도를 넘었다 (HTTP 429). */
-  static class RateLimited extends RuntimeException {
+  static class RateLimited extends Unavailable {
     RateLimited() {
       super("Gemini 한도 초과 (429)");
     }

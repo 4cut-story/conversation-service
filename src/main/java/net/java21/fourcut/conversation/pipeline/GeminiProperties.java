@@ -5,7 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * Gemini로 LLM 작업(장면 추출·콘티)을 먼저 처리하는 설정. 키가 없으면 꺼지고 모든 LLM 작업은 GPU 워커(로컬 qwen)가 한다.
+ * Gemini로 LLM 작업(장면 추출·콘티·전사 교정)을 처리하는 설정. Claude가 꺼져 있거나 실패하면 Gemini가 하고, 키가 없으면 꺼져 GPU 워커(로컬
+ * qwen)가 한다.
  *
  * @param apiKey Gemini API 키 (환경 변수 GEMINI_API_KEY). 비어 있으면 끈다
  * @param model Gemini 모델 이름

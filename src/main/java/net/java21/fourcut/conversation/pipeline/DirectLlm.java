@@ -2,7 +2,10 @@ package net.java21.fourcut.conversation.pipeline;
 
 import java.util.Optional;
 
-/** 대기열을 거치지 않고 Gemini를 바로 한 번 부른다. 결과가 없어도 되는 보조 작업(전사 교정 등)에 쓴다. 실패하면 GPU 워커로 넘기지 않고 빈 값을 돌려준다. */
+/**
+ * 대기열을 거치지 않고 외부 LLM API(Claude → Gemini)를 바로 한 번 부른다. 결과가 없어도 되는 보조 작업(전사 교정 등)에 쓴다. 실패하면 GPU 워커로
+ * 넘기지 않고 빈 값을 돌려준다.
+ */
 public interface DirectLlm {
 
   /** 지금 부를 수 있는지 (키가 있고, 한도 초과 뒤 쉬는 중이 아니다). */
