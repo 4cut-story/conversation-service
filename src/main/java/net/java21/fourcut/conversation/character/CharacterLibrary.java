@@ -15,6 +15,7 @@ import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,12 @@ public class CharacterLibrary {
 
   /** 참조 그림 업로드 주소 유효 시간. */
   static final Duration UPLOAD_TTL = Duration.ofMinutes(30);
+
+  /** 임베딩 요청 하나에 묶는 글 수. 임베딩 서버(emb.java21.net)가 받는 최대값이 32다. */
+  static final int EMBED_BATCH = 32;
+
+  /** 주기 작업 한 번에 채우는 설명 임베딩 수 (32개 묶음 8번, 약 16초). */
+  static final int EMBED_PER_TICK = 256;
 
   private final StoryCharacterRepository repository;
   private final CharacterLookRepository looks;
@@ -104,9 +111,13 @@ public class CharacterLibrary {
     if (query.isEmpty()) {
       return Optional.empty();
     }
+    LookHead wanted = LookHead.of(look);
     for (CharacterVectors.Nearest n : vectors.nearest(query.get(), concept)) {
       if (n.distance() > properties.maxDistance()) {
         return Optional.empty();
+      }
+      if (!wanted.accepts(LookHead.of(n.look()))) {
+        continue;
       }
       Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
       if (l.isPresent()
@@ -286,16 +297,49 @@ public class CharacterLibrary {
     return view(c, all.size(), all);
   }
 
-  /** 설명 임베딩이 없는 기본 표정 모습을 다시 임베딩한다 (Gemini 키를 나중에 넣었거나 실패했을 때). 처리한 수. */
+  /**
+   * 설명 임베딩이 없거나 다른 모델로 만든 기본 표정 모습을 limit개까지 임베딩한다 (서버가 늦게 켜졌거나 실패했거나 모델을 바꿨을 때). 임베딩 서버가 응답하지 않으면
+   * 그 자리에서 멈춘다. 처리한 수.
+   */
   @Transactional
-  int reindex() {
+  int reindex(int limit) {
+    if (!vectors.available()) {
+      return 0;
+    }
+    List<CharacterLook> todo =
+        vectors.missing(embedder.model(), limit).stream()
+            .map(looks::findByPublicId)
+            .flatMap(Optional::stream)
+            .toList();
     int done = 0;
-    for (String id : vectors.missing()) {
-      if (looks.findByPublicId(id).map(this::embedDescription).orElse(false)) {
-        done++;
+    for (int from = 0; from < todo.size(); from += EMBED_BATCH) {
+      List<CharacterLook> batch = todo.subList(from, Math.min(from + EMBED_BATCH, todo.size()));
+      List<float[]> v = embedder.embedAll(batch.stream().map(CharacterLook::description).toList());
+      if (v.size() != batch.size()) {
+        break;
       }
+      for (int i = 0; i < batch.size(); i++) {
+        vectors.save(batch.get(i).publicId(), v.get(i), embedder.model());
+        batch.get(i).embedded(embedder.model());
+      }
+      done += batch.size();
     }
     return done;
+  }
+
+  /** 주기적으로 빠진 설명 임베딩을 조금씩 채운다. 등록 스크립트가 임베딩 없이 넣은 모습도 여기서 채워진다. */
+  @Scheduled(
+      fixedDelayString = "${characters.embed-interval:5s}",
+      initialDelayString = "${characters.embed-initial-delay:30s}")
+  @Transactional
+  public void fillMissingEmbeddings() {
+    if (!properties.enabled()) {
+      return;
+    }
+    int done = reindex(EMBED_PER_TICK);
+    if (done > 0) {
+      log.info("캐릭터 설명 임베딩 {}개를 채웠다", done);
+    }
   }
 
   private boolean embedDescription(CharacterLook l) {

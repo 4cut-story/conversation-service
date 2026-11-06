@@ -2,6 +2,8 @@ package net.java21.fourcut.conversation.character;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -64,7 +66,7 @@ class CharacterLibraryTest {
         vectors,
         embedder,
         storage,
-        new CharacterProperties(enabled, 0.35, "gemini-embedding-001", ADAPTER));
+        new CharacterProperties(enabled, 0.30, "http://emb", "bge-m3", ADAPTER));
   }
 
   @Test
@@ -89,16 +91,32 @@ class CharacterLibraryTest {
     when(vectors.nearest(any(), any()))
         .thenReturn(
             List.of(
-                new CharacterVectors.Nearest(haneulDaily.publicId(), 0.1),
-                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2)));
+                new CharacterVectors.Nearest(haneulDaily.publicId(), 0.1, haneulDaily.look()),
+                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2, haesolDaily.look())));
     Map<String, CharacterRef> cast =
         library.match(
             List.of(
-                new CharacterLibrary.Wanted("A", "민지", "girl with red hair"),
-                new CharacterLibrary.Wanted("B", "도윤", "girl with red bob")),
+                new CharacterLibrary.Wanted("A", "민지", "young woman with red hair"),
+                new CharacterLibrary.Wanted("B", "도윤", "man with red bob")),
             "DAILY");
     assertThat(cast.get("A").publicId()).isEqualTo(haneulDaily.publicId());
     assertThat(cast.get("B").publicId()).isEqualTo(haesolDaily.publicId());
+  }
+
+  @Test
+  @DisplayName("REQ-018: 가까워도 외모 첫 마디의 성별·나이가 다른 모습은 건너뛴다")
+  void skipsOtherHead() {
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
+    when(vectors.nearest(any(), any()))
+        .thenReturn(
+            List.of(
+                new CharacterVectors.Nearest(haneulDaily.publicId(), 0.05, haneulDaily.look()),
+                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2, haesolDaily.look())));
+    Map<String, CharacterRef> cast =
+        library.match(
+            List.of(new CharacterLibrary.Wanted("A", "민지", "old man, red bob, white coat")),
+            "DAILY");
+    assertThat(cast.get("A").publicId()).isEqualTo(haesolDaily.publicId());
   }
 
   @Test
@@ -106,7 +124,8 @@ class CharacterLibraryTest {
   void tooFar() {
     when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
     when(vectors.nearest(any(), any()))
-        .thenReturn(List.of(new CharacterVectors.Nearest(haneulDaily.publicId(), 0.5)));
+        .thenReturn(
+            List.of(new CharacterVectors.Nearest(haneulDaily.publicId(), 0.5, haneulDaily.look())));
     assertThat(library.match(List.of(new CharacterLibrary.Wanted("A", "민지", "cat")), "DAILY"))
         .isEmpty();
   }
@@ -172,6 +191,40 @@ class CharacterLibraryTest {
   void disabled() {
     assertThat(library(false).match(List.of(new CharacterLibrary.Wanted("A", "하늘", "x")), "DAILY"))
         .isEmpty();
+  }
+
+  @Test
+  @DisplayName("REQ-018: 빠진 설명 임베딩을 32개씩 묶어 채운다")
+  void fillMissing() {
+    when(embedder.model()).thenReturn("bge-m3");
+    when(vectors.missing("bge-m3", CharacterLibrary.EMBED_PER_TICK))
+        .thenReturn(
+            List.of(haneulDaily.publicId(), haneulJoseon.publicId(), haesolDaily.publicId()));
+    when(embedder.embedAll(anyList()))
+        .thenAnswer(
+            inv -> ((List<?>) inv.getArgument(0)).stream().map(t -> new float[] {1f}).toList());
+    library.fillMissingEmbeddings();
+    verify(embedder).embedAll(anyList());
+    verify(vectors).save(eq(haesolDaily.publicId()), any(), eq("bge-m3"));
+    assertThat(haneulDaily.embeddingModel()).isEqualTo("bge-m3");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 임베딩 서버가 응답하지 않으면 채우지 않고 멈춘다")
+  void fillMissingFailure() {
+    when(embedder.model()).thenReturn("bge-m3");
+    when(vectors.missing("bge-m3", CharacterLibrary.EMBED_PER_TICK))
+        .thenReturn(List.of(haneulDaily.publicId()));
+    when(embedder.embedAll(anyList())).thenReturn(List.of());
+    library.fillMissingEmbeddings();
+    verify(vectors, never()).save(anyString(), any(), anyString());
+  }
+
+  @Test
+  @DisplayName("REQ-018: 끄면 설명 임베딩을 채우지 않는다")
+  void fillMissingDisabled() {
+    library(false).fillMissingEmbeddings();
+    verify(vectors, never()).missing(anyString(), anyInt());
   }
 
   @Test

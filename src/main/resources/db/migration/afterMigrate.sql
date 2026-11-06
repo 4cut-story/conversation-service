@@ -1,5 +1,5 @@
 -- 마이그레이션이 끝날 때마다 돈다 (Flyway 콜백). 여러 번 돌아도 같다.
--- pgvector가 있으면 character_looks에 설명 임베딩 컬럼과 HNSW 인덱스를 둔다 (REQ-018).
+-- pgvector가 있으면 character_looks에 설명 임베딩 컬럼(BGE-M3, 1024차원)과 HNSW 인덱스를 둔다 (REQ-018).
 -- 확장이 없고 만들 권한도 없으면 건너뛴다. 그동안 캐릭터는 이름으로만 찾는다.
 -- DB 관리자가 나중에 `CREATE EXTENSION vector;`를 실행하면, 서비스를 다시 띄울 때 컬럼이 생긴다.
 DO $$
@@ -20,11 +20,19 @@ BEGIN
     IF vector_schema IS NULL THEN
         RETURN;
     END IF;
+    -- 차원이 다른 옛 컬럼(Gemini 768차원)은 지우고 다시 만든다. 인덱스도 함께 지워지고, 서비스가 임베딩을 다시 채운다
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute
+        WHERE attrelid = to_regclass('character_looks') AND attname = 'description_embedding'
+            AND NOT attisdropped AND atttypmod <> 1024) THEN
+        ALTER TABLE character_looks DROP COLUMN description_embedding;
+        UPDATE character_looks SET embedding_model = NULL;
+    END IF;
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = current_schema() AND table_name = 'character_looks'
             AND column_name = 'description_embedding') THEN
-        EXECUTE format('ALTER TABLE character_looks ADD COLUMN description_embedding %I.vector(768)',
+        EXECUTE format('ALTER TABLE character_looks ADD COLUMN description_embedding %I.vector(1024)',
             vector_schema);
     END IF;
     IF NOT EXISTS (

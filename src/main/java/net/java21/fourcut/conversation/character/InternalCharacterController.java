@@ -33,6 +33,9 @@ class InternalCharacterController {
   static final String CONCEPTS = "DAILY|ANIMALS|WATERCOLOR|PICTURE_BOOK|NEWSPAPER|JOSEON|WUXIA";
   static final String EXPRESSIONS = "NEUTRAL|HAPPY|SAD|ANGRY|SURPRISED|EMBARRASSED";
 
+  /** 한 번 요청으로 다시 임베딩하는 최대 수. */
+  static final int REINDEX_LIMIT = 1000;
+
   private final CharacterLibrary library;
 
   InternalCharacterController(CharacterLibrary library) {
@@ -105,9 +108,9 @@ class InternalCharacterController {
     return ResponseEntity.noContent().build();
   }
 
-  /** 설명 임베딩이 없는 기본 표정 모습을 다시 임베딩한다. */
+  /** 설명 임베딩이 없거나 다른 모델로 만든 기본 표정 모습을 최대 1000개 다시 임베딩한다 (주기 작업을 기다리지 않을 때). */
   @PostMapping("/reindex")
   Map<String, Integer> reindex() {
-    return Map.of("embedded", library.reindex());
+    return Map.of("embedded", library.reindex(REINDEX_LIMIT));
   }
 }

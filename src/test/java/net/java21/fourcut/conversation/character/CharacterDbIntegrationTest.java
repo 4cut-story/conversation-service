@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.character;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -30,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
     properties = {
       "pipeline.recovery-interval=1h",
       "pipeline.local-recovery-interval=1h",
+      "characters.embed-initial-delay=1h",
       "DB_SCHEMA=public"
     })
 @AutoConfigureMockMvc
@@ -42,7 +44,7 @@ class CharacterDbIntegrationTest {
   @Autowired private ObjectStorage storage;
   @MockitoBean private TextEmbedder embedder;
 
-  /** 앞 두 축만 쓰는 768차원 단위 벡터. */
+  /** 앞 두 축만 쓰는 1024차원 단위 벡터. */
   private static float[] unit(double x, double y) {
     float[] v = new float[CharacterProperties.DIMENSIONS];
     double n = Math.sqrt(x * x + y * y);
@@ -67,6 +69,11 @@ class CharacterDbIntegrationTest {
               }
               return Optional.of(unit(0, 1));
             });
+    when(embedder.embedAll(anyList()))
+        .thenAnswer(
+            inv ->
+                ((List<?>) inv.getArgument(0))
+                    .stream().map(t -> embedder.embed((String) t).orElseThrow()).toList());
     assertThat(vectors.available()).isTrue();
 
     String body =
@@ -90,7 +97,7 @@ class CharacterDbIntegrationTest {
 
     // 참조 그림이 없으면 쓰지 않는다
     List<CharacterLibrary.Wanted> wanted =
-        List.of(new CharacterLibrary.Wanted("A", "민지", "girl with red hair"));
+        List.of(new CharacterLibrary.Wanted("A", "민지", "young woman with red hair"));
     assertThat(library.match(wanted, "DAILY")).isEmpty();
 
     storage.put(CharacterKeys.reference(id, dailyLook), new byte[] {1, 2, 3}, "image/png");
@@ -145,6 +152,15 @@ class CharacterDbIntegrationTest {
     mvc.perform(post("/internal/characters/looks/" + dailyLook + "/reference"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.look.embedReady").value(false));
+
+    // 임베딩 모델을 바꾸면 기본 표정 모습(DAILY, JOSEON)을 다시 임베딩한다
+    when(embedder.model()).thenReturn("new-embedding");
+    mvc.perform(post("/internal/characters/reindex"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.embedded").value(2));
+    mvc.perform(get("/internal/characters/" + id))
+        .andExpect(jsonPath("$.looks[0].embeddingModel").value("new-embedding"));
+    mvc.perform(post("/internal/characters/reindex")).andExpect(jsonPath("$.embedded").value(0));
 
     mvc.perform(
             post("/internal/characters")

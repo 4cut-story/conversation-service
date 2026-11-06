@@ -18,8 +18,8 @@ class CharacterVectors {
 
   private static final Logger log = LoggerFactory.getLogger(CharacterVectors.class);
 
-  /** 가장 가까운 캐릭터 후보 수. 이미 다른 인물에 쓴 캐릭터를 건너뛰려고 몇 명 더 받는다. */
-  static final int CANDIDATES = 5;
+  /** 가장 가까운 후보 수. 성별·나이가 다른 모습과 이미 다른 인물에 쓴 캐릭터를 건너뛰려고 넉넉히 받는다. */
+  static final int CANDIDATES = 50;
 
   private final JdbcClient jdbc;
 
@@ -68,15 +68,17 @@ class CharacterVectors {
                     .update());
   }
 
-  /** 임베딩이 없는 활성 캐릭터의 기본 표정 모습 공개 ID. */
-  List<String> missing() {
+  /** 임베딩이 없거나 다른 모델로 만든, 활성 캐릭터의 기본 표정 모습 공개 ID (오래된 순, 최대 limit개). */
+  List<String> missing(String model, int limit) {
     if (!available()) {
       return List.of();
     }
     return jdbc.sql(
             "select l.public_id from character_looks l join characters c on c.id = l.character_id"
-                + " where c.active and l.expression = 'NEUTRAL' and l.description_embedding is null"
-                + " order by l.id")
+                + " where c.active and l.expression = 'NEUTRAL' and (l.description_embedding is"
+                + " null or l.embedding_model is distinct from :m) order by l.id limit :n")
+        .param("m", model)
+        .param("n", limit)
         .query(String.class)
         .list();
   }
@@ -87,7 +89,7 @@ class CharacterVectors {
         .map(
             s ->
                 jdbc.sql(
-                        "select l.public_id, l.description_embedding operator("
+                        "select l.public_id, l.look, l.description_embedding operator("
                             + quote(s)
                             + ".<=>) cast(:v as "
                             + quote(s)
@@ -98,12 +100,13 @@ class CharacterVectors {
                             + CANDIDATES)
                     .param("v", literal(query))
                     .param("c", concept == null ? "DAILY" : concept)
-                    .query((rs, n) -> new Nearest(rs.getString(1), rs.getDouble(2)))
+                    .query(
+                        (rs, n) -> new Nearest(rs.getString(1), rs.getDouble(3), rs.getString(2)))
                     .list())
         .orElse(List.of());
   }
 
-  record Nearest(String publicId, double distance) {}
+  record Nearest(String publicId, double distance, String look) {}
 
   static String literal(float[] v) {
     StringBuilder sb = new StringBuilder(v.length * 10).append('[');
