@@ -53,6 +53,36 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 대사 화자가 원문 화자와 다르면 원문 화자로 바꾸고, 등장인물에 없는 화자의 말은 뺀다")
+  void sourceSpeakers() {
+    var p = panels();
+    var wrong =
+        List.of(
+            p.get(0).withLines(List.of(line("A", "백십 쪽 펴 봐"))),
+            p.get(1).withLines(List.of(line("B", "학생, 모자 써도 다 알아요"), line("A", "배고프다"))),
+            p.get(2).withLines(List.of(line("A", "응"))),
+            p.get(3));
+    var spoken =
+        List.of(
+            line("B", "백십 쪽 펴 봐."),
+            line("C", "학생, 모자 써도 다 알아요."),
+            line("A", "배고프다."),
+            line("A", "응"),
+            line("B", "응"));
+    ComicScript fixed = script(cast(), wrong).withSourceSpeakers(spoken);
+    assertThat(fixed.panels().get(0).lines())
+        .extracting(ComicScript.Line::speaker)
+        .containsExactly("B");
+    assertThat(fixed.panels().get(0).scene()).contains("{B}");
+    assertThat(fixed.panels().get(1).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("배고프다");
+    assertThat(fixed.panels().get(2).lines())
+        .extracting(ComicScript.Line::speaker)
+        .containsExactly("A");
+  }
+
+  @Test
   @DisplayName("FR-005: 호칭이 화자 표시(\"A\")나 영문 한 글자면 호칭으로 쓰지 않고 이름으로 부른다")
   void speakerKeyRoleRejected() {
     assertThat(ComicScript.cleanRole("A", "A")).isNull();
