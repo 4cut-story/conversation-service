@@ -18,9 +18,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * EXTRACT: 전사를 10분 구간으로 나눠 구간마다 LLM으로 장면 후보(0~2개)를 뽑는다. 구간을 하나씩 차례로 작업으로 넣는다. Gemini를 쓸 수 있으면 먼저
- * 서버에서 전사의 잘못 들은 말을 고치고({@link TranscriptCorrector}), 이후 단계(장면 선택·콘티·대사)는 고친 전사를 쓴다. 교정이 실패하면 원문
- * 그대로 간다.
+ * EXTRACT: 전사를 10분 구간으로 나눠 구간마다 LLM으로 장면 후보(0~2개)를 뽑는다. 구간을 하나씩 차례로 작업으로 넣는다. 외부 LLM
+ * API(Claude·Gemini)를 쓸 수 있으면 먼저 서버에서 전사의 잘못 들은 말을 고치고({@link TranscriptCorrector}), 이후 단계(장면
+ * 선택·콘티·대사)는 고친 전사를 쓴다. 교정이 실패하면 원문 그대로 간다.
  */
 @Component
 class ExtractHandler implements StepHandler {
@@ -54,7 +54,7 @@ class ExtractHandler implements StepHandler {
   @Override
   public StepOutcome start(StepContext context) {
     if (properties.correctTranscript() && corrector.available()) {
-      // Gemini 호출은 시간이 걸리므로 트랜잭션 밖(runLocal)에서 한다
+      // 외부 LLM 호출은 시간이 걸리므로 트랜잭션 밖(runLocal)에서 한다
       return new StepOutcome.RunLocal();
     }
     return firstWindow(context, transcripts.load(context.conversation().publicId()));

@@ -191,7 +191,7 @@ public class GpuJob extends BaseEntity {
     this.leaseExpiresAt = null;
   }
 
-  /** 임대를 내려놓는다 (서버 쪽 Gemini가 실패). 임대 횟수에 세지 않아 GPU 워커는 원래 횟수만큼 시도한다. */
+  /** 임대를 내려놓는다 (서버 쪽 외부 LLM API가 모두 실패). 임대 횟수에 세지 않아 GPU 워커는 원래 횟수만큼 시도한다. */
   void release() {
     requeue();
     if (leaseCount > 0) {

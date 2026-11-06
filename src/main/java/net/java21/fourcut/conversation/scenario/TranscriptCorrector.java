@@ -16,8 +16,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 장면 추출·콘티 전에 전사(STT)의 잘못 들은 말을 Gemini로 고친다. 뜻을 바꾸거나 없던 말을 더하지 않고, 소리가 비슷해 잘못 적힌 낱말·띄어쓰기·맞춤법만 고친다.
- * 발화의 화자·시각·순서는 그대로 두고 글자만 바꾼다. 호출이 실패하거나 고친 줄이 원문과 너무 다르면 그 부분은 원문을 쓴다.
+ * 장면 추출·콘티 전에 전사(STT)의 잘못 들은 말을 외부 LLM API(Claude → Gemini)로 고친다. 뜻을 바꾸거나 없던 말을 더하지 않고, 소리가 비슷해 잘못
+ * 적힌 낱말·띄어쓰기·맞춤법만 고친다. 발화의 화자·시각·순서는 그대로 두고 글자만 바꾼다. 호출이 실패하거나 고친 줄이 원문과 너무 다르면 그 부분은 원문을 쓴다.
  */
 @Component
 class TranscriptCorrector {
@@ -80,7 +80,7 @@ class TranscriptCorrector {
   private final DirectLlm llm;
   private final JsonMapper json;
 
-  /** {@code llm}은 지연 주입한다. Gemini 실행기가 파이프라인 엔진을 거쳐 이 클래스에 다시 닿는 순환을 끊는다. */
+  /** {@code llm}은 지연 주입한다. 외부 LLM 실행기가 파이프라인 엔진을 거쳐 이 클래스에 다시 닿는 순환을 끊는다. */
   TranscriptCorrector(@Lazy DirectLlm llm, JsonMapper json) {
     this.llm = llm;
     this.json = json;
