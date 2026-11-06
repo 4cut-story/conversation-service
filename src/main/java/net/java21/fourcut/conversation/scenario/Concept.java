@@ -38,8 +38,8 @@ public enum Concept {
       """),
   ANIMALS(
       "동물 친구들",
-      "storybook scene, cute anthropomorphic animal characters, round shapes, pastel colors,"
-          + " simple background",
+      "storybook scene, cute anthropomorphic animal characters wearing clothes, round shapes,"
+          + " pastel colors, simple background",
       "human, person, realistic animal, insect, bug, character sheet, sticker sheet, emoji, icons,"
           + " doodles, repeated faces, pattern",
       "animal characters, no humans",
