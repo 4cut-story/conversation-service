@@ -92,4 +92,30 @@ class ComicComposerTest {
     assertThat(g.getFontMetrics().stringWidth(cut)).isLessThanOrEqualTo(300);
     g.dispose();
   }
+
+  @Test
+  @DisplayName("FR-007: 말풍선은 화자 쪽에 붙고, 꼬리는 화자 쪽으로 나온다")
+  void bubbleSide() {
+    int w = 200;
+    int left = ComicComposer.bubbleX(Staging.Side.LEFT, false, w);
+    int right = ComicComposer.bubbleX(Staging.Side.RIGHT, true, w);
+    int center = ComicComposer.bubbleX(Staging.Side.CENTER, true, w);
+    assertThat(left).isLessThan(center);
+    assertThat(center).isLessThan(right);
+    // 화자를 모르면 위는 왼쪽, 아래는 오른쪽
+    assertThat(ComicComposer.bubbleX(null, true, w)).isEqualTo(left);
+    assertThat(ComicComposer.bubbleX(null, false, w)).isEqualTo(right);
+
+    // 오른쪽 화자의 위 말풍선: 꼬리 끝은 말풍선 아래, 화자 쪽(오른쪽)이다
+    var rect = new java.awt.Rectangle(right, 40, w, 100);
+    var tail = ComicComposer.tail(Staging.Side.RIGHT, true, right, 40, w, 100).getBounds();
+    assertThat(tail.y + tail.height).isGreaterThan(rect.y + rect.height + 40);
+    assertThat(tail.x + tail.width / 2).isGreaterThan(ComicComposer.speakerX(Staging.Side.CENTER));
+    // 왼쪽 화자의 아래 말풍선: 꼬리는 위로, 왼쪽에 있다
+    var low = ComicComposer.tail(Staging.Side.LEFT, false, left, 600, w, 100).getBounds();
+    assertThat(low.y).isLessThan(600 - 40);
+    assertThat(low.x + low.width).isLessThan(ComicComposer.speakerX(Staging.Side.CENTER));
+    assertThat(ComicComposer.speakerX(Staging.Side.LEFT))
+        .isLessThan(ComicComposer.speakerX(Staging.Side.CENTER));
+  }
 }

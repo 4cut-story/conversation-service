@@ -74,13 +74,16 @@ class DrawHandler implements StepHandler {
       scenarios.saveScript(id, named);
     }
     ComicScript script = withLooks(named, cast);
+    List<Map<String, Staging.Side>> stages = Staging.panels(script);
     long seed = Math.floorMod((long) id.hashCode(), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
     for (int i = 0; i < PANELS; i++) {
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      image.put("prompt", prompt(style(script, properties), script, script.panels().get(i)));
+      image.put(
+          "prompt",
+          prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
       image.put("negativePrompt", negative(script, properties));
       // 네 컷을 같은 시드로 그린다. 컷마다 시드를 달리하면 같은 외모 문구로도 인물 얼굴·옷 색이 컷마다 바뀌었다(GPU PC 3회차 비교).
       // 구도는 컷마다 다른 장면·구도 문구로 달라진다
@@ -88,7 +91,7 @@ class DrawHandler implements StepHandler {
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));
-      ArrayNode refs = references(script, script.panels().get(i), cast);
+      ArrayNode refs = references(stages.get(i), cast);
       if (!refs.isEmpty()) {
         image.set("references", refs);
       }
@@ -120,9 +123,15 @@ class DrawHandler implements StepHandler {
   /**
    * SDXL 프롬프트. CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 인원 → 장면 순으로 둔다. 장면의 {A}, {B}는 그 인물의 외모로 바꾸고, 두 명
    * 이상이면 "two people"(컨셉별 crowd)을 넣는다(넣지 않으면 클로즈업에 한 명만 그리는 일이 잦다). 등장인물에 없는 자리 표시는 "a friend"(컨셉별
-   * friend)로 바꾼다. 자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다.
+   * friend)로 바꾼다. 자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다. 두 명이 나오는 컷은 인물이 처음 나오는 곳에 "on the left"/"on the
+   * right"를 붙여 IP-Adapter 마스크·말풍선과 같은 자리에 세운다({@link Staging}).
    */
   static String prompt(String style, ComicScript script, ComicScript.Panel panel) {
+    return prompt(style, script, panel, Staging.panel(script, panel));
+  }
+
+  static String prompt(
+      String style, ComicScript script, ComicScript.Panel panel, Map<String, Staging.Side> stage) {
     Concept concept = Concept.of(script.concept());
     String scene = panel.scene().strip();
     boolean legacy = !scene.contains("{");
@@ -134,7 +143,18 @@ class DrawHandler implements StepHandler {
         cast.append("; ").append(c.look().strip());
       } else if (scene.contains(mark)) {
         people++;
-        scene = scene.replace(mark, "(" + c.look().strip() + ")");
+        String look = "(" + c.look().strip() + ")";
+        Staging.Side side = stage.get(c.speaker());
+        String where =
+            side == Staging.Side.CENTER && stage.size() > 2
+                ? " in the middle"
+                : WHERE.getOrDefault(side, "");
+        int at = scene.indexOf(mark);
+        scene =
+            scene.substring(0, at)
+                + look
+                + where
+                + scene.substring(at + mark.length()).replace(mark, look);
       }
     }
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
@@ -190,26 +210,36 @@ class DrawHandler implements StepHandler {
   /** IP-Adapter 참조는 한 컷에 두 명까지 (두 명이면 왼쪽·오른쪽 마스크). */
   static final int MAX_REFERENCES = 2;
 
+  /** 프롬프트 위치 문구. 가운데(혼자)는 붙이지 않는다. */
+  private static final Map<Staging.Side, String> WHERE =
+      Map.of(Staging.Side.LEFT, " on the left", Staging.Side.RIGHT, " on the right");
+
   /**
-   * 컷에 나오는 인물(장면에 처음 나온 순서, 예전 콘티는 등장인물 순서) 중 캐릭터를 찾은 인물의 참조. 두 명 이상 나오는 컷은 먼저 나온 인물을 왼쪽, 다음 인물을
-   * 오른쪽에 둔다. 참조가 한 명뿐이어도 자리를 정해 다른 인물까지 그 얼굴로 그리지 않게 한다.
+   * 컷에 나오는 인물 중 캐릭터를 찾은 인물의 참조. 자리는 {@link Staging}이 정한다: 한 만화 안에서 같은 인물은 늘 같은 쪽에 서고, 혼자면 전체다. 참조가
+   * 한 명뿐이어도 자리를 정해 다른 인물까지 그 얼굴로 그리지 않게 한다.
    */
   ArrayNode references(
       ComicScript script, ComicScript.Panel panel, Map<String, CharacterRef> cast) {
+    return references(Staging.panel(script, panel), cast);
+  }
+
+  ArrayNode references(Map<String, Staging.Side> stage, Map<String, CharacterRef> cast) {
     ArrayNode refs = json.createArrayNode();
     if (cast.isEmpty()) {
       return refs;
     }
-    List<String> people = people(script, panel);
-    for (int i = 0; i < people.size() && i < MAX_REFERENCES; i++) {
-      CharacterRef ref = cast.get(people.get(i));
-      if (ref == null) {
+    int added = 0;
+    for (Map.Entry<String, Staging.Side> e : stage.entrySet()) {
+      CharacterRef ref = cast.get(e.getKey());
+      boolean extra = e.getValue() == Staging.Side.CENTER && stage.size() > 1;
+      if (ref == null || extra || added >= MAX_REFERENCES) {
         continue;
       }
+      added++;
       ObjectNode r = refs.addObject();
       r.put("character", ref.publicId());
       r.put("scale", ref.scale());
-      r.put("region", people.size() < 2 ? "full" : i == 0 ? "left" : "right");
+      r.put("region", REGION.get(e.getValue()));
       if (ref.embedReady()) {
         r.put("embedGetKey", ref.embedKey());
       } else {
@@ -219,6 +249,9 @@ class DrawHandler implements StepHandler {
     }
     return refs;
   }
+
+  private static final Map<Staging.Side, String> REGION =
+      Map.of(Staging.Side.LEFT, "left", Staging.Side.RIGHT, "right", Staging.Side.CENTER, "full");
 
   /** 컷에 나오는 화자 표시, 장면에 처음 나온 순서. */
   static List<String> people(ComicScript script, ComicScript.Panel panel) {

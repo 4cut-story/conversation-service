@@ -68,7 +68,7 @@ class DrawReferencesTest {
   }
 
   @Test
-  @DisplayName("REQ-018: 혼자 나오는 컷은 전체, 두 명이면 먼저 나온 인물이 왼쪽이다")
+  @DisplayName("REQ-018: 혼자 나오는 컷은 전체, 두 명이면 장면 문장 순서와 관계없이 인물마다 정한 쪽에 선다")
   void regions() {
     var solo = new ComicScript.Panel("기", "close-up", "{A} eats", null);
     ArrayNode one = handler.references(script, solo, Map.of("A", ready));
@@ -80,15 +80,39 @@ class DrawReferencesTest {
     var duo = new ComicScript.Panel("승", "medium", "{B} hands {A} a cup", null);
     ArrayNode two = handler.references(script, duo, Map.of("A", ready, "B", fresh));
     assertThat(two).hasSize(2);
-    assertThat(two.get(0).path("character").asString()).isEqualTo(fresh.publicId());
+    assertThat(two.get(0).path("character").asString()).isEqualTo(ready.publicId());
     assertThat(two.get(0).path("region").asString()).isEqualTo("left");
+    assertThat(two.get(1).path("character").asString()).isEqualTo(fresh.publicId());
     assertThat(two.get(1).path("region").asString()).isEqualTo("right");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 세 명이 나오는 컷은 고정 자리 두 명만 참조를 넣고 셋째 인물은 넣지 않는다")
+  void three() {
+    ComicScript trio =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "민지", "", "girl"),
+                new ComicScript.Character("B", "도윤", "", "boy"),
+                new ComicScript.Character("C", "하준", "", "old man")),
+            List.of(),
+            true,
+            List.of());
+    var panel = new ComicScript.Panel("전", "wide", "{C} shouts at {B} and {A}", null);
+    CharacterRef third =
+        new CharacterRef("ccccccccccccccccccccc", "할배", "old man", 0.6, "r", "e", "e", 0.1);
+    ArrayNode refs = handler.references(trio, panel, Map.of("A", ready, "B", fresh, "C", third));
+    assertThat(refs).hasSize(2);
+    assertThat(refs.get(0).path("region").asString()).isEqualTo("left");
+    assertThat(refs.get(0).path("character").asString()).isEqualTo(ready.publicId());
+    assertThat(refs.get(1).path("region").asString()).isEqualTo("right");
   }
 
   @Test
   @DisplayName("REQ-018: embedding이 없으면 참조 그림과 embedding을 올릴 키를 넘긴다")
   void notReady() {
-    var duo = new ComicScript.Panel("승", "medium", "{A} and {B} talk", null);
+    var duo = new ComicScript.Panel("승", "medium", "{B} and {A} talk", null);
     ArrayNode refs = handler.references(script, duo, Map.of("B", fresh));
     assertThat(refs).hasSize(1);
     JsonNode r = refs.get(0);
