@@ -53,6 +53,28 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 호칭이 화자 표시(\"A\")나 영문 한 글자면 호칭으로 쓰지 않고 이름으로 부른다")
+  void speakerKeyRoleRejected() {
+    assertThat(ComicScript.cleanRole("A", "A")).isNull();
+    assertThat(ComicScript.cleanRole("b.", "B")).isNull();
+    assertThat(ComicScript.cleanRole("부장님", "A")).isEqualTo("부장님");
+  }
+
+  @Test
+  @DisplayName("FR-005: 대사 앞에 붙은 화자 표시(\"A: \")는 떼어 말풍선에 두 번 나오지 않는다")
+  void speakerTagStripped() {
+    assertThat(ComicScript.withoutSpeakerTag("A: 회의실 문을 열어보자.")).isEqualTo("회의실 문을 열어보자.");
+    assertThat(ComicScript.withoutSpeakerTag("{B}： 누구야?")).isEqualTo("누구야?");
+    assertThat(ComicScript.withoutSpeakerTag("A4 용지 어디 있어?")).isEqualTo("A4 용지 어디 있어?");
+    var p = panels();
+    var tagged =
+        List.of(p.get(0), p.get(1).withLines(List.of(line("B", "A: 문 열어"))), p.get(2), p.get(3));
+    assertThat(script(cast(), tagged).normalized().panels().get(1).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("문 열어");
+  }
+
+  @Test
   @DisplayName("FR-005: 실제 대화가 같은 말을 되풀이해도 뒤 컷의 같은 대사를 빼서 반복 위반으로 실패하지 않는다")
   void repeatedLinesDropped() {
     var p = panels();
