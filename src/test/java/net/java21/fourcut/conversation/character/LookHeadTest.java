@@ -54,4 +54,18 @@ class LookHeadTest {
     assertThat(LookHead.of("young woman, white hair")).isEqualTo(new LookHead(null, "F", "YOUNG"));
     assertThat(LookHead.of("swordsman, white robe")).isEqualTo(new LookHead(null, "M", null));
   }
+
+  @Test
+  @DisplayName("REQ-018: 모습 문구에 성별·나이가 없으면 캐릭터 DB 값으로 채워 할아버지 자리에 소녀를 붙이지 않는다")
+  void dbFallback() {
+    LookHead blonde = LookHead.of("blonde hair, blue overalls");
+    assertThat(LookHead.of("old man, gray hair").accepts(blonde)).isTrue();
+    assertThat(LookHead.of("old man, gray hair").accepts(blonde.orDb("FEMALE", "CHILD"))).isFalse();
+    assertThat(LookHead.of("girl, pigtails").accepts(blonde.orDb("FEMALE", "CHILD"))).isTrue();
+    assertThat(LookHead.of("man, suit").orDb("MALE", "MIDDLE"))
+        .isEqualTo(new LookHead(null, "M", "MIDDLE"));
+    assertThat(LookHead.of("young woman").orDb("MALE", "OLD"))
+        .isEqualTo(new LookHead(null, "F", "YOUNG"));
+    assertThat(blonde.orDb(null, null)).isEqualTo(blonde);
+  }
 }

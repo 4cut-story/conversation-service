@@ -93,7 +93,7 @@ public class CharacterLibrary {
       // 같은 이름의 젊은 캐릭터가 붙었다(funny-03)
       if (l != null
           && !used.contains(l.character().publicId())
-          && LookHead.of(w.look()).accepts(LookHead.of(l.look()))
+          && LookHead.of(w.look()).accepts(head(l))
           && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
@@ -127,6 +127,7 @@ public class CharacterLibrary {
       }
       Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
       if (l.isPresent()
+          && wanted.accepts(head(l.get()))
           && !used.contains(l.get().character().publicId())
           && hasReference(l.get())) {
         used.add(l.get().character().publicId());
@@ -134,6 +135,11 @@ public class CharacterLibrary {
       }
     }
     return Optional.empty();
+  }
+
+  /** 모습 문구의 첫 마디에 없는 성별·나이는 캐릭터 DB 값으로 채운다. */
+  private static LookHead head(CharacterLook l) {
+    return LookHead.of(l.look()).orDb(l.character().gender(), l.character().ageGroup());
   }
 
   private boolean hasReference(CharacterLook l) {
