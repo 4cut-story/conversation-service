@@ -143,8 +143,10 @@ public class CharacterLibrary {
         vectors.nearest(query.get(), concept).stream()
             .takeWhile(n -> n.distance() <= properties.maxDistance())
             .toList();
-    // 성별이 맞는 모습을 먼저 찾고, 없을 때만 성별을 모르는 모습을 쓴다
-    for (boolean strict : new boolean[] {true, false}) {
+    // 성별이 맞는 모습을 찾는다. 성별을 모르는 모습은 이쪽 성별도 모를 때만 쓴다. 성별을 아는 인물에 쓰면 참조 그림(안경 쓴 남자아이)과
+    // 프롬프트("young woman")가 어긋나 여자로 그려지고 안경·옷이 빠졌다(school-18, school-19, love-11)
+    boolean[] passes = wanted.gender() == null ? new boolean[] {true, false} : new boolean[] {true};
+    for (boolean strict : passes) {
       for (CharacterVectors.Nearest n : near) {
         if (!wanted.accepts(LookHead.of(n.look()))) {
           continue;
