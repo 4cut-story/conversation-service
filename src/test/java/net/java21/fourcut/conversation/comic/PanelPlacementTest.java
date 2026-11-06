@@ -79,11 +79,11 @@ class PanelPlacementTest {
   }
 
   @Test
-  @DisplayName("FR-006: 두 명이 서고 누가 말하는 컷만 그림을 보내 확인하고, 답대로 자리를 고친다")
+  @DisplayName("FR-006: 누가 말하는 컷은 그림을 보내 확인하고, 답대로 자리를 고친다")
   void check() {
     ComicScript s = script();
     List<Map<String, Side>> planned = Staging.panels(s);
-    assertThat(PanelPlacement.asked(s, planned, 4)).containsExactly(0, 2);
+    assertThat(PanelPlacement.asked(s, planned, 4)).containsExactly(0, 1, 2);
     when(llm.available()).thenReturn(true);
     when(llm.see(anyString(), anyString(), anyString(), anyList()))
         .thenReturn(
@@ -98,7 +98,7 @@ class PanelPlacementTest {
     ArgumentCaptor<List<byte[]>> sent = ArgumentCaptor.forClass(List.class);
     ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
     verify(llm).see(anyString(), prompt.capture(), anyString(), sent.capture());
-    assertThat(sent.getValue()).hasSize(2);
+    assertThat(sent.getValue()).hasSize(3);
     assertThat(prompt.getValue()).contains("(panel 1)", "(panel 3)", "old man, white hair");
   }
 
@@ -120,5 +120,60 @@ class PanelPlacementTest {
     when(llm.see(anyString(), anyString(), anyString(), anyList()))
         .thenThrow(new IllegalStateException("x"));
     assertThat(placement.check(s, images(), planned)).isEqualTo(planned);
+  }
+
+  @Test
+  @DisplayName("FR-007: 답에 얼굴 위치가 있으면 컷별 얼굴로 받고, 그림 밖이거나 없는 값은 버린다")
+  void heads() {
+    ComicScript s = script();
+    List<Map<String, Side>> planned = Staging.panels(s);
+    when(llm.available()).thenReturn(true);
+    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+        .thenReturn(
+            Optional.of(
+                "{\"panels\":[{\"panel\":1,\"people\":["
+                    + "{\"speaker\":\"A\",\"side\":\"right\",\"x\":70,\"y\":40,\"size\":20},"
+                    + "{\"speaker\":\"B\",\"side\":\"left\",\"x\":130,\"y\":40,\"size\":20}]},"
+                    + "{\"panel\":2,\"people\":[{\"speaker\":\"A\",\"side\":\"center\"}]}]}"));
+    PanelPlacement.Spots spots = placement.locate(s, images(), planned);
+    assertThat(spots.heads()).hasSize(4);
+    assertThat(spots.heads().get(0)).containsOnlyKeys("A");
+    PanelPlacement.Head a = spots.heads().get(0).get("A");
+    assertThat(a.x()).isEqualTo(0.7);
+    assertThat(a.size()).isEqualTo(0.2);
+    assertThat(spots.heads().get(1)).isEmpty();
+    assertThat(spots.heads().get(3)).isEmpty();
+    assertThat(spots.stages().get(0)).containsEntry("A", Side.RIGHT);
+  }
+
+  @Test
+  @DisplayName("FR-007: 그림 밖 위치, 너무 작거나 큰 얼굴, 안 보인 인물은 얼굴로 쓰지 않는다")
+  void headRange() {
+    var m = JsonMapper.builder().build();
+    assertThat(PanelPlacement.head(m.readTree("{\"side\":\"left\",\"x\":50,\"y\":50,\"size\":10}")))
+        .contains(new PanelPlacement.Head(0.5, 0.5, 0.1));
+    assertThat(
+            PanelPlacement.head(m.readTree("{\"side\":\"absent\",\"x\":50,\"y\":50,\"size\":10}")))
+        .isEmpty();
+    assertThat(PanelPlacement.head(m.readTree("{\"side\":\"left\",\"x\":50,\"y\":-1,\"size\":10}")))
+        .isEmpty();
+    assertThat(PanelPlacement.head(m.readTree("{\"side\":\"left\",\"x\":50,\"y\":50,\"size\":1}")))
+        .isEmpty();
+    assertThat(PanelPlacement.head(m.readTree("{\"side\":\"left\",\"x\":50,\"y\":50,\"size\":90}")))
+        .isEmpty();
+    assertThat(
+            PanelPlacement.head(m.readTree("{\"side\":\"left\",\"x\":\"a\",\"y\":50,\"size\":9}")))
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("FR-007: 확인을 못 하면 얼굴 없이 정해 둔 자리 그대로다")
+  void locateFallback() {
+    ComicScript s = script();
+    List<Map<String, Side>> planned = Staging.panels(s);
+    when(llm.available()).thenReturn(false);
+    PanelPlacement.Spots spots = placement.locate(s, images(), planned);
+    assertThat(spots.stages()).isEqualTo(planned);
+    assertThat(spots.heads()).hasSize(4).allMatch(Map::isEmpty);
   }
 }
