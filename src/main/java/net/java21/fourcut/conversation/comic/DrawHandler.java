@@ -169,7 +169,12 @@ class DrawHandler implements StepHandler {
     String shot = kind == null ? "" : kind.replace('-', ' ') + " shot, ";
     String count =
         people >= 2
-            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
+            ? COUNTS.get(Math.min(people, COUNTS.size()) - 1)
+                + " "
+                + concept.crowd()
+                + ", "
+                + SIDE_BY_SIDE
+                + ", "
             : "";
     return style + ", " + shot + count + lineup + scene + detail + cast;
   }
@@ -442,6 +447,12 @@ class DrawHandler implements StepHandler {
   private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
 
   private static final List<String> COUNTS = List.of("one", "two", "three", "four");
+
+  /**
+   * 여럿이 나오는 컷의 구도 말. 두 사람이 말하는 컷에 한 사람만 그려져 말풍선 자리(왼쪽·오른쪽)와 그림이 어긋났다(그림책 '밤마다 그려진 담벼락 그림의 비밀'
+   * 2·4컷). Lightning(guidance 0)은 negative를 읽지 않아 구도는 이 말로만 잡는다.
+   */
+  static final String SIDE_BY_SIDE = "side by side, both fully visible";
 
   /** 컨셉 그림체. 일상 웹툰(기본·예전 콘티)은 설정의 그림체를 쓴다. */
   static String style(ComicScript script, ComicProperties properties) {
