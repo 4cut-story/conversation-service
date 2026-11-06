@@ -12,6 +12,8 @@ import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
 import net.java21.fourcut.conversation.pipeline.StepOutcome;
 import net.java21.fourcut.conversation.scenario.ComicScript;
+import net.java21.fourcut.conversation.scenario.Concept;
+import net.java21.fourcut.conversation.scenario.Dialect;
 import net.java21.fourcut.conversation.scenario.ScenarioStore;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
@@ -75,8 +77,21 @@ class ComposeHandler implements StepHandler {
                 full,
                 thumb,
                 language,
-                script.nameWarnings() == null ? List.of() : script.nameWarnings()));
+                script.nameWarnings() == null ? List.of() : script.nameWarnings(),
+                cast(script),
+                Concept.of(script.concept()).name(),
+                Dialect.of(context.conversation().dialect()).name()));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /** 만화 아래 등장인물 소개: 호칭, 캐릭터 이름, 캐릭터 모습. */
+  static List<ContentClient.CastMember> cast(ComicScript script) {
+    if (script.characters() == null) {
+      return List.of();
+    }
+    return script.characters().stream()
+        .map(c -> new ContentClient.CastMember(c.callName(), c.displayName(), c.lookId()))
+        .toList();
   }
 
   private static BufferedImage read(byte[] bytes) {

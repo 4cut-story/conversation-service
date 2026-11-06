@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 class ComicScriptTest {
 
@@ -369,5 +370,88 @@ class ComicScriptTest {
     assertThat(s.withCharacterNames(java.util.Map.of())).isSameAs(s);
     ComicScript swapped = s.withCharacterNames(java.util.Map.of("A", "도윤", "B", "민지"));
     assertThat(swapped.characters().get(0).name()).isEqualTo("도윤");
+  }
+
+  @Test
+  @DisplayName("FR-006: 컷의 배경·표정은 JSON으로 읽고, 예전 콘티에는 없어도 읽는다")
+  void panelJson() {
+    JsonMapper json = JsonMapper.builder().build();
+    ComicScript.Panel p =
+        json.readValue(
+            "{\"role\":\"기\",\"shot\":\"wide\",\"scene\":\"{A} waits\",\"lines\":[],"
+                + "\"setting\":\"bus stop, rain\",\"faces\":[{\"speaker\":\"A\",\"face\":\"sleepy\"}]}",
+            ComicScript.Panel.class);
+    assertThat(p.setting()).isEqualTo("bus stop, rain");
+    assertThat(p.faces()).containsExactly(new ComicScript.Face("A", "sleepy"));
+    assertThat(p.withLines(List.of()).faces()).isEqualTo(p.faces());
+    assertThat(p.withScene("x").setting()).isEqualTo("bus stop, rain");
+    ComicScript.Panel old =
+        json.readValue(
+            "{\"role\":\"기\",\"shot\":\"wide\",\"scene\":\"{A} waits\",\"lines\":[]}",
+            ComicScript.Panel.class);
+    assertThat(old.setting()).isNull();
+    assertThat(old.faces()).isNull();
+  }
+
+  static List<ComicScript.Character> family() {
+    return List.of(
+        new ComicScript.Character("A", "하늘", "손이 큰 할머니", "old woman", " 할머니 ", null),
+        new ComicScript.Character("B", "도윤", "장난꾸러기", "girl", "손녀", null));
+  }
+
+  @Test
+  @DisplayName("REQ-018: 대사와 제목은 이름 대신 호칭으로 부르고 원문(quote)과 등장인물 이름은 그대로 둔다")
+  void roleCalls() {
+    ComicScript s =
+        new ComicScript(
+            "하늘의 비밀 레시피",
+            family(),
+            List.of(
+                new ComicScript.Panel(
+                    "기",
+                    "wide",
+                    "{A} cooks",
+                    List.of(
+                        new ComicScript.Line("B", "하늘아, 뭐 해?", "하늘아 뭐 해"),
+                        new ComicScript.Line("A", "도윤이가 좋아하는 거", "도윤이가 좋아하는 거")))),
+            true,
+            List.of());
+    ComicScript called = s.withRoleCalls();
+    assertThat(called.title()).isEqualTo("할머니의 비밀 레시피");
+    assertThat(called.panels().get(0).lines())
+        .containsExactly(
+            new ComicScript.Line("B", "할머니, 뭐 해?", "하늘아 뭐 해"),
+            new ComicScript.Line("A", "손녀가 좋아하는 거", "도윤이가 좋아하는 거"));
+    assertThat(called.characters().get(0).name()).isEqualTo("하늘");
+    assertThat(called.callNames()).containsEntry("A", "할머니").containsEntry("B", "손녀");
+    assertThat(called.withRoleCalls()).isEqualTo(called);
+  }
+
+  @Test
+  @DisplayName("REQ-018: 호칭이 겹치면 번호를 붙이고, 호칭이 없거나 너무 길면 이름으로 부른다")
+  void roleCallsFallback() {
+    List<ComicScript.Character> friends =
+        List.of(
+            new ComicScript.Character("A", "하늘", "", "girl", "친구", null),
+            new ComicScript.Character("B", "도윤", "", "boy", "친구", null),
+            new ComicScript.Character("C", "지우", "", "boy", "아주아주아주긴호칭이다", null));
+    ComicScript called = script(friends, panels()).withRoleCalls();
+    assertThat(called.callNames())
+        .containsEntry("A", "친구")
+        .containsEntry("B", "친구2")
+        .containsEntry("C", "지우");
+    ComicScript old = script(cast(), panels());
+    assertThat(old.withRoleCalls()).isSameAs(old);
+    assertThat(old.callNames()).containsEntry("A", "민지");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 이름을 호칭으로 바꿀 때 조사를 맞추고 높여 부르는 호칭에는 '아/야'를 붙이지 않는다")
+  void roleParticles() {
+    assertThat(CastNames.toRoles("하늘아 하늘이가 하늘은 하늘을", java.util.Map.of("하늘", "형")))
+        .isEqualTo("형 형이 형은 형을");
+    assertThat(CastNames.toRoles("도윤아 도윤이랑 도윤이도", java.util.Map.of("도윤", "손녀")))
+        .isEqualTo("손녀야 손녀랑 손녀도");
+    assertThat(CastNames.toRoles("민지야, 민지가", java.util.Map.of("민지", "할머니"))).isEqualTo("할머니, 할머니가");
   }
 }

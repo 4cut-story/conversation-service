@@ -598,6 +598,9 @@ class PipelineFlowIntegrationTest {
         ArgumentCaptor.forClass(ContentClient.RegisterComic.class);
     verify(content).register(registered.capture());
     assertThat(registered.getValue().nameWarnings()).containsExactly("민지");
+    assertThat(registered.getValue().cast()).isNotEmpty();
+    assertThat(registered.getValue().concept()).isNotBlank();
+    assertThat(registered.getValue().dialect()).isEqualTo("NONE");
     assertThat(registered.getValue().ownerId()).isEqualTo(owner);
     byte[] full = storage.get(WorkKeys.comicFull(conversationId)).orElseThrow();
     BufferedImage composed = ImageIO.read(new java.io.ByteArrayInputStream(full));

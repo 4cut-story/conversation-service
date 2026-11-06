@@ -68,9 +68,10 @@ class DrawHandler implements StepHandler {
     String id = context.conversation().publicId();
     ComicScript written = scenarios.script(id);
     Map<String, CharacterRef> cast = characters.match(wanted(written), concept(written));
-    ComicScript named = withNames(written, cast);
+    ComicScript named = withNames(written.withRoleCalls(), cast);
     if (!named.equals(written)) {
-      // 말풍선(COMPOSE)과 만화 제목도 캐릭터 이름을 쓰게 저장한다. 다시 그릴 때는 이 이름으로 같은 캐릭터를 찾는다
+      // 등장인물 소개(COMPOSE가 content-service에 넘긴다)에 캐릭터 이름과 모습을 쓰게 저장한다. 대사·제목은 호칭으로 부른다.
+      // 다시 그릴 때는 이 이름으로 같은 캐릭터를 찾는다
       scenarios.saveScript(id, named);
     }
     ComicScript script = withLooks(named, cast);
@@ -148,10 +149,11 @@ class DrawHandler implements StepHandler {
       }
     }
     String lineup = "";
+    Map<String, String> names = new java.util.HashMap<>();
     if (people >= 2 && stage.size() >= 2) {
       lineup = lineup(stage, looks);
-      Map<String, String> heads = heads(stage, looks);
-      for (Map.Entry<String, String> e : heads.entrySet()) {
+      names = heads(stage, looks);
+      for (Map.Entry<String, String> e : names.entrySet()) {
         scene = scene.replace("{" + e.getKey() + "}", e.getValue());
       }
     } else {
@@ -159,13 +161,43 @@ class DrawHandler implements StepHandler {
         scene = scene.replace("{" + e.getKey() + "}", "(" + e.getValue() + ")");
       }
     }
+    String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
     String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
     String count =
         people >= 2
             ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
             : "";
-    return style + ", " + shot + count + lineup + scene + cast;
+    return style + ", " + shot + count + lineup + scene + detail + cast;
+  }
+
+  /**
+   * 콘티의 인물별 표정·몸짓. 두 명 이상이면 장면 문장과 같은 짧은 이름("the old woman laughing")으로, 혼자면 표정만 붙인다. 긴 프롬프트는 워커가
+   * 75토큰 조각으로 나눠 읽으므로 콘티 내용을 줄이지 않고 넘긴다.
+   */
+  static String faces(ComicScript.Panel panel, Set<String> inScene, Map<String, String> names) {
+    if (panel.faces() == null) {
+      return "";
+    }
+    StringBuilder out = new StringBuilder();
+    for (ComicScript.Face f : panel.faces()) {
+      if (f == null || f.face() == null || f.face().isBlank() || !inScene.contains(f.speaker())) {
+        continue;
+      }
+      out.append(", ");
+      String who = names.get(f.speaker());
+      if (who != null) {
+        out.append(who).append(' ');
+      }
+      out.append(f.face().strip());
+    }
+    return out.toString();
+  }
+
+  /** 콘티의 배경(장소와 배경 물건). */
+  static String setting(ComicScript.Panel panel) {
+    String s = panel.setting();
+    return s == null || s.isBlank() ? "" : ", " + s.strip();
   }
 
   /**
@@ -227,11 +259,26 @@ class DrawHandler implements StepHandler {
     return Concept.of(script.concept()).name();
   }
 
-  /** 캐릭터를 찾은 인물은 가명 대신 캐릭터 이름을 쓴다(등장인물, 제목, 대사). */
+  /**
+   * 캐릭터를 찾은 인물은 가명 대신 캐릭터 이름을 쓰고 그 캐릭터 모습 ID를 남긴다(만화 아래 등장인물 소개). 대사·제목에 남은 가명도 바꾸지만, 대사·제목은 먼저
+   * 호칭으로 바꿔 두어 이름이 나오지 않는다.
+   */
   static ComicScript withNames(ComicScript script, Map<String, CharacterRef> cast) {
     Map<String, String> names = new java.util.LinkedHashMap<>();
     cast.forEach((speaker, ref) -> names.put(speaker, ref.name()));
-    return script.withCharacterNames(names);
+    ComicScript named = script.withCharacterNames(names);
+    if (cast.isEmpty() || named.characters() == null) {
+      return named;
+    }
+    List<ComicScript.Character> looked =
+        named.characters().stream()
+            .map(
+                c ->
+                    cast.containsKey(c.speaker())
+                        ? c.withLookId(cast.get(c.speaker()).publicId())
+                        : c)
+            .toList();
+    return looked.equals(named.characters()) ? named : named.withCharacters(looked);
   }
 
   /** 캐릭터를 찾은 인물은 참조 그림과 맞도록 캐릭터의 외모 문구로 그린다. */
@@ -241,12 +288,7 @@ class DrawHandler implements StepHandler {
     }
     List<ComicScript.Character> looks =
         script.characters().stream()
-            .map(
-                c ->
-                    cast.containsKey(c.speaker())
-                        ? new ComicScript.Character(
-                            c.speaker(), c.name(), c.persona(), cast.get(c.speaker()).look())
-                        : c)
+            .map(c -> cast.containsKey(c.speaker()) ? c.withLook(cast.get(c.speaker()).look()) : c)
             .toList();
     return new ComicScript(
         script.title(),

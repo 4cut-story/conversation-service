@@ -118,4 +118,22 @@ class ComicComposerTest {
     assertThat(ComicComposer.speakerX(Staging.Side.LEFT))
         .isLessThan(ComicComposer.speakerX(Staging.Side.CENTER));
   }
+
+  @Test
+  @DisplayName("REQ-018: 등장인물 소개는 호칭, 캐릭터 이름, 캐릭터 모습을 넘긴다")
+  void cast() {
+    ComicScript s =
+        new ComicScript(
+            "t",
+            java.util.List.of(
+                new ComicScript.Character("A", "하늘", "", "old woman", "할머니", "look1"),
+                new ComicScript.Character("B", "도윤", "", "girl")),
+            java.util.List.of(),
+            true,
+            java.util.List.of());
+    assertThat(ComposeHandler.cast(s))
+        .containsExactly(
+            new ContentClient.CastMember("할머니", "하늘", "look1"),
+            new ContentClient.CastMember("도윤", "도윤", null));
+  }
 }

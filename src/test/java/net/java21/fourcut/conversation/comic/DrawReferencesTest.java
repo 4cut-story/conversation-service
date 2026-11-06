@@ -147,6 +147,8 @@ class DrawReferencesTest {
     ComicScript named = DrawHandler.withNames(script, Map.of("A", ready));
     assertThat(named.characters().get(0).name()).isEqualTo("하늘");
     assertThat(named.characters().get(1).name()).isEqualTo("도윤");
+    assertThat(named.characters().get(0).lookId()).isEqualTo("aaaaaaaaaaaaaaaaaaaaa");
+    assertThat(named.characters().get(1).lookId()).isNull();
     assertThat(DrawHandler.withNames(script, Map.of())).isSameAs(script);
   }
 
