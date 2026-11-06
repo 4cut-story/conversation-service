@@ -85,7 +85,7 @@ class TranscriptCorrectorTest {
   }
 
   @Test
-  @DisplayName("긴 전사는 나눠 보내고, 쉬는 중이 되면 나머지는 보내지 않는다")
+  @DisplayName("긴 전사는 나눠 보내고, 쉬는 중이 되면 아직 보내지 않은 묶음은 보내지 않는다")
   void batchesAndStopsWhenPaused() {
     String[] texts = new String[TranscriptCorrector.BATCH * 3];
     java.util.Arrays.fill(texts, "응");
@@ -94,7 +94,33 @@ class TranscriptCorrectorTest {
 
     corrector.correct(transcript(texts));
 
-    verify(llm, times(2)).chat(anyString(), anyString(), anyString());
+    verify(llm, times(1)).chat(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  @DisplayName("FR-003: 묶음들을 동시에 보내고, 묶음마다 고친 줄을 모두 합친다")
+  void correctsBatchesConcurrently() {
+    String[] texts = new String[TranscriptCorrector.BATCH * 3];
+    java.util.Arrays.fill(texts, "응");
+    int second = TranscriptCorrector.BATCH;
+    int third = TranscriptCorrector.BATCH * 2;
+    texts[1] = "같이 갈 레";
+    texts[second + 1] = "회의 실어";
+    texts[third + 1] = "됬어";
+    when(llm.available()).thenReturn(true);
+    when(llm.chat(anyString(), contains("(0~"), anyString()))
+        .thenReturn(Optional.of("{\"fixes\":[{\"i\":1,\"text\":\"같이 갈래?\"}]}"));
+    when(llm.chat(anyString(), contains("(" + second + "~"), anyString()))
+        .thenReturn(Optional.of("{\"fixes\":[{\"i\":" + (second + 1) + ",\"text\":\"회의 싫어\"}]}"));
+    when(llm.chat(anyString(), contains("(" + third + "~"), anyString()))
+        .thenReturn(Optional.of("{\"fixes\":[{\"i\":" + (third + 1) + ",\"text\":\"됐어\"}]}"));
+
+    Transcript fixed = corrector.correct(transcript(texts));
+
+    verify(llm, times(3)).chat(anyString(), anyString(), anyString());
+    assertThat(fixed.utterances().get(1).text()).isEqualTo("같이 갈래?");
+    assertThat(fixed.utterances().get(second + 1).text()).isEqualTo("회의 싫어");
+    assertThat(fixed.utterances().get(third + 1).text()).isEqualTo("됐어");
   }
 
   @Test

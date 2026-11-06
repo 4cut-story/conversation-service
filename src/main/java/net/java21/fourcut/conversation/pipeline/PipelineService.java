@@ -231,22 +231,23 @@ public class PipelineService {
       case StepOutcome.RunLocal r -> afterCommit(step.getId());
       case StepOutcome.Done d -> {
         step.succeed(d.resultKey(), now());
+        logDone(step);
         if (d.next() != null) {
           startStep(conversation, d.next(), 1);
         }
       }
       case StepOutcome.Completed c -> {
         step.succeed(c.resultKey(), now());
+        logDone(step);
         Instant began =
             steps
                 .findFirstByConversationIdAndStepOrderByAttemptAsc(
                     conversation.id(), Step.TRANSCRIBE)
                 .map(PipelineStep::getStartedAt)
                 .orElse(now());
-        observer.completed(
-            conversation.id(),
-            c.comicId(),
-            (int) java.time.Duration.between(began, now()).toSeconds());
+        int total = (int) java.time.Duration.between(began, now()).toSeconds();
+        log.info("만화 완성: conversation={} 전사 시작부터 {}초", conversation.id(), total);
+        observer.completed(conversation.id(), c.comicId(), total);
       }
       case StepOutcome.NoScene n -> {
         step.succeed(n.resultKey(), now());
@@ -254,6 +255,16 @@ public class PipelineService {
       }
       case StepOutcome.Retry r -> failStep(conversation, step, r.reason());
     }
+  }
+
+  /** 단계별 소요 시간. 어디가 느린지 로그로 바로 보이게 한다. */
+  private void logDone(PipelineStep step) {
+    log.info(
+        "단계 완료: conversation={} step={} attempt={} {}ms",
+        step.getConversationId(),
+        step.getStep(),
+        step.getAttempt(),
+        java.time.Duration.between(step.getStartedAt(), now()).toMillis());
   }
 
   private void failStep(ConversationInfo conversation, PipelineStep step, String reason) {
