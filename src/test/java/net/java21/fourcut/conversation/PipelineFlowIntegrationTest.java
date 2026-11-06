@@ -353,6 +353,7 @@ class PipelineFlowIntegrationTest {
                                             + " PICTURE_BOOK(어린이 그림책), NEWSPAPER(흑백 신문 만화), JOSEON(조선시대 사람들), WUXIA(무협)"),
                                 fieldWithPath("dialect")
                                     .optional()
+                                    .type(JsonFieldType.STRING)
                                     .description(
                                         "말풍선 대사 사투리. NONE 또는 없으면 사투리로 바꾸지 않는다. GYEONGSANG(경상도), JEOLLA(전라도),"
                                             + " CHUNGCHEONG(충청도), GANGWON(강원도), SEOUL(서울)")),
