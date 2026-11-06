@@ -42,7 +42,8 @@ class DrawPromptTest {
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, close up shot, two people, (boy, glasses) looks at (girl, bob hair), a friend waits, cafe");
+            "s, close up shot, two people, (boy, glasses) on the right looks at (girl, bob hair) on the left,"
+                + " a friend waits, cafe");
   }
 
   @Test
@@ -55,8 +56,8 @@ class DrawPromptTest {
                 script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS),
                 panel))
         .isEqualTo(
-            "bugs, wide shot, two animal characters, no humans, (girl, bob hair) and (boy, glasses) talk,"
-                + " another animal waits, cafe");
+            "bugs, wide shot, two animal characters, no humans, (girl, bob hair) on the left and"
+                + " (boy, glasses) on the right talk, another animal waits, cafe");
   }
 
   @Test
@@ -68,5 +69,15 @@ class DrawPromptTest {
     var animals = script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS);
     assertThat(DrawHandler.style(animals, props)).contains("animal");
     assertThat(DrawHandler.negative(animals, props)).startsWith("base neg, ").contains("human");
+  }
+
+  @Test
+  @DisplayName("FR-006: 같은 인물이 장면에 여러 번 나오면 위치 문구는 처음 한 번만 붙인다")
+  void positionOnce() {
+    var panel = new ComicScript.Panel("승", "medium", "{A} waves at {B}, {A} smiles", List.of());
+    assertThat(DrawHandler.prompt("s", script, panel))
+        .isEqualTo(
+            "s, medium shot, two people, (girl, bob hair) on the left waves at (boy, glasses) on the right,"
+                + " (girl, bob hair) smiles");
   }
 }
