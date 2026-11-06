@@ -2,6 +2,7 @@ package net.java21.fourcut.conversation.character;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -64,7 +65,7 @@ class CharacterLibraryTest {
         vectors,
         embedder,
         storage,
-        new CharacterProperties(enabled, 0.35, "gemini-embedding-001", ADAPTER));
+        new CharacterProperties(enabled, 0.35, "http://emb", "bge-m3", ADAPTER));
   }
 
   @Test
@@ -172,6 +173,27 @@ class CharacterLibraryTest {
   void disabled() {
     assertThat(library(false).match(List.of(new CharacterLibrary.Wanted("A", "하늘", "x")), "DAILY"))
         .isEmpty();
+  }
+
+  @Test
+  @DisplayName("REQ-018: 빠진 설명 임베딩을 채우고, 임베딩 서버가 응답하지 않으면 멈춘다")
+  void fillMissing() {
+    when(embedder.model()).thenReturn("bge-m3");
+    when(vectors.missing("bge-m3", CharacterLibrary.EMBED_BATCH))
+        .thenReturn(
+            List.of(haneulDaily.publicId(), haneulJoseon.publicId(), haesolDaily.publicId()));
+    when(embedder.embed(haneulJoseon.description())).thenReturn(Optional.empty());
+    library.fillMissingEmbeddings();
+    verify(vectors).save(eq(haneulDaily.publicId()), any(), eq("bge-m3"));
+    verify(vectors, never()).save(eq(haesolDaily.publicId()), any(), anyString());
+    assertThat(haneulDaily.embeddingModel()).isEqualTo("bge-m3");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 끄면 설명 임베딩을 채우지 않는다")
+  void fillMissingDisabled() {
+    library(false).fillMissingEmbeddings();
+    verify(vectors, never()).missing(anyString(), anyInt());
   }
 
   @Test

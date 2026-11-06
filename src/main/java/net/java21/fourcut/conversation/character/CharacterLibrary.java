@@ -15,6 +15,7 @@ import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,9 @@ public class CharacterLibrary {
 
   /** 참조 그림 업로드 주소 유효 시간. */
   static final Duration UPLOAD_TTL = Duration.ofMinutes(30);
+
+  /** 한 번에 채우는 설명 임베딩 수. */
+  static final int EMBED_BATCH = 32;
 
   private final StoryCharacterRepository repository;
   private final CharacterLookRepository looks;
@@ -286,16 +290,35 @@ public class CharacterLibrary {
     return view(c, all.size(), all);
   }
 
-  /** 설명 임베딩이 없는 기본 표정 모습을 다시 임베딩한다 (Gemini 키를 나중에 넣었거나 실패했을 때). 처리한 수. */
+  /**
+   * 설명 임베딩이 없거나 다른 모델로 만든 기본 표정 모습을 limit개까지 임베딩한다 (서버가 늦게 켜졌거나 실패했거나 모델을 바꿨을 때). 임베딩 서버가 응답하지 않으면
+   * 그 자리에서 멈춘다. 처리한 수.
+   */
   @Transactional
-  int reindex() {
+  int reindex(int limit) {
     int done = 0;
-    for (String id : vectors.missing()) {
-      if (looks.findByPublicId(id).map(this::embedDescription).orElse(false)) {
-        done++;
+    for (String id : vectors.missing(embedder.model(), limit)) {
+      if (!looks.findByPublicId(id).map(this::embedDescription).orElse(false)) {
+        break;
       }
+      done++;
     }
     return done;
+  }
+
+  /** 주기적으로 빠진 설명 임베딩을 조금씩 채운다. 등록 스크립트가 임베딩 없이 넣은 모습도 여기서 채워진다. */
+  @Scheduled(
+      fixedDelayString = "${characters.embed-interval:5s}",
+      initialDelayString = "${characters.embed-initial-delay:30s}")
+  @Transactional
+  public void fillMissingEmbeddings() {
+    if (!properties.enabled()) {
+      return;
+    }
+    int done = reindex(EMBED_BATCH);
+    if (done > 0) {
+      log.info("캐릭터 설명 임베딩 {}개를 채웠다", done);
+    }
   }
 
   private boolean embedDescription(CharacterLook l) {

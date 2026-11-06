@@ -68,15 +68,17 @@ class CharacterVectors {
                     .update());
   }
 
-  /** 임베딩이 없는 활성 캐릭터의 기본 표정 모습 공개 ID. */
-  List<String> missing() {
+  /** 임베딩이 없거나 다른 모델로 만든, 활성 캐릭터의 기본 표정 모습 공개 ID (오래된 순, 최대 limit개). */
+  List<String> missing(String model, int limit) {
     if (!available()) {
       return List.of();
     }
     return jdbc.sql(
             "select l.public_id from character_looks l join characters c on c.id = l.character_id"
-                + " where c.active and l.expression = 'NEUTRAL' and l.description_embedding is null"
-                + " order by l.id")
+                + " where c.active and l.expression = 'NEUTRAL' and (l.description_embedding is"
+                + " null or l.embedding_model is distinct from :m) order by l.id limit :n")
+        .param("m", model)
+        .param("n", limit)
         .query(String.class)
         .list();
   }

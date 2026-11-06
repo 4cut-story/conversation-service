@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
     properties = {
       "pipeline.recovery-interval=1h",
       "pipeline.local-recovery-interval=1h",
+      "characters.embed-initial-delay=1h",
       "DB_SCHEMA=public"
     })
 @AutoConfigureMockMvc
@@ -42,7 +43,7 @@ class CharacterDbIntegrationTest {
   @Autowired private ObjectStorage storage;
   @MockitoBean private TextEmbedder embedder;
 
-  /** 앞 두 축만 쓰는 768차원 단위 벡터. */
+  /** 앞 두 축만 쓰는 1024차원 단위 벡터. */
   private static float[] unit(double x, double y) {
     float[] v = new float[CharacterProperties.DIMENSIONS];
     double n = Math.sqrt(x * x + y * y);
@@ -145,6 +146,15 @@ class CharacterDbIntegrationTest {
     mvc.perform(post("/internal/characters/looks/" + dailyLook + "/reference"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.look.embedReady").value(false));
+
+    // 임베딩 모델을 바꾸면 기본 표정 모습(DAILY, JOSEON)을 다시 임베딩한다
+    when(embedder.model()).thenReturn("new-embedding");
+    mvc.perform(post("/internal/characters/reindex"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.embedded").value(2));
+    mvc.perform(get("/internal/characters/" + id))
+        .andExpect(jsonPath("$.looks[0].embeddingModel").value("new-embedding"));
+    mvc.perform(post("/internal/characters/reindex")).andExpect(jsonPath("$.embedded").value(0));
 
     mvc.perform(
             post("/internal/characters")
