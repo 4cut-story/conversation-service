@@ -10,6 +10,7 @@ import net.java21.fourcut.conversation.pipeline.DirectLlm;
 import net.java21.fourcut.conversation.stt.Transcript;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -79,7 +80,8 @@ class TranscriptCorrector {
   private final DirectLlm llm;
   private final JsonMapper json;
 
-  TranscriptCorrector(DirectLlm llm, JsonMapper json) {
+  /** {@code llm}은 지연 주입한다. Gemini 실행기가 파이프라인 엔진을 거쳐 이 클래스에 다시 닿는 순환을 끊는다. */
+  TranscriptCorrector(@Lazy DirectLlm llm, JsonMapper json) {
     this.llm = llm;
     this.json = json;
   }
