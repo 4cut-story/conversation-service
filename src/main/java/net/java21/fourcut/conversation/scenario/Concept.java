@@ -24,8 +24,9 @@ public enum Concept {
       "people",
       "a friend",
       """
-      그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
-        때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young woman, long black hair, yellow hoodie").
+      그림용 영어 외모 6단어 이내. 나이와 성별로 시작한다: 어른은 "young woman", "young man", 할머니·할아버지는
+        "old woman", "old man", 어린아이는 "girl", "boy". 머리 하나와 옷 하나를 색과 함께 쓴다
+        (예: "young woman, long black hair, yellow hoodie").
         실제 외모는 추측하지 않는다. 인물끼리 머리색·옷 색이 모두 달라야 한다.\
       """,
       """
@@ -65,8 +66,9 @@ public enum Concept {
       "people",
       "a friend",
       """
-      그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고(대화가 아이들일
-        때만 girl, boy), 머리 하나와 옷 하나를 색과 함께 쓴다(예: "young man, short brown hair, white shirt").
+      그림용 영어 외모 6단어 이내. 나이와 성별로 시작한다: 어른은 "young woman", "young man", 할머니·할아버지는
+        "old woman", "old man", 어린아이는 "girl", "boy". 머리 하나와 옷 하나를 색과 함께 쓴다
+        (예: "young man, short brown hair, white shirt").
         실제 외모는 추측하지 않는다. 인물끼리 머리색·옷 색이 모두 달라야 한다.\
       """,
       """
@@ -106,7 +108,8 @@ public enum Concept {
       "people",
       "a friend",
       """
-      그림용 영어 외모 6단어 이내. "young woman", "young man"처럼 어른 성별 명사로 시작하고, 흑백이라 색 대신
+      그림용 영어 외모 6단어 이내. 나이와 성별로 시작한다: 어른은 "young woman", "young man", 할머니·할아버지는
+        "old woman", "old man", 아이는 "girl", "boy". 흑백이라 색 대신
         머리 모양과 눈에 띄는 소품으로 구분한다(예: "young man, curly hair, round glasses"). 인물끼리 머리
         모양·소품이 모두 달라야 한다.\
       """,
