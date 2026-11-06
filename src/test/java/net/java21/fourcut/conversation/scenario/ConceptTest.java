@@ -20,7 +20,7 @@ class ConceptTest {
     assertThat(Concept.chosen(null, "ANIMALS")).isEqualTo(Concept.ANIMALS);
     assertThat(Concept.chosen(null, null)).isEqualTo(Concept.DAILY);
     assertThat(Concept.PICTURE_BOOK.label()).isEqualTo("어린이 그림책");
-    assertThat(Concept.NEWSPAPER.style()).startsWith("black and white");
+    assertThat(Concept.NEWSPAPER.style()).contains("muted colors");
     assertThat(Prompts.scriptSystem(Concept.JOSEON)).contains("hanbok").contains("jumak");
     assertThat(Prompts.scriptSystem(Concept.WUXIA)).contains("swordsman");
     assertThat(Concept.of("wuxia")).isEqualTo(Concept.WUXIA);

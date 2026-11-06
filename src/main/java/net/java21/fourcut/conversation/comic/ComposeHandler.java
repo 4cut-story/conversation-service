@@ -1,5 +1,6 @@
 package net.java21.fourcut.conversation.comic;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -58,11 +59,13 @@ class ComposeHandler implements StepHandler {
   public StepOutcome runLocal(StepContext context) {
     String id = context.conversation().publicId();
     ComicScript script = scenarios.script(id);
+    boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
     List<BufferedImage> panels = new ArrayList<>();
     for (int i = 1; i <= DrawHandler.PANELS; i++) {
       String key = WorkKeys.panel(id, i);
       byte[] bytes = storage.get(key).orElseThrow(() -> new IllegalStateException(key + " 그림이 없다"));
-      panels.add(read(bytes));
+      BufferedImage panel = read(bytes);
+      panels.add(gray ? gray(panel) : panel);
     }
     // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리를 확인해 맞춘다
     ComicComposer.Result result =
@@ -97,6 +100,27 @@ class ComposeHandler implements StepHandler {
     return script.characters().stream()
         .map(c -> new ContentClient.CastMember(c.callName(), c.displayName(), c.lookId()))
         .toList();
+  }
+
+  /** 흑백 신문 만화는 옅은 색으로 그린 뒤 여기서 흑백으로 바꾼다. 그림 모델에 흑백을 바로 시키면 망점·잡티가 많았다(회차 2·3, 문구만 바꿔서는 줄지 않음). */
+  static BufferedImage gray(BufferedImage image) {
+    BufferedImage g =
+        new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+    Graphics2D d = g.createGraphics();
+    try {
+      d.drawImage(image, 0, 0, null);
+    } finally {
+      d.dispose();
+    }
+    BufferedImage out =
+        new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+    Graphics2D o = out.createGraphics();
+    try {
+      o.drawImage(g, 0, 0, null);
+    } finally {
+      o.dispose();
+    }
+    return out;
   }
 
   private static BufferedImage read(byte[] bytes) {
