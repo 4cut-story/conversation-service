@@ -101,8 +101,8 @@ public enum Concept {
       """),
   NEWSPAPER(
       "흑백 신문 만화",
-      "black and white ink illustration, clean pen lines, smooth gray shading, white paper,"
-          + " simple background",
+      "black and white cartoon, bold clean outlines, flat solid gray fills, plain white"
+          + " background, simple background",
       "color, colorful, red, blue, halftone, screentone, dot pattern, film grain, noise,"
           + " scan lines, glitch, blurry, signboard, distorted face",
       "people",
