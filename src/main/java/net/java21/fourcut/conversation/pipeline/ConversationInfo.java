@@ -8,9 +8,21 @@ package net.java21.fourcut.conversation.pipeline;
  * @param ownerId 소유자 공개 ID
  * @param language 사용자가 고른 언어. 없으면 null(자동 감지)
  * @param concept 사용자가 고른 만화 컨셉. 없으면 null(자동)
+ * @param dialect 사용자가 고른 대사 사투리. 없으면 null(사투리 없음)
  */
 public record ConversationInfo(
-    Long id, String publicId, String ownerId, String language, int chunkCount, String concept) {
+    Long id,
+    String publicId,
+    String ownerId,
+    String language,
+    int chunkCount,
+    String concept,
+    String dialect) {
+
+  public ConversationInfo(
+      Long id, String publicId, String ownerId, String language, int chunkCount, String concept) {
+    this(id, publicId, ownerId, language, chunkCount, concept, null);
+  }
 
   public ConversationInfo(
       Long id, String publicId, String ownerId, String language, int chunkCount) {

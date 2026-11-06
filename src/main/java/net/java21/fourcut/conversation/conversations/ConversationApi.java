@@ -18,15 +18,27 @@ public final class ConversationApi {
    * @param consent 함께 대화하는 사람들의 녹음 동의. true가 아니면 400 CONSENT_REQUIRED
    * @param language ko, en. 없으면 자동 감지
    * @param concept 만화 컨셉. AUTO이거나 없으면 장면에 맞게 고른다
+   * @param dialect 말풍선 대사 사투리. NONE이거나 없으면 사투리로 바꾸지 않는다
    */
   public record CreateRequest(
       @NotNull Conversation.Source source,
       Boolean consent,
       @Pattern(regexp = "ko|en") String language,
-      @Pattern(regexp = CONCEPTS) String concept) {
+      @Pattern(regexp = CONCEPTS) String concept,
+      @Pattern(regexp = DIALECTS) String dialect) {
 
     public CreateRequest(Conversation.Source source, Boolean consent, String language) {
-      this(source, consent, language, null);
+      this(source, consent, language, null, null);
+    }
+
+    public CreateRequest(
+        Conversation.Source source, Boolean consent, String language, String concept) {
+      this(source, consent, language, concept, null);
+    }
+
+    /** 저장할 사투리. 없음이면 null. */
+    String chosenDialect() {
+      return dialect == null || "NONE".equals(dialect) ? null : dialect;
     }
 
     /** 저장할 컨셉. 자동이면 null. */
@@ -38,6 +50,9 @@ public final class ConversationApi {
   /** 고를 수 있는 컨셉. AUTO는 자동. */
   static final String CONCEPTS =
       "AUTO|DAILY|ANIMALS|WATERCOLOR|PICTURE_BOOK|NEWSPAPER|JOSEON|WUXIA";
+
+  /** 고를 수 있는 사투리. NONE은 사투리 없음. */
+  static final String DIALECTS = "NONE|GYEONGSANG|JEOLLA|CHUNGCHEONG|GANGWON|SEOUL";
 
   /** 만든 대화. id는 공개 ID다. */
   public record Created(String id, ConversationStatus status) {}
@@ -70,6 +85,7 @@ public final class ConversationApi {
       String comicId,
       String language,
       String concept,
+      String dialect,
       Integer durationSec,
       Instant createdAt) {}
 }

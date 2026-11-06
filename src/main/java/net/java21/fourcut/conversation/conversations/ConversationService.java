@@ -64,14 +64,11 @@ public class ConversationService {
     if (!Boolean.TRUE.equals(request.consent())) {
       throw new ApiException(ErrorCode.CONSENT_REQUIRED);
     }
-    Conversation saved =
-        conversations.save(
-            new Conversation(
-                owner,
-                request.source(),
-                request.language(),
-                request.chosenConcept(),
-                clock.instant()));
+    Conversation c =
+        new Conversation(
+            owner, request.source(), request.language(), request.chosenConcept(), clock.instant());
+    c.chooseDialect(request.chosenDialect());
+    Conversation saved = conversations.save(c);
     return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
   }
 
@@ -182,6 +179,7 @@ public class ConversationService {
         c.getComicId(),
         c.getLanguage(),
         c.getConcept() == null ? "AUTO" : c.getConcept(),
+        c.getDialect() == null ? "NONE" : c.getDialect(),
         c.getDurationSec(),
         c.getCreatedAt());
   }

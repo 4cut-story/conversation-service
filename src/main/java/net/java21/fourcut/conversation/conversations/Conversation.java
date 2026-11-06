@@ -42,6 +42,10 @@ public class Conversation extends BaseEntity {
   @Column(length = 20)
   private String concept;
 
+  /** 대사 사투리. null이면 사투리 없음. */
+  @Column(length = 20)
+  private String dialect;
+
   @Column(name = "duration_sec")
   private Integer durationSec;
 
@@ -93,6 +97,16 @@ public class Conversation extends BaseEntity {
 
   public String getLanguage() {
     return language;
+  }
+
+  /** 사용자가 고른 대사 사투리. null이면 사투리 없음. */
+  public String getDialect() {
+    return dialect;
+  }
+
+  /** 대사 사투리를 정한다. null이면 사투리 없음. */
+  public void chooseDialect(String dialect) {
+    this.dialect = dialect;
   }
 
   /** 사용자가 고른 만화 컨셉. null이면 자동. */

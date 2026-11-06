@@ -27,7 +27,8 @@ class ConversationProgress implements PipelineObserver {
                     c.getOwnerId(),
                     c.getLanguage(),
                     c.getChunkCount(),
-                    c.getConcept()))
+                    c.getConcept(),
+                    c.getDialect()))
         .orElse(null);
   }
 

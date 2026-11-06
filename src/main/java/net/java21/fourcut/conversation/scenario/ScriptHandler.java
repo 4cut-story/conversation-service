@@ -54,7 +54,7 @@ class ScriptHandler implements StepHandler {
             RealNames.whose(store.names(id), transcripts.load(id)));
     long seed = (long) id.hashCode() + context.attempt();
     return llm.job(
-        Prompts.scriptSystem(concept(context, scene)),
+        Prompts.scriptSystem(concept(context, scene), Dialect.of(context.conversation().dialect())),
         prompt,
         Prompts.SCRIPT_SCHEMA,
         Prompts.SCRIPT_MAX_TOKENS,

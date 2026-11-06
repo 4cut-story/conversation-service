@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-06.2";
+  static final String VERSION = "2026-11-06.3";
 
   private Prompts() {}
 
@@ -89,11 +89,29 @@ final class Prompts {
 
   /** 컨셉에 맞는 콘티 지시. 컨셉마다 작가 페르소나, 인물 외모(look) 규칙, 대사 말투가 다르다. */
   static String scriptSystem(Concept concept) {
+    return scriptSystem(concept, Dialect.NONE);
+  }
+
+  /** 컨셉 콘티 지시에 사용자가 고른 사투리 규칙을 더한다. NONE이면 사투리 규칙이 없다. */
+  static String scriptSystem(Concept concept, Dialect dialect) {
     return SCRIPT_TEMPLATE
+        .replace("%DIALECT%", dialectRule(dialect))
         .replace("%WRITER%", concept.writer())
         .replace("%LOOK%", concept.lookRule())
         .replace("%VOICE%", concept.voice())
         .replace("%CONCEPT%", concept.label());
+  }
+
+  private static String dialectRule(Dialect dialect) {
+    if (dialect == null || dialect == Dialect.NONE) {
+      return "";
+    }
+    return "\n- 사투리("
+        + dialect.label()
+        + "): 사용자가 고른 사투리다. 모든 인물의 text를 이 사투리로 바꾼다. "
+        + "\"말투\"의 분위기·호칭·낱말(테마 어휘)은 살리고, 어미와 말끝·억양은 이 사투리로 한다. "
+        + "뜻과 사실은 바꾸지 않고 30자 이내를 지킨다. quote는 바꾸지 않는다.\n  "
+        + dialect.rule();
   }
 
   /** 기본(일상 웹툰) 콘티 지시. */
@@ -134,7 +152,7 @@ final class Prompts {
         무엇을 했는지, 숫자, 물건, 질문인지 대답인지)은 quote 그대로 두고 말투와 낱말만 바꾼다. quote에 없는
         사건·정보를 지어 넣지 않는다.
         quote와 text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
-      - 말투(%CONCEPT%): %VOICE%
+      - 말투(%CONCEPT%): %VOICE%%DIALECT%
       - text 교정: 말풍선은 그대로 인쇄되므로 text는 반드시 바른 글이어야 한다. 말투를 입힌 뒤 한 번 더 읽고 고친다.
         맞춤법(되/돼, 안/않, 데/대, 로서/로써, 왠지/웬일, 몇일 → 며칠), 띄어쓰기(의존 명사 "할 수", "먹을 거야",
         "한 번", 보조 용언, 조사는 붙여 쓰기), 받아쓰기 오류(녹음 전사라 소리 나는 대로 잘못 적힌 말, 뜻이 안 통하는
