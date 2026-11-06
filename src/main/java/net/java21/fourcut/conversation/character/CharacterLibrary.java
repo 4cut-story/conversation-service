@@ -31,8 +31,11 @@ public class CharacterLibrary {
   /** 참조 그림 업로드 주소 유효 시간. */
   static final Duration UPLOAD_TTL = Duration.ofMinutes(30);
 
-  /** 한 번에 채우는 설명 임베딩 수. */
+  /** 임베딩 요청 하나에 묶는 글 수. 임베딩 서버(emb.java21.net)가 받는 최대값이 32다. */
   static final int EMBED_BATCH = 32;
+
+  /** 주기 작업 한 번에 채우는 설명 임베딩 수 (32개 묶음 8번, 약 16초). */
+  static final int EMBED_PER_TICK = 256;
 
   private final StoryCharacterRepository repository;
   private final CharacterLookRepository looks;
@@ -296,12 +299,26 @@ public class CharacterLibrary {
    */
   @Transactional
   int reindex(int limit) {
+    if (!vectors.available()) {
+      return 0;
+    }
+    List<CharacterLook> todo =
+        vectors.missing(embedder.model(), limit).stream()
+            .map(looks::findByPublicId)
+            .flatMap(Optional::stream)
+            .toList();
     int done = 0;
-    for (String id : vectors.missing(embedder.model(), limit)) {
-      if (!looks.findByPublicId(id).map(this::embedDescription).orElse(false)) {
+    for (int from = 0; from < todo.size(); from += EMBED_BATCH) {
+      List<CharacterLook> batch = todo.subList(from, Math.min(from + EMBED_BATCH, todo.size()));
+      List<float[]> v = embedder.embedAll(batch.stream().map(CharacterLook::description).toList());
+      if (v.size() != batch.size()) {
         break;
       }
-      done++;
+      for (int i = 0; i < batch.size(); i++) {
+        vectors.save(batch.get(i).publicId(), v.get(i), embedder.model());
+        batch.get(i).embedded(embedder.model());
+      }
+      done += batch.size();
     }
     return done;
   }
@@ -315,7 +332,7 @@ public class CharacterLibrary {
     if (!properties.enabled()) {
       return;
     }
-    int done = reindex(EMBED_BATCH);
+    int done = reindex(EMBED_PER_TICK);
     if (done > 0) {
       log.info("캐릭터 설명 임베딩 {}개를 채웠다", done);
     }

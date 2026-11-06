@@ -3,6 +3,7 @@ package net.java21.fourcut.conversation.character;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -176,17 +177,30 @@ class CharacterLibraryTest {
   }
 
   @Test
-  @DisplayName("REQ-018: 빠진 설명 임베딩을 채우고, 임베딩 서버가 응답하지 않으면 멈춘다")
+  @DisplayName("REQ-018: 빠진 설명 임베딩을 32개씩 묶어 채운다")
   void fillMissing() {
     when(embedder.model()).thenReturn("bge-m3");
-    when(vectors.missing("bge-m3", CharacterLibrary.EMBED_BATCH))
+    when(vectors.missing("bge-m3", CharacterLibrary.EMBED_PER_TICK))
         .thenReturn(
             List.of(haneulDaily.publicId(), haneulJoseon.publicId(), haesolDaily.publicId()));
-    when(embedder.embed(haneulJoseon.description())).thenReturn(Optional.empty());
+    when(embedder.embedAll(anyList()))
+        .thenAnswer(
+            inv -> ((List<?>) inv.getArgument(0)).stream().map(t -> new float[] {1f}).toList());
     library.fillMissingEmbeddings();
-    verify(vectors).save(eq(haneulDaily.publicId()), any(), eq("bge-m3"));
-    verify(vectors, never()).save(eq(haesolDaily.publicId()), any(), anyString());
+    verify(embedder).embedAll(anyList());
+    verify(vectors).save(eq(haesolDaily.publicId()), any(), eq("bge-m3"));
     assertThat(haneulDaily.embeddingModel()).isEqualTo("bge-m3");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 임베딩 서버가 응답하지 않으면 채우지 않고 멈춘다")
+  void fillMissingFailure() {
+    when(embedder.model()).thenReturn("bge-m3");
+    when(vectors.missing("bge-m3", CharacterLibrary.EMBED_PER_TICK))
+        .thenReturn(List.of(haneulDaily.publicId()));
+    when(embedder.embedAll(anyList())).thenReturn(List.of());
+    library.fillMissingEmbeddings();
+    verify(vectors, never()).save(anyString(), any(), anyString());
   }
 
   @Test

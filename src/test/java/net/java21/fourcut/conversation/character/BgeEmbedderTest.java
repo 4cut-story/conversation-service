@@ -3,6 +3,7 @@ package net.java21.fourcut.conversation.character;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
@@ -32,28 +33,46 @@ class BgeEmbedderTest {
   @DisplayName("REQ-018: OpenAI 호환 형식(model, input)으로 요청한다")
   void request() {
     BgeEmbedder e = embedder("http://localhost:1");
-    ObjectNode body = e.request(" red hair ");
+    ObjectNode body = e.request(List.of(" red hair ", "old man"));
     assertThat(body.path("model").asString()).isEqualTo("bge-m3");
     assertThat(body.path("input").path(0).asString()).isEqualTo("red hair");
+    assertThat(body.path("input").size()).isEqualTo(2);
     assertThat(e.model()).isEqualTo("bge-m3");
   }
 
   @Test
-  @DisplayName("REQ-018: 받은 1024차원 임베딩은 길이 1로 맞춘다")
+  @DisplayName("REQ-018: 받은 1024차원 임베딩은 index 순서로 읽고 길이 1로 맞춘다")
   void normalized() {
-    float[] v = BgeEmbedder.values(response(3.0, 4.0, CharacterProperties.DIMENSIONS));
-    assertThat(v).hasSize(1024);
-    assertThat(v[0]).isEqualTo(0.6f);
-    assertThat(v[1]).isEqualTo(0.8f);
+    ObjectNode response = json.createObjectNode();
+    ArrayNode data = response.putArray("data");
+    item(data, 1, 0.0, 2.0, 1024);
+    item(data, 0, 3.0, 4.0, 1024);
+    List<float[]> v = BgeEmbedder.values(response, 2);
+    assertThat(v.get(0)).hasSize(1024);
+    assertThat(v.get(0)[0]).isEqualTo(0.6f);
+    assertThat(v.get(0)[1]).isEqualTo(0.8f);
+    assertThat(v.get(1)[1]).isEqualTo(1f);
   }
 
   @Test
-  @DisplayName("REQ-018: 차원이 다르거나 0이면 실패한다")
+  @DisplayName("REQ-018: 개수나 차원이 다르거나 0이면 실패한다")
   void invalid() {
-    assertThatThrownBy(() -> BgeEmbedder.values(response(1.0, 0.0, 768)))
+    ObjectNode response = json.createObjectNode();
+    item(response.putArray("data"), 0, 1.0, 0.0, 768);
+    assertThatThrownBy(() -> BgeEmbedder.values(response, 1))
         .isInstanceOf(IllegalStateException.class);
-    assertThatThrownBy(() -> BgeEmbedder.values(response(0.0, 0.0, 1024)))
+    assertThatThrownBy(() -> BgeEmbedder.values(response, 2))
         .isInstanceOf(IllegalStateException.class);
+    ObjectNode zero = json.createObjectNode();
+    item(zero.putArray("data"), 0, 0.0, 0.0, 1024);
+    assertThatThrownBy(() -> BgeEmbedder.values(zero, 1)).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  @DisplayName("REQ-018: 빈 글이 섞이면 묶음 임베딩을 하지 않는다")
+  void blankInBatch() {
+    assertThat(embedder("http://localhost:1").embedAll(List.of("a", " "))).isEmpty();
+    assertThat(embedder("http://localhost:1").embedAll(List.of())).isEmpty();
   }
 
   @Test
@@ -62,13 +81,13 @@ class BgeEmbedderTest {
     assertThat(embedder("http://localhost:1").embed("red hair")).isEmpty();
   }
 
-  private ObjectNode response(double x, double y, int size) {
-    ObjectNode response = json.createObjectNode();
-    ArrayNode values = response.putArray("data").addObject().putArray("embedding");
+  private static void item(ArrayNode data, int index, double x, double y, int size) {
+    ObjectNode item = data.addObject();
+    item.put("index", index);
+    ArrayNode values = item.putArray("embedding");
     values.add(x).add(y);
     for (int i = 2; i < size; i++) {
       values.add(0.0);
     }
-    return response;
   }
 }

@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.character;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -68,6 +69,11 @@ class CharacterDbIntegrationTest {
               }
               return Optional.of(unit(0, 1));
             });
+    when(embedder.embedAll(anyList()))
+        .thenAnswer(
+            inv ->
+                ((List<?>) inv.getArgument(0))
+                    .stream().map(t -> embedder.embed((String) t).orElseThrow()).toList());
     assertThat(vectors.available()).isTrue();
 
     String body =

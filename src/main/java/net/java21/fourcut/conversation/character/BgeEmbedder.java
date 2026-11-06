@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.character;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -51,8 +53,16 @@ class BgeEmbedder implements TextEmbedder {
 
   @Override
   public Optional<float[]> embed(String text) {
-    if (!enabled || text == null || text.isBlank()) {
+    if (text == null || text.isBlank()) {
       return Optional.empty();
+    }
+    return embedAll(List.of(text)).stream().findFirst();
+  }
+
+  @Override
+  public List<float[]> embedAll(List<String> texts) {
+    if (!enabled || texts.isEmpty() || texts.stream().anyMatch(t -> t == null || t.isBlank())) {
+      return List.of();
     }
     try {
       String response =
@@ -60,25 +70,39 @@ class BgeEmbedder implements TextEmbedder {
               .post()
               .uri("/v1/embeddings")
               .contentType(MediaType.APPLICATION_JSON)
-              .body(json.writeValueAsString(request(text)))
+              .body(json.writeValueAsString(request(texts)))
               .retrieve()
               .body(String.class);
-      return Optional.of(values(json.readTree(response)));
+      return values(json.readTree(response), texts.size());
     } catch (RuntimeException e) {
       log.warn("설명 임베딩을 받지 못해 이름으로만 찾는다: {}", e.toString());
-      return Optional.empty();
+      return List.of();
     }
   }
 
-  ObjectNode request(String text) {
+  ObjectNode request(List<String> texts) {
     ObjectNode body = json.createObjectNode();
     body.put("model", model);
-    body.putArray("input").add(text.strip());
+    ArrayNode input = body.putArray("input");
+    texts.forEach(t -> input.add(t.strip()));
     return body;
   }
 
-  static float[] values(JsonNode response) {
-    JsonNode values = response.path("data").path(0).path("embedding");
+  /** 응답의 data를 index 순서로 읽는다. 개수가 다르면 실패한다. */
+  static List<float[]> values(JsonNode response, int expected) {
+    JsonNode data = response.path("data");
+    if (data.size() != expected) {
+      throw new IllegalStateException("임베딩 " + data.size() + "개를 받았다 (" + expected + "개 요청)");
+    }
+    float[][] out = new float[expected][];
+    for (int i = 0; i < expected; i++) {
+      JsonNode item = data.get(i);
+      out[item.path("index").asInt(i)] = values(item.path("embedding"));
+    }
+    return List.of(out);
+  }
+
+  static float[] values(JsonNode values) {
     if (values.size() != CharacterProperties.DIMENSIONS) {
       throw new IllegalStateException("임베딩 차원이 " + values.size() + "이다");
     }
