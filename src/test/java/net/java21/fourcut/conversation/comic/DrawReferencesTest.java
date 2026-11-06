@@ -170,4 +170,31 @@ class DrawReferencesTest {
     assertThat(DrawHandler.panelSeed(100, 1, duo, Map.of("A", ready))).isEqualTo(100);
     assertThat(DrawHandler.panelSeed(100, 2, Map.of(), both)).isEqualTo(100);
   }
+
+  @Test
+  @DisplayName("REQ-018: 혼자 나오는 캐릭터 옆에 다른 사람이 있으면 참조를 가운데에만 건다")
+  void centerWithOthers() {
+    Map<String, Staging.Side> solo = Map.of("A", Staging.Side.CENTER);
+    assertThat(handler.references(solo, Map.of("A", ready), true).get(0).path("region").asString())
+        .isEqualTo("center");
+    assertThat(handler.references(solo, Map.of("A", ready), false).get(0).path("region").asString())
+        .isEqualTo("full");
+    Map<String, Staging.Side> duo = Map.of("A", Staging.Side.LEFT, "B", Staging.Side.RIGHT);
+    assertThat(handler.references(duo, Map.of("A", ready), true).get(0).path("region").asString())
+        .isEqualTo("left");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 장면에 등장인물이 아닌 자리 표시나 사람 낱말이 있으면 다른 사람이 나온다고 본다")
+  void othersInScene() {
+    assertThat(DrawHandler.othersInScene(script, panel("{A} pays the bus driver"))).isTrue();
+    assertThat(DrawHandler.othersInScene(script, panel("{A} talks to {C}"))).isTrue();
+    assertThat(DrawHandler.othersInScene(script, panel("{A} sleeps on a sofa"))).isFalse();
+    assertThat(DrawHandler.othersInScene(script, panel("{A} and {B} laugh"))).isFalse();
+    assertThat(DrawHandler.othersInScene(script, panel("{A} reads a mandate"))).isFalse();
+  }
+
+  private static ComicScript.Panel panel(String scene) {
+    return new ComicScript.Panel("기", "medium", scene, List.of());
+  }
 }

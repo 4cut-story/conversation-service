@@ -85,7 +85,8 @@ class DrawHandler implements StepHandler {
           "prompt",
           prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
       image.put("negativePrompt", negative(script, properties));
-      ArrayNode refs = references(stages.get(i), cast);
+      ArrayNode refs =
+          references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast));
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
@@ -291,6 +292,15 @@ class DrawHandler implements StepHandler {
   }
 
   ArrayNode references(Map<String, Staging.Side> stage, Map<String, CharacterRef> cast) {
+    return references(stage, cast, false);
+  }
+
+  /**
+   * others: 컷에 캐릭터가 아닌 사람(점원, 기사, "a friend")도 나온다. 그러면 혼자 나오는 캐릭터의 참조를 전체가 아니라 가운데(center)에만 건다.
+   * 전체에 걸면 다른 사람까지 그 캐릭터 얼굴로 그려져 한 컷에 같은 인물이 둘 나왔다(100편 배치 13편 중 3편).
+   */
+  ArrayNode references(
+      Map<String, Staging.Side> stage, Map<String, CharacterRef> cast, boolean others) {
     ArrayNode refs = json.createArrayNode();
     if (cast.isEmpty()) {
       return refs;
@@ -306,7 +316,8 @@ class DrawHandler implements StepHandler {
       ObjectNode r = refs.addObject();
       r.put("character", ref.publicId());
       r.put("scale", ref.scale());
-      r.put("region", REGION.get(e.getValue()));
+      boolean solo = e.getValue() == Staging.Side.CENTER && stage.size() == 1;
+      r.put("region", solo && others ? "center" : REGION.get(e.getValue()));
       if (ref.embedReady()) {
         r.put("embedGetKey", ref.embedKey());
       } else {
@@ -321,6 +332,28 @@ class DrawHandler implements StepHandler {
       Map.of(Staging.Side.LEFT, "left", Staging.Side.RIGHT, "right", Staging.Side.CENTER, "full");
 
   /** 컷에 나오는 화자 표시, 장면에 처음 나온 순서. */
+  /** 장면에 캐릭터 말고 다른 사람이 나오는지: 등장인물에 없는 자리 표시나 사람을 가리키는 낱말. */
+  static boolean othersInScene(ComicScript script, ComicScript.Panel panel) {
+    String scene = panel.scene() == null ? "" : panel.scene();
+    Set<String> known = new HashSet<>();
+    script.characters().forEach(c -> known.add(c.speaker()));
+    Matcher m = MARK.matcher(scene);
+    while (m.find()) {
+      if (!known.contains(m.group(1))) {
+        return true;
+      }
+    }
+    return OTHERS.matcher(MARK.matcher(scene).replaceAll(" ")).find();
+  }
+
+  private static final Pattern OTHERS =
+      Pattern.compile(
+          "\\b(driver|clerk|cashier|staff|customer|waiter|waitress|friend|stranger|people|crowd"
+              + "|villager|passenger|man|woman|men|women|boy|girl|kid|child|children|baby|grandma"
+              + "|grandpa|mother|father|mom|dad|teacher|doctor|nurse|officer|guard|seller|vendor"
+              + "|shopkeeper|owner|chef|neighbor|someone|everyone)s?\\b",
+          Pattern.CASE_INSENSITIVE);
+
   static List<String> people(ComicScript script, ComicScript.Panel panel) {
     String scene = panel.scene() == null ? "" : panel.scene();
     Set<String> known = new HashSet<>();
