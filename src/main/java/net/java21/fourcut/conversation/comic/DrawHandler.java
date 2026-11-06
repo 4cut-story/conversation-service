@@ -288,7 +288,12 @@ class DrawHandler implements StepHandler {
     }
     List<ComicScript.Character> looks =
         script.characters().stream()
-            .map(c -> cast.containsKey(c.speaker()) ? c.withLook(cast.get(c.speaker()).look()) : c)
+            .map(
+                c ->
+                    cast.containsKey(c.speaker())
+                        ? c.withLook(
+                            CharacterLibrary.drawLook(cast.get(c.speaker()).look(), c.look()))
+                        : c)
             .toList();
     return new ComicScript(
         script.title(),

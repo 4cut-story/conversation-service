@@ -143,6 +143,30 @@ record LookHead(String animal, String gender, String age) {
     return tokens.stream().anyMatch(words::contains);
   }
 
+  /**
+   * 캐릭터 DB의 성별·나이대로 비어 있는 값을 채운다. DB 모습 문구가 "blonde hair, blue overalls"처럼 성별·나이 없이 시작하면 무엇과도 맞아서
+   * 할아버지 자리에 금발 소녀가 붙었다.
+   *
+   * @param dbGender FEMALE, MALE (없으면 null)
+   * @param dbAge CHILD, YOUNG, MIDDLE, OLD (없으면 null)
+   */
+  LookHead orDb(String dbGender, String dbAge) {
+    String g = gender;
+    if (g == null && dbGender != null) {
+      g =
+          switch (dbGender) {
+            case "FEMALE" -> "F";
+            case "MALE" -> "M";
+            default -> null;
+          };
+    }
+    String a = age;
+    if ((a == null || "ADULT".equals(a)) && dbAge != null) {
+      a = dbAge;
+    }
+    return new LookHead(animal, g, a);
+  }
+
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */
   boolean accepts(LookHead other) {
     if (animal != null || other.animal != null) {

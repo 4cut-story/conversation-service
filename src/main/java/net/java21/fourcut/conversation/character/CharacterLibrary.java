@@ -60,6 +60,27 @@ public class CharacterLibrary {
     this.properties = properties;
   }
 
+  /**
+   * 그림에 쓸 외모 문구. 캐릭터의 외모 문구로 그리되, 성별이 빠져 있으면("curly brown hair, navy hoodie") 콘티 외모의 첫 마디("boy")를
+   * 앞에 붙인다. 성별이 없으면 두 명 컷에서 옆 사람의 성별이 번져 남자아이가 여자로 그려졌다.
+   *
+   * @param characterLook 캐릭터 DB 모습 문구
+   * @param scriptLook 콘티 외모 문구
+   */
+  public static String drawLook(String characterLook, String scriptLook) {
+    String look = characterLook == null ? "" : characterLook.strip();
+    if (scriptLook == null || scriptLook.isBlank()) {
+      return look;
+    }
+    LookHead own = LookHead.of(look);
+    String head = scriptLook.split(",", 2)[0].strip();
+    LookHead wanted = LookHead.of(head);
+    if (own.animal() != null || own.gender() != null || wanted.gender() == null) {
+      return look;
+    }
+    return look.isEmpty() ? head : head + ", " + look;
+  }
+
   /** 콘티 인물 하나. key는 화자 표시(A, B…), look은 그림용 영어 외모. */
   public record Wanted(String key, String name, String look) {}
 
@@ -93,7 +114,7 @@ public class CharacterLibrary {
       // 같은 이름의 젊은 캐릭터가 붙었다(funny-03)
       if (l != null
           && !used.contains(l.character().publicId())
-          && LookHead.of(w.look()).accepts(LookHead.of(l.look()))
+          && LookHead.of(w.look()).accepts(head(l))
           && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
@@ -127,6 +148,7 @@ public class CharacterLibrary {
       }
       Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
       if (l.isPresent()
+          && wanted.accepts(head(l.get()))
           && !used.contains(l.get().character().publicId())
           && hasReference(l.get())) {
         used.add(l.get().character().publicId());
@@ -134,6 +156,11 @@ public class CharacterLibrary {
       }
     }
     return Optional.empty();
+  }
+
+  /** 모습 문구의 첫 마디에 없는 성별·나이는 캐릭터 DB 값으로 채운다. */
+  private static LookHead head(CharacterLook l) {
+    return LookHead.of(l.look()).orDb(l.character().gender(), l.character().ageGroup());
   }
 
   private boolean hasReference(CharacterLook l) {
