@@ -8,15 +8,15 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-05.1";
+  static final String VERSION = "2026-11-06.1";
 
   private Prompts() {}
 
   /** 장면 후보 JSON(후보 3개, 핵심 순간, 항목 점수, 이름)은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
   static final int EXTRACT_MAX_TOKENS = 1100;
 
-  /** 콘티 JSON(컷 4개, 대사, 인물) 출력 상한. */
-  static final int SCRIPT_MAX_TOKENS = 2000;
+  /** 콘티 JSON(컷 4개, 원문 대사와 다듬은 대사, 인물) 출력 상한. */
+  static final int SCRIPT_MAX_TOKENS = 2600;
 
   static final String EXTRACT_SYSTEM =
       """
@@ -87,9 +87,13 @@ final class Prompts {
     };
   }
 
-  /** 컨셉에 맞는 콘티 지시. 컨셉마다 인물 외모(look) 규칙만 다르다. */
+  /** 컨셉에 맞는 콘티 지시. 컨셉마다 작가 페르소나, 인물 외모(look) 규칙, 대사 말투가 다르다. */
   static String scriptSystem(Concept concept) {
-    return SCRIPT_TEMPLATE.replace("%LOOK%", concept.lookRule());
+    return SCRIPT_TEMPLATE
+        .replace("%WRITER%", concept.writer())
+        .replace("%LOOK%", concept.lookRule())
+        .replace("%VOICE%", concept.voice())
+        .replace("%CONCEPT%", concept.label());
   }
 
   /** 기본(일상 웹툰) 콘티 지시. */
@@ -97,11 +101,13 @@ final class Prompts {
 
   private static final String SCRIPT_TEMPLATE =
       """
-      대화 장면을 기-승-전-결 4컷 만화 콘티로 만든다.
+      %WRITER%
+      이 대화 장면을 "%CONCEPT%" 4컷 만화의 기-승-전-결 콘티로 만든다.
 
       인물 (characters, 화자 A, B…마다 하나)
       - name: 입력의 "인물 가명"을 그대로 쓴다.
-      - persona: 이 장면에서 드러난 성격 한 줄(예: 먹는 데 진심인 친구).
+      - persona: 이 장면에서 드러난 성격을 "%CONCEPT%" 세계의 인물로 한 줄(예: 먹는 데 진심인 친구). 대사 말투는 이
+        persona를 따르고, 한 인물은 네 컷 내내 같은 말투를 쓴다.
       - look: %LOOK%
 
       컷 (panels, 정확히 4개, role 순서 "기","승","전","결")
@@ -123,8 +129,13 @@ final class Prompts {
         길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다. 핵심 순간의 말은 꼭 전 컷 대사에 넣는다.
         이야기를 이끄는 말(질문, 들통, 고백, 반응)을 고르고 "응", "그래" 같은 맞장구만으로 컷을 채우지 않는다.
         speaker는 A, B…를 쓴다.
-        text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
-      - 대사에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면
+        quote에는 위 규칙대로 [장면 대화]에서 고른 말을 고쳐 쓰지 않고 그대로 옮긴다.
+        text에는 quote를 그 인물의 persona와 아래 "말투"로 다듬은 말풍선 대사를 쓴다(30자 이내). 뜻과 사실(누가
+        무엇을 했는지, 숫자, 물건, 질문인지 대답인지)은 quote 그대로 두고 말투와 낱말만 바꾼다. quote에 없는
+        사건·정보를 지어 넣지 않는다.
+        quote와 text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
+      - 말투(%CONCEPT%): %VOICE%
+      - 대사(quote, text)에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면
         "도윤아"), 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기 전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
 
@@ -142,7 +153,8 @@ final class Prompts {
         "required":["role","shot","scene","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
          "scene":{"type":"string"},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
-          "required":["speaker","text"],"properties":{"speaker":{"type":"string"},"text":{"type":"string"}}}}}}},
+          "required":["speaker","quote","text"],"properties":{"speaker":{"type":"string"},
+           "quote":{"type":"string"},"text":{"type":"string"}}}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;
 }

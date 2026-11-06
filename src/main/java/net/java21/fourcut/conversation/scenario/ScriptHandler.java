@@ -12,7 +12,10 @@ import net.java21.fourcut.conversation.stt.TranscriptStore;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
-/** SCRIPT: 고른 장면과 앞뒤 1분 대화로 4컷 콘티(가명 인물, 컷별 구도, 다듬은 대사)를 LLM 한 번에 만든다. */
+/**
+ * SCRIPT: 고른 장면과 앞뒤 1분 대화로 4컷 콘티(가명 인물, 컷별 구도, 대사)를 LLM 한 번에 만든다. 대사는 원문(quote)과 컨셉 말투로 다듬은
+ * 말(text)을 함께 받아, 원문으로 장면 대조·빈 컷 채우기를 하고 말풍선에는 다듬은 말을 쓴다.
+ */
 @Component
 class ScriptHandler implements StepHandler {
 
@@ -130,6 +133,7 @@ class ScriptHandler implements StepHandler {
             .withLineTexts(t -> SpokenLines.snap(t, source))
             .withLinesWhere(t -> SpokenLines.inside(t, inScene))
             .withEmptyPanelsFilled(sceneLines(transcript, scene, rename))
+            .withStyledLines(SpokenLines.MAX_CHARS)
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withConcept(concept);
     if (concept == Concept.ANIMALS) {

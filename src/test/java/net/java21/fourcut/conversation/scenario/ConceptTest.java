@@ -25,4 +25,19 @@ class ConceptTest {
     assertThat(Prompts.scriptSystem(Concept.WUXIA)).contains("swordsman");
     assertThat(Concept.of("wuxia")).isEqualTo(Concept.WUXIA);
   }
+
+  @Test
+  @DisplayName("FR-006: 콘티 지시는 컨셉마다 작가 페르소나로 시작하고 대사를 그 컨셉 말투로 다듬게 한다")
+  void writerAndVoice() {
+    for (Concept c : Concept.values()) {
+      String system = Prompts.scriptSystem(c);
+      assertThat(system).startsWith("너는").contains(c.writer()).contains(c.voice());
+      assertThat(system).contains("quote").contains("\"" + c.label() + "\"");
+      assertThat(system).doesNotContain("%WRITER%", "%VOICE%", "%CONCEPT%", "%LOOK%");
+    }
+    assertThat(Concept.WUXIA.writer()).contains("무협지 작가");
+    assertThat(Concept.WUXIA.voice()).contains("소협").contains("객잔");
+    assertThat(Concept.JOSEON.voice()).contains("하오체");
+    assertThat(Prompts.SCRIPT_SCHEMA).contains("\"quote\"");
+  }
 }

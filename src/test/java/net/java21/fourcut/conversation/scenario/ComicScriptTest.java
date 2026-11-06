@@ -226,4 +226,90 @@ class ComicScriptTest {
     assertThat(fixed.panels().get(0).scene()).isEqualTo(panels().get(0).scene());
     assertThat(fixed.replaced(java.util.Map.of())).isSameAs(fixed);
   }
+
+  static ComicScript.Line styled(String speaker, String text, String quote) {
+    return new ComicScript.Line(speaker, text, quote);
+  }
+
+  static List<ComicScript.Panel> styledPanels() {
+    return List.of(
+        new ComicScript.Panel(
+            "기",
+            "wide",
+            "{A} and {B} sit at table, inn",
+            List.of(styled("A", "이 몸의 배가 비었소", "배고프다"))),
+        new ComicScript.Panel(
+            "승",
+            "medium",
+            "{B} secretly eats from plate",
+            List.of(styled("B", "강호 밖의 말이오", "내일 회사 가기 싫다"))),
+        new ComicScript.Panel(
+            "전",
+            "close-up",
+            "{A} stares at empty plate, shocked",
+            List.of(styled("A", "누가 본좌의 접시를 비웠소?", "누가 내 접시 먹었어?"))),
+        new ComicScript.Panel(
+            "결", "medium", "{B} whistles, {A} chases him", List.of(styled("B", "", "나 아니야"))));
+  }
+
+  @Test
+  @DisplayName("FR-005: 컨셉 말투로 다듬은 대사는 원문(quote)으로 장면을 확인하고, 말풍선에는 다듬은 말을 쓴다")
+  void styledLinesUseQuoteForMatching() {
+    List<String> scene = List.of("배고프다", "누가 내 접시 먹었어?", "나 아니야");
+    ComicScript s =
+        script(cast(), styledPanels())
+            .withLineTexts(t -> SpokenLines.snap(t, scene))
+            .withLinesWhere(t -> SpokenLines.inside(t, scene))
+            .withEmptyPanelsFilled(
+                List.of(line("A", "배고프다"), line("B", "아 나 진짜 아니라니까"), line("A", "누가 내 접시 먹었어?")))
+            .withStyledLines(SpokenLines.MAX_CHARS);
+
+    assertThat(s.panels().get(0).lines()).containsExactly(styled("A", "이 몸의 배가 비었소", "배고프다"));
+    // 원문이 장면 밖이면 다듬은 말이 그럴듯해도 버리고, 빈 컷은 장면 발화(원문)로 채운다
+    assertThat(s.panels().get(1).lines())
+        .containsExactly(styled("B", "아 나 진짜 아니라니까", "아 나 진짜 아니라니까"));
+    assertThat(s.panels().get(2).lines().get(0).text()).isEqualTo("누가 본좌의 접시를 비웠소?");
+    // 다듬은 말이 비면 원문으로 되돌려 말풍선이 비지 않는다
+    assertThat(s.panels().get(3).lines()).containsExactly(styled("B", "나 아니야", "나 아니야"));
+    assertThat(s.violation()).isNull();
+  }
+
+  @Test
+  @DisplayName("FR-005: 다듬은 대사가 말풍선 길이를 넘으면 원문으로 되돌리고, 원문이 없는 예전 대사는 그대로 둔다")
+  void styledLinesFallBack() {
+    String tooLong = "본좌가 이 객잔의 모든 만두를 걸고 그대에게 정식으로 결투를 신청하는 바이오, 받으시오";
+    ComicScript s =
+        script(
+                cast(),
+                List.of(
+                    new ComicScript.Panel(
+                        "기", "wide", "{A} at table", List.of(styled("A", tooLong, "만두 내기 할래?"))),
+                    new ComicScript.Panel("승", "medium", "{B} eats", List.of(line("B", "좋아"))),
+                    new ComicScript.Panel("전", "close-up", "{A} shocked", List.of()),
+                    new ComicScript.Panel("결", "medium", "{B} runs", List.of())))
+            .withStyledLines(SpokenLines.MAX_CHARS);
+    assertThat(s.panels().get(0).lines()).containsExactly(styled("A", "만두 내기 할래?", "만두 내기 할래?"));
+    assertThat(s.panels().get(1).lines()).containsExactly(line("B", "좋아"));
+    assertThat(line("B", "좋아").source()).isEqualTo("좋아");
+  }
+
+  @Test
+  @DisplayName("FR-005: 실명 바꾸기는 다듬은 대사와 원문 모두에 적용한다")
+  void renameAppliesToQuote() {
+    ComicScript s =
+        script(
+                cast(),
+                List.of(
+                    new ComicScript.Panel(
+                        "기",
+                        "wide",
+                        "{A} at table",
+                        List.of(styled("A", "지현 소협, 어디 가오", "지현아 어디 가"))),
+                    new ComicScript.Panel("승", "medium", "{B} eats", List.of()),
+                    new ComicScript.Panel("전", "close-up", "{A} shocked", List.of()),
+                    new ComicScript.Panel("결", "medium", "{B} runs", List.of())))
+            .replaced(java.util.Map.of("지현", "도윤"))
+            .normalized();
+    assertThat(s.panels().get(0).lines()).containsExactly(styled("A", "도윤 소협, 어디 가오", "도윤아 어디 가"));
+  }
 }
