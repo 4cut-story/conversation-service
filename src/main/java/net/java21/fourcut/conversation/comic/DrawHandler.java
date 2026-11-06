@@ -176,7 +176,8 @@ class DrawHandler implements StepHandler {
                 + SIDE_BY_SIDE
                 + ", "
             : "";
-    return style + ", " + SINGLE + ", " + shot + count + lineup + scene + detail + cast;
+    return style + ", " + QUALITY + ", " + SINGLE + ", " + shot + count + lineup + scene + detail
+        + cast;
   }
 
   /**
@@ -447,6 +448,12 @@ class DrawHandler implements StepHandler {
   private static final Pattern UNKNOWN_MARK = Pattern.compile("\\{[A-Z]\\}");
 
   private static final List<String> COUNTS = List.of("one", "two", "three", "four");
+
+  /**
+   * 모든 그림체에 붙이는 품질 말. negative를 쓰지 않는 Lightning(guidance 0)에서 선 번짐·뭉개진 얼굴을 줄이려고 긍정 말로 또렷한 선과 얼굴을
+   * 건다(만화 품질 개선 계획 2단계).
+   */
+  static final String QUALITY = "high quality illustration, crisp clean lineart, well-drawn faces";
 
   /**
    * 한 컷이 한 장면이 되게 하는 말. 컷 안이 네 칸 격자로 그려졌다(무협 '문 앞의 수상한 보물 상자' 1컷). negative의 grid·multiple panels는

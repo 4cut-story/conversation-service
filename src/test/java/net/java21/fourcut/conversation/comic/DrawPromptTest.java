@@ -25,7 +25,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("전", "close-up", "{A} drops ice cream, park", List.of());
     assertThat(DrawHandler.prompt("simple cartoon", script, panel))
         .isEqualTo(
-            "simple cartoon, one single scene, close up shot, (girl, bob hair) drops ice cream, park");
+            "simple cartoon, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, close up shot, (girl, bob hair) drops ice cream, park");
   }
 
   @Test
@@ -33,7 +33,8 @@ class DrawPromptTest {
   void legacy() {
     var panel = new ComicScript.Panel("기", null, "two friends at a table", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
-        .isEqualTo("s, one single scene, two friends at a table; girl, bob hair; boy, glasses");
+        .isEqualTo(
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, two friends at a table; girl, bob hair; boy, glasses");
   }
 
   @Test
@@ -45,7 +46,7 @@ class DrawPromptTest {
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, one single scene, medium shot, two people, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two people, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
                 + " the boy looks at the girl, a friend waits, cafe");
   }
 
@@ -65,7 +66,7 @@ class DrawPromptTest {
                 new ComicScript.Face("C", "not in scene")));
     assertThat(DrawHandler.prompt("s", script, duo))
         .isEqualTo(
-            "s, one single scene, medium shot, two people, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two people, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
                 + " the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up,"
                 + " the boy laughing, burger shop, ordering kiosk, trays of burgers");
     var solo =
@@ -78,7 +79,7 @@ class DrawPromptTest {
             List.of(new ComicScript.Face("A", "teary smile")));
     assertThat(DrawHandler.prompt("s", script, solo))
         .isEqualTo(
-            "s, one single scene, close up shot, (girl, bob hair) eats a burger, teary smile");
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, close up shot, (girl, bob hair) eats a burger, teary smile");
   }
 
   @Test
@@ -91,7 +92,7 @@ class DrawPromptTest {
                 script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS),
                 panel))
         .isEqualTo(
-            "bugs, one single scene, wide shot, two animal characters, no humans, side by side, both fully visible, (girl, bob hair) on the left,"
+            "bugs, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, wide shot, two animal characters, no humans, side by side, both fully visible, (girl, bob hair) on the left,"
                 + " (boy, glasses) on the right, the girl and the boy talk, another animal waits, cafe");
   }
 
@@ -121,7 +122,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("승", "medium", "{B} hugs {A}, {B} smiles", List.of());
     assertThat(DrawHandler.prompt("s", twins, panel))
         .isEqualTo(
-            "s, one single scene, medium shot, two people, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail)"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two people, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail)"
                 + " on the right, the young woman on the right hugs the young woman on the left,"
                 + " the young woman on the right smiles");
   }
@@ -142,7 +143,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("전", "wide", "{C} scolds {B} and {A}", List.of());
     assertThat(DrawHandler.prompt("s", trio, panel))
         .isEqualTo(
-            "s, one single scene, wide shot, three people, side by side, both fully visible, (girl) on the left, (old man) in the middle, (boy) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, wide shot, three people, side by side, both fully visible, (girl) on the left, (old man) in the middle, (boy) on the right,"
                 + " the old man scolds the boy and the girl");
   }
 }
