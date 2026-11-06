@@ -39,14 +39,14 @@ class DrawPromptTest {
 
   @Test
   @DisplayName(
-      "FR-006: 두 명이 나오는 컷은 two people과 왼쪽부터 인물 줄을 넣고, 장면은 짧은 이름으로 쓴다. 없는 인물은 a friend다."
+      "FR-006: 두 명이 나오는 컷은 나이·성별로 센 인원(a girl and a boy)과 왼쪽부터 인물 줄을 넣고, 장면은 짧은 이름으로 쓴다. 없는 인물은 a friend다."
           + " 두 명 close-up은 한 명만 그려지므로 medium으로 그린다")
   void twoPeople() {
     var panel =
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two people, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
                 + " the boy looks at the girl, a friend waits, cafe");
   }
 
@@ -66,7 +66,7 @@ class DrawPromptTest {
                 new ComicScript.Face("C", "not in scene")));
     assertThat(DrawHandler.prompt("s", script, duo))
         .isEqualTo(
-            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two people, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
                 + " the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up,"
                 + " the boy laughing, burger shop, ordering kiosk, trays of burgers");
     var solo =
@@ -122,7 +122,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("승", "medium", "{B} hugs {A}, {B} smiles", List.of());
     assertThat(DrawHandler.prompt("s", twins, panel))
         .isEqualTo(
-            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two people, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail)"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, two young women, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail)"
                 + " on the right, the young woman on the right hugs the young woman on the left,"
                 + " the young woman on the right smiles");
   }
@@ -143,7 +143,32 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("전", "wide", "{C} scolds {B} and {A}", List.of());
     assertThat(DrawHandler.prompt("s", trio, panel))
         .isEqualTo(
-            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, wide shot, three people, side by side, both fully visible, (girl) on the left, (old man) in the middle, (boy) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, wide shot, a girl, an old man and a boy, side by side, both fully visible, (girl) on the left, (old man) in the middle, (boy) on the right,"
                 + " the old man scolds the boy and the girl");
+  }
+
+  @Test
+  @DisplayName("FR-006: 외모 첫 마디가 나이·성별이 아니거나 사람 컨셉이 아니면 인원은 two people처럼 센다")
+  void whoFallback() {
+    java.util.Map<String, Staging.Side> stage =
+        java.util.Map.of("A", Staging.Side.LEFT, "B", Staging.Side.RIGHT);
+    assertThat(
+            DrawHandler.who(
+                stage,
+                java.util.Map.of("A", "young woman, bob hair", "B", "old man"),
+                net.java21.fourcut.conversation.scenario.Concept.DAILY))
+        .isEqualTo("a young woman and an old man");
+    assertThat(
+            DrawHandler.who(
+                stage,
+                java.util.Map.of("A", "young woman", "B", "robot, silver body"),
+                net.java21.fourcut.conversation.scenario.Concept.DAILY))
+        .isNull();
+    assertThat(
+            DrawHandler.who(
+                stage,
+                java.util.Map.of("A", "young woman", "B", "old man"),
+                net.java21.fourcut.conversation.scenario.Concept.ANIMALS))
+        .isNull();
   }
 }
