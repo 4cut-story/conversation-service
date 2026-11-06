@@ -202,6 +202,14 @@ record LookHead(String animal, String gender, String age) {
         && ages(age, other.age);
   }
 
+  /**
+   * {@link #accepts}에 더해, 이쪽 성별을 알 때 성별을 모르는 모습은 받지 않는다. 성별 없는 여자 모습이 아빠에게 붙어 참조 그림(긴 머리 여자)과
+   * 프롬프트(남자)가 어긋났다(mystery-01).
+   */
+  boolean acceptsKnown(LookHead other) {
+    return accepts(other) && (gender == null || other.gender != null || other.animal != null);
+  }
+
   private static boolean ages(String a, String b) {
     if (a == null || b == null || a.equals(b)) {
       return true;

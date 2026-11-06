@@ -44,6 +44,15 @@ class LookHeadTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 성별을 아는 쪽은 성별을 모르는 모습을 엄격 비교에서 받지 않는다")
+  void acceptsKnown() {
+    assertThat(LookHead.of("man, glasses").acceptsKnown(LookHead.of("long hair"))).isFalse();
+    assertThat(LookHead.of("man, glasses").acceptsKnown(LookHead.of("old man"))).isTrue();
+    assertThat(LookHead.of("person").acceptsKnown(LookHead.of("long hair"))).isTrue();
+    assertThat(LookHead.of("fox").acceptsKnown(LookHead.of("fox, scarf"))).isTrue();
+  }
+
+  @Test
   @DisplayName("REQ-018: 첫 마디에 나이가 없어도 흰머리·주름이 있으면 노인으로 보고 젊은 캐릭터를 쓰지 않는다")
   void oldFromDetails() {
     assertThat(LookHead.of("woman, gray hair bun, purple cardigan"))
