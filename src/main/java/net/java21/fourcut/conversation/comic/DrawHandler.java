@@ -210,8 +210,8 @@ class DrawHandler implements StepHandler {
     return s == null || s.isBlank() ? "" : ", " + s.strip();
   }
 
-  private static final java.util.regex.Pattern PERSON =
-      java.util.regex.Pattern.compile("(?:(young|old|little) )?(woman|man|girl|boy)");
+  private static final Pattern PERSON =
+      Pattern.compile("(?:(young|old|little) )?(woman|man|girl|boy)");
 
   /**
    * 사람 컨셉에서 인물 모두의 외모 첫 마디가 나이·성별이면 "two people" 대신 그 사람들로 센다("two young women", "a young woman and
