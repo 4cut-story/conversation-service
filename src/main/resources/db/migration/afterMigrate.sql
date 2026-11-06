@@ -38,8 +38,16 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE schemaname = current_schema() AND indexname = 'idx_character_looks_description_embedding') THEN
-        EXECUTE format('CREATE INDEX idx_character_looks_description_embedding ON character_looks'
-            || ' USING hnsw (description_embedding %I.vector_cosine_ops) WITH (m = 16, ef_construction = 64)',
-            vector_schema);
+        -- 병렬 빌드는 공유 메모리(/dev/shm)를 써서 작은 DB 서버에서 "No space left on device"로 실패한다. 한 프로세스로 짓는다.
+        -- 그래도 실패하면 인덱스 없이 띄운다(모습 7,000개는 순차 검색으로도 충분하다). 서비스가 뜨지 못하는 것보다 낫다.
+        PERFORM set_config('max_parallel_maintenance_workers', '0', true);
+        PERFORM set_config('maintenance_work_mem', '64MB', true);
+        BEGIN
+            EXECUTE format('CREATE INDEX idx_character_looks_description_embedding ON character_looks'
+                || ' USING hnsw (description_embedding %I.vector_cosine_ops) WITH (m = 16, ef_construction = 64)',
+                vector_schema);
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING '설명 임베딩 인덱스를 만들지 못해 인덱스 없이 찾는다: %', SQLERRM;
+        END;
     END IF;
 END $$;
