@@ -310,6 +310,91 @@ public record ComicScript(
     return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
   }
 
+  /**
+   * 대사가 하나도 없는 컷(LLM이 비웠거나 장면 밖 대사를 버려 비게 된 컷)을 장면 대화의 실제 발화로 채운다. 앞뒤 컷 대사 사이에 한 말 중 아직 쓰지 않은 말을
+   * 고르고(맞장구보다 긴 말을 먼저), 그 사이에 없으면 장면 전체에서 고른다. 채울 말이 없으면 그대로 둔다.
+   *
+   * @param spoken 장면 구간 발화(시간 순서). speaker는 화자 표시
+   */
+  public ComicScript withEmptyPanelsFilled(List<Line> spoken) {
+    if (panels == null || characters == null || spoken == null || spoken.isEmpty()) {
+      return this;
+    }
+    Set<String> speakers = new HashSet<>(characters.stream().map(Character::speaker).toList());
+    List<Line> pool =
+        spoken.stream()
+            .filter(l -> l.text() != null && !l.text().isBlank() && speakers.contains(l.speaker()))
+            .toList();
+    List<String> texts = pool.stream().map(Line::text).toList();
+    Set<String> said = new HashSet<>();
+    panels.stream()
+        .flatMap(
+            p -> p.lines() == null ? java.util.stream.Stream.<Line>empty() : p.lines().stream())
+        .forEach(l -> said.add(key(l.text())));
+    List<Panel> out = new java.util.ArrayList<>(panels);
+    for (int i = 0; i < out.size(); i++) {
+      Panel p = out.get(i);
+      if (p.lines() != null && !p.lines().isEmpty()) {
+        continue;
+      }
+      int from = lastIndexBefore(out, i, texts);
+      int to = firstIndexAfter(out, i, texts, pool.size());
+      Line pick = pick(pool, from, to, said);
+      if (pick == null) {
+        pick = pick(pool, -1, pool.size(), said);
+      }
+      if (pick != null) {
+        said.add(key(pick.text()));
+        out.set(i, withSpeakersInScene(new Panel(p.role(), p.shot(), p.scene(), List.of(pick))));
+      }
+    }
+    return new ComicScript(title, characters, out, reviewed, nameWarnings, concept);
+  }
+
+  /** (from, to) 사이의 아직 안 쓴 말 중 가장 이른 것(앞 컷 바로 다음 순간). 맞장구가 아닌 말을 먼저 고른다. */
+  private static Line pick(List<Line> pool, int from, int to, Set<String> said) {
+    int lo = from + 1;
+    int hi = Math.min(to, pool.size());
+    if (lo >= hi) {
+      return null;
+    }
+    List<Line> range =
+        pool.subList(lo, hi).stream().filter(l -> !said.contains(key(l.text()))).toList();
+    List<Line> longer = range.stream().filter(l -> !SpokenLines.shortReply(l.text())).toList();
+    List<Line> choice = longer.isEmpty() ? range : longer;
+    return choice.isEmpty() ? null : choice.get(0);
+  }
+
+  private static int lastIndexBefore(List<Panel> ps, int i, List<String> texts) {
+    int at = -1;
+    for (int k = 0; k < i; k++) {
+      for (Line l : ps.get(k).lines() == null ? List.<Line>of() : ps.get(k).lines()) {
+        at = Math.max(at, SpokenLines.indexIn(l.text(), texts));
+      }
+    }
+    return at;
+  }
+
+  private static int firstIndexAfter(List<Panel> ps, int i, List<String> texts, int none) {
+    for (int k = i + 1; k < ps.size(); k++) {
+      int best = none;
+      for (Line l : ps.get(k).lines() == null ? List.<Line>of() : ps.get(k).lines()) {
+        int at = SpokenLines.indexIn(l.text(), texts);
+        if (at >= 0) {
+          best = Math.min(best, at);
+        }
+      }
+      if (best < none) {
+        return best;
+      }
+    }
+    return none;
+  }
+
+  private static String key(String text) {
+    return text == null ? "" : text.replaceAll("\\s+", "");
+  }
+
   /** 인물 외모의 첫 단어(동물)를 코드로 정한 동물로 바꾼다. LLM은 두 인물을 같은 동물로 자주 고른다. */
   public ComicScript withAnimals(List<String> animals) {
     if (characters == null || animals.isEmpty()) {

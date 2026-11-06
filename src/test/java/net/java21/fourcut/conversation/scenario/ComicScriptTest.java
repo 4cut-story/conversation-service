@@ -87,6 +87,41 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 대사가 빈 컷은 앞뒤 컷 대사 사이에 한 장면 발화로 채우고, 맞장구보다 긴 말을 먼저 쓴다")
+  void fillsEmptyPanels() {
+    List<ComicScript.Line> spoken =
+        List.of(
+            line("A", "배고프다"),
+            line("B", "응"),
+            line("B", "내가 몰래 하나 먹었지"),
+            line("C", "남의 화자 말"),
+            line("A", "누구야?"),
+            line("B", "나 아닌데 진짜로"),
+            line("A", "거짓말하지 마"));
+    ComicScript s = script(cast(), panels()).withEmptyPanelsFilled(spoken);
+    assertThat(s.panels())
+        .allSatisfy(p -> assertThat(p.lines()).hasSize(1))
+        .extracting(p -> p.lines().get(0).text())
+        .containsExactly("배고프다", "내가 몰래 하나 먹었지", "누구야?", "나 아닌데 진짜로");
+    assertThat(s.panels().get(1).scene()).contains("{B}");
+    assertThat(s.violation()).isNull();
+  }
+
+  @Test
+  @DisplayName("FR-005: 앞뒤 사이에 쓸 말이 없으면 장면의 남은 말로 채우고, 남은 말도 없으면 그대로 둔다")
+  void fillsFromRestOrLeaves() {
+    ComicScript s =
+        script(cast(), panels())
+            .withEmptyPanelsFilled(List.of(line("A", "누구야?"), line("B", "배고프다 진짜")));
+    assertThat(s.panels().get(1).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("배고프다 진짜");
+    assertThat(s.panels().get(3).lines()).isEmpty();
+    assertThat(script(cast(), panels()).withEmptyPanelsFilled(List.of()).panels().get(1).lines())
+        .isEmpty();
+  }
+
+  @Test
   @DisplayName("FR-005: 같은 대사를 두 컷에 쓰면 위반이다")
   void repeatedLine() {
     var copy = new java.util.ArrayList<>(panels());
