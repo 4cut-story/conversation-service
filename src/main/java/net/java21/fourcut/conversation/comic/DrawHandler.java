@@ -85,13 +85,11 @@ class DrawHandler implements StepHandler {
           "prompt",
           prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
       image.put("negativePrompt", negative(script, properties));
-      // 네 컷을 같은 시드로 그린다. 컷마다 시드를 달리하면 같은 외모 문구로도 인물 얼굴·옷 색이 컷마다 바뀌었다(GPU PC 3회차 비교).
-      // 구도는 컷마다 다른 장면·구도 문구로 달라진다
-      image.put("seed", seed);
+      ArrayNode refs = references(stages.get(i), cast);
+      image.put("seed", panelSeed(seed, i, stages.get(i), cast));
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));
-      ArrayNode refs = references(stages.get(i), cast);
       if (!refs.isEmpty()) {
         image.set("references", refs);
         image.set("ipSchedule", ipSchedule(properties));
@@ -257,6 +255,19 @@ class DrawHandler implements StepHandler {
         script.nameWarnings(),
         script.concept());
   }
+
+  /**
+   * 컷 시드. 참조 없는 인물이 나오는 컷은 네 컷이 같은 시드다: 컷마다 시드를 달리하면 같은 외모 문구로도 얼굴·옷 색이 바뀌었다(GPU PC 3회차 비교). 컷 인물이
+   * 모두 캐릭터 참조(IP-Adapter)로 그려지면 정체성은 참조가 지키므로 컷마다 시드를 바꾼다. 같은 시드면 첫 노이즈가 같아 네 컷이 같은 자세·구도로 나왔다(100편
+   * 배치 13편 중 5편).
+   */
+  static long panelSeed(
+      long seed, int index, Map<String, Staging.Side> stage, Map<String, CharacterRef> cast) {
+    boolean allRef = !stage.isEmpty() && stage.keySet().stream().allMatch(cast::containsKey);
+    return allRef ? seed + PANEL_SEED_STEP * (index + 1) : seed;
+  }
+
+  static final long PANEL_SEED_STEP = 7919;
 
   /** 캐릭터 참조 강도 스케줄. 설정으로 고쳐 GPU PC 워커를 다시 띄우지 않고 조정한다. */
   ObjectNode ipSchedule(ComicProperties p) {

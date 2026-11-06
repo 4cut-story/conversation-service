@@ -158,4 +158,16 @@ class DrawReferencesTest {
     assertThat(s.path("earlySteps").asInt()).isEqualTo(3);
     assertThat(s.path("lateBoost").asDouble()).isEqualTo(0.15);
   }
+
+  @Test
+  @DisplayName("REQ-018: 컷 인물이 모두 캐릭터 참조면 컷마다 시드를 바꾸고, 참조 없는 인물이 있으면 네 컷이 같은 시드다")
+  void panelSeed() {
+    Map<String, Staging.Side> duo = Map.of("A", Staging.Side.LEFT, "B", Staging.Side.RIGHT);
+    Map<String, CharacterRef> both = Map.of("A", ready, "B", fresh);
+    long s1 = DrawHandler.panelSeed(100, 0, duo, both);
+    long s2 = DrawHandler.panelSeed(100, 1, duo, both);
+    assertThat(s1).isNotEqualTo(100).isNotEqualTo(s2);
+    assertThat(DrawHandler.panelSeed(100, 1, duo, Map.of("A", ready))).isEqualTo(100);
+    assertThat(DrawHandler.panelSeed(100, 2, Map.of(), both)).isEqualTo(100);
+  }
 }
