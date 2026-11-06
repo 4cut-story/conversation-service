@@ -392,4 +392,66 @@ class ComicScriptTest {
     assertThat(old.setting()).isNull();
     assertThat(old.faces()).isNull();
   }
+
+  static List<ComicScript.Character> family() {
+    return List.of(
+        new ComicScript.Character("A", "하늘", "손이 큰 할머니", "old woman", " 할머니 ", null),
+        new ComicScript.Character("B", "도윤", "장난꾸러기", "girl", "손녀", null));
+  }
+
+  @Test
+  @DisplayName("REQ-018: 대사와 제목은 이름 대신 호칭으로 부르고 원문(quote)과 등장인물 이름은 그대로 둔다")
+  void roleCalls() {
+    ComicScript s =
+        new ComicScript(
+            "하늘의 비밀 레시피",
+            family(),
+            List.of(
+                new ComicScript.Panel(
+                    "기",
+                    "wide",
+                    "{A} cooks",
+                    List.of(
+                        new ComicScript.Line("B", "하늘아, 뭐 해?", "하늘아 뭐 해"),
+                        new ComicScript.Line("A", "도윤이가 좋아하는 거", "도윤이가 좋아하는 거")))),
+            true,
+            List.of());
+    ComicScript called = s.withRoleCalls();
+    assertThat(called.title()).isEqualTo("할머니의 비밀 레시피");
+    assertThat(called.panels().get(0).lines())
+        .containsExactly(
+            new ComicScript.Line("B", "할머니, 뭐 해?", "하늘아 뭐 해"),
+            new ComicScript.Line("A", "손녀가 좋아하는 거", "도윤이가 좋아하는 거"));
+    assertThat(called.characters().get(0).name()).isEqualTo("하늘");
+    assertThat(called.callNames()).containsEntry("A", "할머니").containsEntry("B", "손녀");
+    assertThat(called.withRoleCalls()).isEqualTo(called);
+  }
+
+  @Test
+  @DisplayName("REQ-018: 호칭이 겹치면 번호를 붙이고, 호칭이 없거나 너무 길면 이름으로 부른다")
+  void roleCallsFallback() {
+    List<ComicScript.Character> friends =
+        List.of(
+            new ComicScript.Character("A", "하늘", "", "girl", "친구", null),
+            new ComicScript.Character("B", "도윤", "", "boy", "친구", null),
+            new ComicScript.Character("C", "지우", "", "boy", "아주아주아주긴호칭이다", null));
+    ComicScript called = script(friends, panels()).withRoleCalls();
+    assertThat(called.callNames())
+        .containsEntry("A", "친구")
+        .containsEntry("B", "친구2")
+        .containsEntry("C", "지우");
+    ComicScript old = script(cast(), panels());
+    assertThat(old.withRoleCalls()).isSameAs(old);
+    assertThat(old.callNames()).containsEntry("A", "민지");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 이름을 호칭으로 바꿀 때 조사를 맞추고 높여 부르는 호칭에는 '아/야'를 붙이지 않는다")
+  void roleParticles() {
+    assertThat(CastNames.toRoles("하늘아 하늘이가 하늘은 하늘을", java.util.Map.of("하늘", "형")))
+        .isEqualTo("형 형이 형은 형을");
+    assertThat(CastNames.toRoles("도윤아 도윤이랑 도윤이도", java.util.Map.of("도윤", "손녀")))
+        .isEqualTo("손녀야 손녀랑 손녀도");
+    assertThat(CastNames.toRoles("민지야, 민지가", java.util.Map.of("민지", "할머니"))).isEqualTo("할머니, 할머니가");
+  }
 }

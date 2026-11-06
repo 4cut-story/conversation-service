@@ -123,7 +123,10 @@ final class Prompts {
       이 대화 장면을 "%CONCEPT%" 4컷 만화의 기-승-전-결 콘티로 만든다.
 
       인물 (characters, 화자 A, B…마다 하나)
-      - name: 입력의 "인물 가명"을 그대로 쓴다.
+      - name: 입력의 "인물 가명"을 그대로 쓴다. 가명은 만화 아래 등장인물 소개에만 나오고 대사·제목에는 쓰지 않는다.
+      - role: 만화 속에서 이 인물을 부르는 호칭 한 낱말(8자 이내). 대화 내용과 서로 부르는 말로 관계를 짐작해 정한다(예: 할머니,
+        할아버지, 엄마, 아빠, 손녀, 손자, 아들, 딸, 언니, 오빠, 형, 동생, 친구, 선배, 후배, 팀장, 동료). 알 수 없으면 "친구".
+        인물끼리 겹치지 않게 한다(친구가 둘이면 "친구"와 "단짝"처럼).
       - persona: 이 장면에서 드러난 성격을 "%CONCEPT%" 세계의 인물로 한 줄(예: 먹는 데 진심인 친구). 대사 말투는 이
         persona를 따르고, 한 인물은 네 컷 내내 같은 말투를 쓴다.
       - look: %LOOK%
@@ -158,6 +161,8 @@ final class Prompts {
         무엇을 했는지, 숫자, 물건, 질문인지 대답인지)은 quote 그대로 두고 말투와 낱말만 바꾼다. quote에 없는
         사건·정보를 지어 넣지 않는다.
         quote와 text에는 대사만 쓰고 "A:"나 이름 같은 화자 표시를 붙이지 않는다.
+        text에서 인물을 부르거나 가리킬 때는 가명 대신 그 인물의 role 호칭을 쓴다(예: "하늘아, 밥 먹었어?" → A가 할머니면
+        "할머니, 밥 먹었어?", "하늘이가 그랬어" → "손녀가 그랬어"). 말풍선 앞에는 role이 붙는다.
       - 말투(%CONCEPT%): %VOICE%%DIALECT%
       - text 교정: 말풍선은 그대로 인쇄되므로 text는 반드시 바른 글이어야 한다. 말투를 입힌 뒤 한 번 더 읽고 고친다.
         맞춤법(되/돼, 안/않, 데/대, 로서/로써, 왠지/웬일, 몇일 → 며칠), 띄어쓰기(의존 명사 "할 수", "먹을 거야",
@@ -165,11 +170,12 @@ final class Prompts {
         낱말은 앞뒤 맥락에 맞는 말로), 어색하거나 이상한 표현(번역투, 문장 성분이 빠지거나 꼬인 문장, 같은 말 반복,
         "그 뭐냐", "막 이렇게" 같은 군말)을 자연스러운 한국어로 바로잡는다. 일부러 쓴 말투(사투리, 테마 말투, 감탄사,
         ㅋㅋ)는 틀린 것이 아니니 살린다. quote는 원문 대조용이라 교정하지 않고 그대로 둔다.
-      - 대사(quote, text)에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 그 화자의 가명으로(예: "민수야" → B가 도윤이면
-        "도윤아"), 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기 전 단어는 nameWarnings에 넣는다.
+      - 대사(quote, text)에 대화 속 사람 이름·별명이 나오면 바꾼다: 등장 화자를 부르는 말이면 quote는 그 화자의 가명으로(예: "민수야" → B가 도윤이면
+        "도윤아"), text는 그 화자의 role 호칭으로, 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기 전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
 
-      title은 20자 이내로 이 장면의 핵심을 살려 짓고(예: "사라진 아이스크림의 범인") 실명을 넣지 않는다. title과 persona도
+      title은 20자 이내로 이 장면의 핵심을 살려 짓고(예: "사라진 아이스크림의 범인", "할머니의 비밀 레시피") 실명과 가명을 넣지 않는다
+      (인물은 role 호칭으로). title과 persona도
       맞춤법·띄어쓰기를 지킨다. 대사·제목·persona는 대화와 같은 언어로 쓴다.
       """;
 
@@ -178,8 +184,8 @@ final class Prompts {
       {"type":"object","required":["title","characters","panels","nameWarnings"],"properties":{
        "title":{"type":"string"},
        "characters":{"type":"array","minItems":1,"items":{"type":"object",
-        "required":["speaker","name","persona","look"],"properties":{"speaker":{"type":"string"},
-         "name":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"}}}},
+        "required":["speaker","name","role","persona","look"],"properties":{"speaker":{"type":"string"},
+         "name":{"type":"string"},"role":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"}}}},
        "panels":{"type":"array","minItems":4,"maxItems":4,"items":{"type":"object",
         "required":["role","shot","scene","setting","faces","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
