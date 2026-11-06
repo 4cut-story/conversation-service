@@ -18,7 +18,7 @@ public record CharacterProperties(
     @DefaultValue("0.30") double maxDistance,
     @DefaultValue("https://emb.java21.net") String embeddingUrl,
     @DefaultValue("bge-m3") String embeddingModel,
-    @DefaultValue("plus-face-sdxl-vit-h") String ipAdapter) {
+    @DefaultValue("plus-sdxl-vit-h") String ipAdapter) {
 
   /** 설명 임베딩 차원 (character_looks.description_embedding vector(1024)). */
   public static final int DIMENSIONS = 1024;
