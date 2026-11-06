@@ -210,16 +210,22 @@ class DrawHandler implements StepHandler {
     return s == null || s.isBlank() ? "" : ", " + s.strip();
   }
 
+  /** 동물 컨셉 외모 첫 마디로 쓰는 동물(Concept.ANIMALS lookRule). */
+  private static final Pattern ANIMAL =
+      Pattern.compile("rabbit|deer|fox|bear|cat|dog|squirrel|panda");
+
   private static final Pattern PERSON =
       Pattern.compile("(?:(young|old|little) )?(woman|man|girl|boy)");
 
   /**
    * 사람 컨셉에서 인물 모두의 외모 첫 마디가 나이·성별이면 "two people" 대신 그 사람들로 센다("two young women", "a young woman and
    * an old man", 왼쪽부터). "two people"은 남녀 한 쌍으로 그리는 버릇이 있어, 여자 둘이 나오는 컷에서 한 명이 남자로 그려졌다(office-11,
-   * office-15). 셀 수 없으면 null.
+   * office-15). 동물 컨셉은 종으로 센다("a squirrel and a rabbit"). "two animal characters"만 주면 두 인물이 같은 종으로
+   * 섞였다 (office-12, office-20, moving-20). 셀 수 없으면 null.
    */
   static String who(Map<String, Staging.Side> stage, Map<String, String> looks, Concept concept) {
-    if (!"people".equals(concept.crowd())) {
+    boolean animals = concept == Concept.ANIMALS;
+    if (!animals && !"people".equals(concept.crowd())) {
       return null;
     }
     List<String> heads = new ArrayList<>();
@@ -234,16 +240,24 @@ class DrawHandler implements StepHandler {
       return null;
     }
     for (String h : heads) {
-      if (!PERSON.matcher(h).matches()) {
+      if (!(animals ? ANIMAL.matcher(h).matches() : PERSON.matcher(h).matches())) {
         return null;
       }
     }
+    String counted = counted(heads);
+    // 동물 컨셉은 종을 세어 주어도 사람이 섞이지 않게 컨셉의 crowd 말을 남긴다
+    return animals ? counted + ", " + concept.crowd() : counted;
+  }
+
+  private static String counted(List<String> heads) {
     if (heads.stream().distinct().count() == 1) {
       String h = heads.get(0);
       String plural =
           h.endsWith("woman")
               ? h.replaceAll("woman$", "women")
-              : h.endsWith("man") ? h.replaceAll("man$", "men") : h + "s";
+              : h.endsWith("man")
+                  ? h.replaceAll("man$", "men")
+                  : "deer".equals(h) ? h : "fox".equals(h) ? "foxes" : h + "s";
       return COUNTS.get(heads.size() - 1) + " " + plural;
     }
     List<String> each = new ArrayList<>();

@@ -148,7 +148,7 @@ class DrawPromptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 외모 첫 마디가 나이·성별이 아니거나 사람 컨셉이 아니면 인원은 two people처럼 센다")
+  @DisplayName("FR-006: 동물 컨셉은 종으로 세고, 외모 첫 마디로 셀 수 없으면 two people처럼 센다")
   void whoFallback() {
     java.util.Map<String, Staging.Side> stage =
         java.util.Map.of("A", Staging.Side.LEFT, "B", Staging.Side.RIGHT);
@@ -170,5 +170,17 @@ class DrawPromptTest {
                 java.util.Map.of("A", "young woman", "B", "old man"),
                 net.java21.fourcut.conversation.scenario.Concept.ANIMALS))
         .isNull();
+    assertThat(
+            DrawHandler.who(
+                stage,
+                java.util.Map.of("A", "squirrel, yellow shirt", "B", "rabbit, blue apron"),
+                net.java21.fourcut.conversation.scenario.Concept.ANIMALS))
+        .isEqualTo("a squirrel and a rabbit, animal characters, no humans");
+    assertThat(
+            DrawHandler.who(
+                stage,
+                java.util.Map.of("A", "fox, red scarf", "B", "fox, green hat"),
+                net.java21.fourcut.conversation.scenario.Concept.ANIMALS))
+        .isEqualTo("two foxes, animal characters, no humans");
   }
 }
