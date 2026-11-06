@@ -109,11 +109,12 @@ public class CharacterLibrary {
         return Optional.empty();
       }
       Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
-      if (l.isEmpty() || used.contains(l.get().character().publicId()) || !hasReference(l.get())) {
-        continue;
+      if (l.isPresent()
+          && !used.contains(l.get().character().publicId())
+          && hasReference(l.get())) {
+        used.add(l.get().character().publicId());
+        return Optional.of(ref(l.get(), n.distance()));
       }
-      used.add(l.get().character().publicId());
-      return Optional.of(ref(l.get(), n.distance()));
     }
     return Optional.empty();
   }
