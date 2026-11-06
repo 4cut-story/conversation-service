@@ -36,13 +36,15 @@ class DrawPromptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 두 명이 나오는 컷은 two people과 왼쪽부터 인물 줄을 넣고, 장면은 짧은 이름으로 쓴다. 없는 인물은 a friend다")
+  @DisplayName(
+      "FR-006: 두 명이 나오는 컷은 two people과 왼쪽부터 인물 줄을 넣고, 장면은 짧은 이름으로 쓴다. 없는 인물은 a friend다."
+          + " 두 명 close-up은 한 명만 그려지므로 medium으로 그린다")
   void twoPeople() {
     var panel =
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, close up shot, two people, (girl, bob hair) on the left, (boy, glasses) on the right,"
+            "s, medium shot, two people, (girl, bob hair) on the left, (boy, glasses) on the right,"
                 + " the boy looks at the girl, a friend waits, cafe");
   }
 

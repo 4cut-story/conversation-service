@@ -163,7 +163,10 @@ class DrawHandler implements StepHandler {
     }
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
-    String shot = panel.shot() == null ? "" : panel.shot().replace('-', ' ') + " shot, ";
+    // 두 명 이상인 close-up은 한 사람 얼굴만 크게 그려 나머지가 빠지고 두 외모가 한 사람에 섞였다(mystery-02 3컷 등).
+    // 여럿이 나오는 컷은 medium으로 그린다.
+    String kind = people >= 2 && "close-up".equals(panel.shot()) ? "medium" : panel.shot();
+    String shot = kind == null ? "" : kind.replace('-', ' ') + " shot, ";
     String count =
         people >= 2
             ? COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd() + ", "
