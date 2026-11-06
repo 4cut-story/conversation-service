@@ -9,10 +9,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param llmModel 워커가 Ollama에 넘길 모델 이름
  * @param windowSec 장면 후보를 뽑는 구간 길이 (10분)
  * @param numCtx Ollama 컨텍스트 길이. 10분 구간 전사가 들어간다
+ * @param correctTranscript 장면 추출 전에 Gemini로 전사의 잘못 들은 말을 고친다. Gemini 키가 없으면 하지 않는다
  */
 @ConfigurationProperties("scenario")
 public record ScenarioProperties(
     @DefaultValue("qwen3:8b") String llmModel,
     @DefaultValue("600") int windowSec,
     @DefaultValue("16384") int numCtx,
-    @DefaultValue("0.4") double temperature) {}
+    @DefaultValue("0.4") double temperature,
+    @DefaultValue("true") boolean correctTranscript) {}

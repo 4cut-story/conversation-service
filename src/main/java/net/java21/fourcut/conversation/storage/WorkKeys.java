@@ -29,6 +29,11 @@ public final class WorkKeys {
     return work(conversationId, "transcript.json");
   }
 
+  /** 교정 전 전사 원본. 전사를 LLM으로 교정하면 원본을 여기에 남긴다 (다시 시도해도 원본에서 교정한다). */
+  public static String rawTranscript(String conversationId) {
+    return work(conversationId, "transcript-raw.json");
+  }
+
   /** 녹음 중 미리 전사한 앞부분 (FR-015). 화자 없이 단어 시각만 있다. */
   public static String preTranscript(String conversationId) {
     return work(conversationId, "pre-transcript.json");
