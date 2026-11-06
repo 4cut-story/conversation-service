@@ -168,12 +168,19 @@ public class PipelineService {
                 "GPU 작업 실패 " + job.getErrorCode() + ": " + job.getErrorMessage()));
   }
 
-  /** 서버 단계(합성)가 너무 오래 RUNNING이면(서버가 재시작된 경우 등) 실패로 보고 다시 한다. */
+  /**
+   * 서버 단계(합성, 장면 추출 전 전사 교정)가 너무 오래 RUNNING이면(서버가 재시작된 경우 등) 실패로 보고 다시 한다. 장면 추출은 아직 GPU 작업을 넣지 않은
+   * 경우(교정 중)만 본다.
+   */
   @Scheduled(fixedDelayString = "${pipeline.local-recovery-interval:60s}")
   @Transactional
   public void recoverLocalSteps() {
     Instant before = now().minus(properties.localStepTimeout());
-    for (PipelineStep step : steps.runningSince(Step.COMPOSE, before)) {
+    List<PipelineStep> stuck = new java.util.ArrayList<>(steps.runningSince(Step.COMPOSE, before));
+    steps.runningSince(Step.EXTRACT, before).stream()
+        .filter(s -> s.getRuntimeJobId() == null)
+        .forEach(stuck::add);
+    for (PipelineStep step : stuck) {
       ConversationInfo conversation = observer.find(step.getConversationId());
       if (conversation != null) {
         failStep(conversation, step, "서버 단계 시간 초과");

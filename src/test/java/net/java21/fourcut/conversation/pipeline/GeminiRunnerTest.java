@@ -126,4 +126,24 @@ class GeminiRunnerTest {
     assertThat(off.active()).isFalse();
     assertThat(job.getState()).isEqualTo(GpuJob.State.QUEUED);
   }
+
+  @Test
+  @DisplayName("직접 호출: 결과 본문을 돌려주고, 한도 초과면 빈 값과 함께 잠시 쉰다")
+  void directChat() {
+    when(client.chat(any())).thenReturn(json.createObjectNode().put("content", "{\"fixes\":[]}"));
+    assertThat(runner.available()).isTrue();
+    assertThat(runner.chat("s", "p", "{\"type\":\"object\"}")).contains("{\"fixes\":[]}");
+
+    when(client.chat(any())).thenThrow(new IllegalStateException("Gemini HTTP 500"));
+    assertThat(runner.chat("s", "p", "{}")).isEmpty();
+    assertThat(runner.available()).isTrue();
+
+    org.mockito.Mockito.reset(client);
+    when(client.chat(any())).thenThrow(new GeminiClient.RateLimited());
+    assertThat(runner.chat("s", "p", "{}")).isEmpty();
+    assertThat(runner.available()).isFalse();
+    assertThat(runner.chat("s", "p", "{}")).isEmpty();
+    verify(client, times(1)).chat(any());
+    assertThat(runner(null).chat("s", "p", "{}")).isEmpty();
+  }
 }

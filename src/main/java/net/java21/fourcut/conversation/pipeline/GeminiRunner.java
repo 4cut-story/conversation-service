@@ -16,13 +16,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * LLM 작업을 Gemini(무료 등급)로 먼저 처리한다. 서버 안의 워커처럼 작업을 임대하고 결과를 보고한다. Gemini가 실패하거나 한도를 넘기면 임대를 내려놓아 작업이
  * 대기열에 그대로 남고, GPU 워커(로컬 qwen)가 가져간다. 한도 초과나 오류 뒤에는 {@code cooldown} 동안 Gemini를 건너뛴다.
  */
 @Component
-class GeminiRunner {
+class GeminiRunner implements DirectLlm {
 
   static final String WORKER_ID = "gemini";
 
@@ -92,6 +93,39 @@ class GeminiRunner {
 
   boolean active() {
     return client != null && clock.instant().isAfter(pausedUntil.get());
+  }
+
+  @Override
+  public boolean available() {
+    return active();
+  }
+
+  @Override
+  public Optional<String> chat(String system, String prompt, String jsonSchema) {
+    if (!active()) {
+      return Optional.empty();
+    }
+    ObjectNode job = json.createObjectNode();
+    job.put("system", system.strip());
+    job.put("prompt", prompt);
+    job.set("jsonSchema", json.readTree(jsonSchema));
+    job.putObject("options").put("temperature", 0.0);
+    long start = System.nanoTime();
+    try {
+      String content = client.chat(job).path("content").asString("");
+      log.info(
+          "Gemini 직접 호출: model={} {}ms",
+          properties.model(),
+          (System.nanoTime() - start) / 1_000_000);
+      return Optional.of(content);
+    } catch (GeminiClient.RateLimited e) {
+      pausedUntil.set(clock.instant().plus(properties.cooldown()));
+      log.warn("Gemini 직접 호출 한도 초과 ({} 동안 Gemini 쉼)", properties.cooldown());
+      return Optional.empty();
+    } catch (RuntimeException e) {
+      log.warn("Gemini 직접 호출 실패: reason={}", e.getClass().getSimpleName() + ": " + e.getMessage());
+      return Optional.empty();
+    }
   }
 
   /** 작업 하나를 Gemini로 처리해 본다. 이미 GPU 워커가 가져갔으면 아무것도 하지 않는다. */
