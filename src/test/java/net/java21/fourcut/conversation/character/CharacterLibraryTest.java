@@ -133,6 +133,32 @@ class CharacterLibraryTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 성별을 아는 인물에는 성별을 모르는 모습보다 성별이 맞는 모습을 먼저 쓴다")
+  void knownGenderFirst() {
+    StoryCharacter nobody = new StoryCharacter("마연", "long hair", null, null, null, 0.6);
+    CharacterLook longHair =
+        new CharacterLook(nobody, "DAILY", NEUTRAL, "long brown hair, white shirt", "office");
+    when(storage.exists(embedKey(longHair))).thenReturn(false);
+    when(looks.findByPublicId(longHair.publicId())).thenReturn(Optional.of(longHair));
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of(nobody));
+    when(looks.findByCharacterInAndConceptAndExpression(any(), eq("DAILY"), eq(NEUTRAL)))
+        .thenReturn(List.of(longHair));
+    when(vectors.nearest(any(), any()))
+        .thenReturn(
+            List.of(
+                new CharacterVectors.Nearest(longHair.publicId(), 0.05, longHair.look()),
+                new CharacterVectors.Nearest(haesolDaily.publicId(), 0.2, haesolDaily.look())));
+    Map<String, CharacterRef> dad =
+        library.match(
+            List.of(new CharacterLibrary.Wanted("A", "마연", "man, short hair, glasses")), "DAILY");
+    assertThat(dad.get("A").publicId()).isEqualTo(haesolDaily.publicId());
+    Map<String, CharacterRef> anyone =
+        library.match(
+            List.of(new CharacterLibrary.Wanted("A", "민지", "person, long hair")), "DAILY");
+    assertThat(anyone.get("A").publicId()).isEqualTo(longHair.publicId());
+  }
+
+  @Test
   @DisplayName("REQ-018: 거리 한도보다 멀면 캐릭터를 쓰지 않는다")
   void tooFar() {
     when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());

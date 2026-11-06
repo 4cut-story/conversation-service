@@ -114,7 +114,7 @@ public class CharacterLibrary {
       // 같은 이름의 젊은 캐릭터가 붙었다(funny-03)
       if (l != null
           && !used.contains(l.character().publicId())
-          && LookHead.of(w.look()).accepts(head(l))
+          && LookHead.of(w.look()).acceptsKnown(head(l))
           && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
@@ -139,20 +139,24 @@ public class CharacterLibrary {
       return Optional.empty();
     }
     LookHead wanted = LookHead.of(look);
-    for (CharacterVectors.Nearest n : vectors.nearest(query.get(), concept)) {
-      if (n.distance() > properties.maxDistance()) {
-        return Optional.empty();
-      }
-      if (!wanted.accepts(LookHead.of(n.look()))) {
-        continue;
-      }
-      Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
-      if (l.isPresent()
-          && wanted.accepts(head(l.get()))
-          && !used.contains(l.get().character().publicId())
-          && hasReference(l.get())) {
-        used.add(l.get().character().publicId());
-        return Optional.of(ref(l.get(), n.distance()));
+    List<CharacterVectors.Nearest> near =
+        vectors.nearest(query.get(), concept).stream()
+            .takeWhile(n -> n.distance() <= properties.maxDistance())
+            .toList();
+    // 성별이 맞는 모습을 먼저 찾고, 없을 때만 성별을 모르는 모습을 쓴다
+    for (boolean strict : new boolean[] {true, false}) {
+      for (CharacterVectors.Nearest n : near) {
+        if (!wanted.accepts(LookHead.of(n.look()))) {
+          continue;
+        }
+        Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
+        if (l.isPresent()
+            && (strict ? wanted.acceptsKnown(head(l.get())) : wanted.accepts(head(l.get())))
+            && !used.contains(l.get().character().publicId())
+            && hasReference(l.get())) {
+          used.add(l.get().character().publicId());
+          return Optional.of(ref(l.get(), n.distance()));
+        }
       }
     }
     return Optional.empty();
