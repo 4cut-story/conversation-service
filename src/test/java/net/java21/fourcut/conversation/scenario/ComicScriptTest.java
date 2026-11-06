@@ -53,6 +53,27 @@ class ComicScriptTest {
   }
 
   @Test
+  @DisplayName("FR-005: 실제 대화가 같은 말을 되풀이해도 뒤 컷의 같은 대사를 빼서 반복 위반으로 실패하지 않는다")
+  void repeatedLinesDropped() {
+    var p = panels();
+    var repeated =
+        List.of(
+            p.get(0),
+            p.get(1).withLines(List.of(line("B", "백십 쪽"), line("A", "배 고 프다"))),
+            p.get(2).withLines(List.of(line("A", "백십 쪽"), line("B", "누구야?"))),
+            p.get(3));
+    assertThat(script(cast(), repeated).violation()).contains("같은 대사");
+    ComicScript fixed = script(cast(), repeated).withoutRepeatedLines();
+    assertThat(fixed.violation()).isNull();
+    assertThat(fixed.panels().get(1).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("백십 쪽");
+    assertThat(fixed.panels().get(2).lines())
+        .extracting(ComicScript.Line::text)
+        .containsExactly("누구야?");
+  }
+
+  @Test
   @DisplayName("FR-005: 네 컷 구도가 모두 같거나 장면이 거의 같으면 위반이다")
   void repetition() {
     var sameShot =

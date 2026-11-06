@@ -132,8 +132,10 @@ class ScriptHandler implements StepHandler {
             .replaced(rename)
             .withLineTexts(t -> SpokenLines.snap(t, source))
             .withLinesWhere(t -> SpokenLines.inside(t, inScene))
+            .withoutRepeatedLines()
             .withEmptyPanelsFilled(sceneLines(transcript, scene, rename))
             .withStyledLines(SpokenLines.MAX_CHARS)
+            .withoutRepeatedLines()
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withRoleCalls()
             .withConcept(concept);
