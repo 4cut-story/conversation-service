@@ -109,6 +109,8 @@ class PipelineFlowIntegrationTest {
     fieldWithPath("concept")
         .description(
             "만화 컨셉. AUTO(장면에 맞게 고름), DAILY, ANIMALS, WATERCOLOR, PICTURE_BOOK, NEWSPAPER, JOSEON, WUXIA"),
+    fieldWithPath("dialect")
+        .description("대사 사투리. NONE(없음), GYEONGSANG, JEOLLA, CHUNGCHEONG, GANGWON, SEOUL"),
     fieldWithPath("createdAt").description("만든 시각")
   };
 
@@ -348,7 +350,12 @@ class PipelineFlowIntegrationTest {
                                     .optional()
                                     .description(
                                         "만화 컨셉. AUTO 또는 없으면 장면에 맞게 고른다. DAILY(일상 웹툰), ANIMALS(동물 친구들), WATERCOLOR(수채화 애니메이션),"
-                                            + " PICTURE_BOOK(어린이 그림책), NEWSPAPER(흑백 신문 만화), JOSEON(조선시대 사람들), WUXIA(무협)")),
+                                            + " PICTURE_BOOK(어린이 그림책), NEWSPAPER(흑백 신문 만화), JOSEON(조선시대 사람들), WUXIA(무협)"),
+                                fieldWithPath("dialect")
+                                    .optional()
+                                    .description(
+                                        "말풍선 대사 사투리. NONE 또는 없으면 사투리로 바꾸지 않는다. GYEONGSANG(경상도), JEOLLA(전라도),"
+                                            + " CHUNGCHEONG(충청도), GANGWON(강원도), SEOUL(서울)")),
                             responseFields(
                                 fieldWithPath("id").description("대화 ID"),
                                 fieldWithPath("status").description("RECORDING"))))),
