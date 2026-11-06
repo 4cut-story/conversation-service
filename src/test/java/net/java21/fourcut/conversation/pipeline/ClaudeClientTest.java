@@ -124,6 +124,17 @@ class ClaudeClientTest {
   }
 
   @Test
+  @DisplayName("FR-006: 그림이 있으면 그림 블록을 앞에, 질문 글을 뒤에 보낸다")
+  void imageRequest() {
+    JsonNode body = client.request(json.readTree("{\"prompt\":\"p\",\"images\":[\"QUJD\"]}"));
+    JsonNode content = body.path("messages").path(0).path("content");
+    assertThat(content.path(0).path("type").asString()).isEqualTo("image");
+    assertThat(content.path(0).path("source").path("data").asString()).isEqualTo("QUJD");
+    assertThat(content.path(0).path("source").path("media_type").asString()).isEqualTo("image/png");
+    assertThat(content.path(1).path("text").asString()).isEqualTo("p");
+  }
+
+  @Test
   @DisplayName("스키마와 시스템 지시가 없으면 형식 없이 보낸다")
   void plainRequest() {
     JsonNode body = client.request(json.readTree("{\"prompt\":\"p\"}"));

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,6 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -112,11 +114,27 @@ class CloudLlmRunner implements DirectLlm {
 
   @Override
   public Optional<String> chat(String system, String prompt, String jsonSchema) {
+    return direct(system, prompt, jsonSchema, List.of());
+  }
+
+  @Override
+  public Optional<String> see(
+      String system, String prompt, String jsonSchema, List<byte[]> images) {
+    return direct(system, prompt, jsonSchema, images);
+  }
+
+  private Optional<String> direct(
+      String system, String prompt, String jsonSchema, List<byte[]> images) {
     ObjectNode job = json.createObjectNode();
     job.put("system", system.strip());
     job.put("prompt", prompt);
     job.set("jsonSchema", json.readTree(jsonSchema));
     job.putObject("options").put("temperature", 0.0);
+    if (!images.isEmpty()) {
+      // PNG base64. 워커 LLM 작업에는 없는 필드라 직접 호출에서만 쓴다
+      ArrayNode array = job.putArray("images");
+      images.forEach(b -> array.add(Base64.getEncoder().encodeToString(b)));
+    }
     for (Provider provider : providers) {
       if (!provider.active()) {
         continue;
