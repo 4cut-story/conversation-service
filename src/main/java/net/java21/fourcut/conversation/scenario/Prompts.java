@@ -118,7 +118,7 @@ final class Prompts {
         장소는 대화 내용에 맞게 하나 정해 네 컷 모두 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
         예: "{A} drops ice cream cone on ground, {B} gasps, park",
         "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
-      - lines: 컷당 0~2개, 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
+      - lines: 컷당 1~2개(대사 없는 컷은 만들지 않는다), 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 4컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
         길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다. 핵심 순간의 말은 꼭 전 컷 대사에 넣는다.
         이야기를 이끄는 말(질문, 들통, 고백, 반응)을 고르고 "응", "그래" 같은 맞장구만으로 컷을 채우지 않는다.
@@ -141,7 +141,7 @@ final class Prompts {
        "panels":{"type":"array","minItems":4,"maxItems":4,"items":{"type":"object",
         "required":["role","shot","scene","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
-         "scene":{"type":"string"},"lines":{"type":"array","maxItems":2,"items":{"type":"object",
+         "scene":{"type":"string"},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
           "required":["speaker","text"],"properties":{"speaker":{"type":"string"},"text":{"type":"string"}}}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;

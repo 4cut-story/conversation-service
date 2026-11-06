@@ -61,6 +61,30 @@ final class SpokenLines {
     return false;
   }
 
+  /** 대사의 첫 문장이 나온 후보의 위치(시간 순서 목록에서). 없으면 -1. */
+  static int indexIn(String line, List<String> candidates) {
+    List<String> parts = sentences(line);
+    if (parts.isEmpty()) {
+      return -1;
+    }
+    String first = parts.get(0);
+    for (int i = 0; i < candidates.size(); i++) {
+      String c = candidates.get(i) == null ? "" : candidates.get(i);
+      if (c.contains(first) || similarity(first, c) >= MIN_SIMILARITY) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /** 맞장구("응", "그래", "아 진짜?")처럼 짧은 말인지. 빈 컷을 채울 때 뒤로 미룬다. */
+  static boolean shortReply(String text) {
+    return text == null || text.replaceAll("[\\s\\p{Punct}…~ㅋㅎㅠㅜ]", "").length() < MIN_FILL_CHARS;
+  }
+
+  /** 빈 컷을 채우는 말로 우선 고르는 최소 글자 수(공백·문장부호 제외). */
+  static final int MIN_FILL_CHARS = 5;
+
   private static String closest(String sentence, List<String> source) {
     String best = sentence;
     double score = MIN_SIMILARITY;

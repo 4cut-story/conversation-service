@@ -127,9 +127,10 @@ class ScriptHandler implements StepHandler {
             .withNames(cast)
             .withFictionalNames(spoken(transcript))
             .replaced(rename)
-            .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withLineTexts(t -> SpokenLines.snap(t, source))
             .withLinesWhere(t -> SpokenLines.inside(t, inScene))
+            .withEmptyPanelsFilled(sceneLines(transcript, scene, rename))
+            .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withConcept(concept);
     if (concept == Concept.ANIMALS) {
       script = script.withAnimals(animals(id.hashCode()));
@@ -145,13 +146,29 @@ class ScriptHandler implements StepHandler {
   /** 장면 구간(앞뒤 여유 SCENE_SLACK_SEC)의 대화. 대사는 이 안에서만 고른다. */
   static String sceneText(Transcript transcript, SceneCandidate scene) {
     StringBuilder sb = new StringBuilder();
-    transcript.utterances().stream()
+    sceneUtterances(transcript, scene).forEach(u -> sb.append(u.text()).append('\n'));
+    return sb.toString();
+  }
+
+  /** 장면 구간 발화를 시간 순서대로 말풍선 후보로 바꾼다(실명은 가명으로). 대사가 빈 컷을 채울 때 쓴다. */
+  static List<ComicScript.Line> sceneLines(
+      Transcript transcript, SceneCandidate scene, Map<String, String> rename) {
+    return sceneUtterances(transcript, scene).stream()
+        .map(
+            u ->
+                new ComicScript.Line(
+                    u.speaker(), SpokenLines.snap(RealNames.apply(u.text(), rename), List.of())))
+        .toList();
+  }
+
+  private static List<Transcript.Utterance> sceneUtterances(
+      Transcript transcript, SceneCandidate scene) {
+    return transcript.utterances().stream()
         .filter(
             u ->
                 u.start() >= scene.start() - SCENE_SLACK_SEC
                     && u.start() <= scene.end() + SCENE_SLACK_SEC)
-        .forEach(u -> sb.append(u.text()).append('\n'));
-    return sb.toString();
+        .toList();
   }
 
   /** 인물마다 다른 동물. 대화마다 시작 동물을 바꾼다. */

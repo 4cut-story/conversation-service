@@ -28,4 +28,15 @@ class SpokenLinesTest {
     assertThat(out.length()).isLessThanOrEqualTo(SpokenLines.MAX_CHARS);
     assertThat(SpokenLines.similarity("", "")).isEqualTo(1);
   }
+
+  @Test
+  @DisplayName("FR-005: 대사가 나온 발화 위치를 찾고, 짧은 맞장구를 가려낸다")
+  void indexAndShortReply() {
+    assertThat(SpokenLines.indexIn("지하철이 중간에 10분 석어.", source)).isEqualTo(1);
+    assertThat(SpokenLines.indexIn("전혀 없는 말", source)).isEqualTo(-1);
+    assertThat(SpokenLines.indexIn("", source)).isEqualTo(-1);
+    assertThat(SpokenLines.shortReply("응 그래!")).isTrue();
+    assertThat(SpokenLines.shortReply("ㅋㅋㅋ 진짜?")).isTrue();
+    assertThat(SpokenLines.shortReply("빵 하나에 40분?")).isFalse();
+  }
 }
