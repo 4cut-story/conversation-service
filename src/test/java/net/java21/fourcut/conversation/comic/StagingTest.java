@@ -97,6 +97,22 @@ class StagingTest {
   }
 
   @Test
+  @DisplayName("FR-006: 세 명이 나오는 컷은 말하는 인물이 양쪽 자리를 먼저 차지해 가운데로 밀리지 않는다")
+  void speakerTakesSide() {
+    ComicScript.Panel reveal =
+        new ComicScript.Panel(
+            "결",
+            "wide",
+            "{C} cooks with {A} and {B}",
+            List.of(new ComicScript.Line("C", "오늘 촬영 같이 할래?"), new ComicScript.Line("B", "와!")));
+    ComicScript s =
+        script(List.of(panel("{A} and {B}"), panel("{B} and {A}"), reveal), "A", "B", "C");
+    assertThat(Staging.panel(s, s.panels().get(2)))
+        .containsExactly(
+            Map.entry("C", Side.LEFT), Map.entry("B", Side.RIGHT), Map.entry("A", Side.CENTER));
+  }
+
+  @Test
   @DisplayName("FR-006: 인물 표시가 없는 예전 콘티는 등장인물 순서로 왼쪽·오른쪽이고, 인물이 없으면 빈 자리다")
   void legacyAndEmpty() {
     ComicScript s = script(List.of(panel("two friends")), "A", "B");

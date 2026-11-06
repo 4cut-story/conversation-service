@@ -3,9 +3,11 @@ package net.java21.fourcut.conversation.comic;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.java21.fourcut.conversation.scenario.ComicScript;
 
 /**
@@ -13,8 +15,8 @@ import net.java21.fourcut.conversation.scenario.ComicScript;
  * 쪽에 두고 꼬리로 가리킴)이 같은 자리를 쓴다.
  *
  * <p>예전에는 장면 문장에 먼저 나온 인물을 왼쪽에 두어, 문장 순서가 바뀌면 컷마다 좌우가 바뀌었다. 이제는 가장 많은 컷에 나오는 두 인물(같으면 등장인물 순서)을 골라
- * 등장인물 순서대로 왼쪽·오른쪽에 고정한다. 고정 자리가 없는 인물은 같은 컷의 다른 인물 반대쪽에 서고, 세 명 이상 나오는 컷의 셋째 인물부터는 가운데다. 혼자 나오는 컷은
- * 가운데다.
+ * 등장인물 순서대로 왼쪽·오른쪽에 고정한다. 고정 자리가 없는 인물은 같은 컷의 다른 인물 반대쪽에 서고, 세 명 이상 나오는 컷은 말하는 인물이 먼저 왼쪽·오른쪽에 서고 셋째
+ * 인물부터는 가운데다. 혼자 나오는 컷은 가운데다.
  */
 final class Staging {
 
@@ -65,10 +67,17 @@ final class Staging {
 
   static Map<String, Side> panel(
       ComicScript script, ComicScript.Panel panel, Map<String, Side> home) {
-    // 고정 자리가 있는 인물을 먼저 세운다 (세 명 이상일 때 고정 인물이 가운데로 밀리지 않게)
+    // 세 명 이상일 때 왼쪽·오른쪽(참조 그림이 붙는 자리)은 이 컷에서 말하는 인물이 먼저 차지하고, 그다음 고정 자리가 있는
+    // 인물이다. 말하는 인물이 가운데로 밀리면 참조 없이 그려져 컷에서 사라졌다(4컷에서 정체를 밝히는 할머니가 빠졌다).
+    Set<String> talking = new HashSet<>();
+    if (panel.lines() != null) {
+      panel.lines().forEach(l -> talking.add(l.speaker()));
+    }
     List<String> people =
         DrawHandler.people(script, panel).stream()
-            .sorted(Comparator.comparingInt((String s) -> home.containsKey(s) ? 0 : 1))
+            .sorted(
+                Comparator.comparingInt(
+                    (String s) -> (talking.contains(s) ? 0 : 2) + (home.containsKey(s) ? 0 : 1)))
             .toList();
     Map<String, Side> out = new LinkedHashMap<>();
     if (people.isEmpty()) {
