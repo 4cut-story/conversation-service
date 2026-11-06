@@ -64,8 +64,34 @@ public record ComicScript(
    * @param role 기·승·전·결
    * @param shot 구도: wide, medium, close-up. 예전 콘티에는 없을 수 있다
    * @param scene 그림 모델용 영어 장면. 인물은 {A}, {B}로 쓴다
+   * @param setting 그림 모델용 영어 배경: 장소와 눈에 보이는 배경 물건. 예전 콘티에는 없다
+   * @param faces 인물별 표정·몸짓. 예전 콘티에는 없다
    */
-  public record Panel(String role, String shot, String scene, List<Line> lines) {}
+  public record Panel(
+      String role, String shot, String scene, List<Line> lines, String setting, List<Face> faces) {
+
+    public Panel(String role, String shot, String scene, List<Line> lines) {
+      this(role, shot, scene, lines, null, null);
+    }
+
+    /** 대사만 바꾼 컷. */
+    public Panel withLines(List<Line> next) {
+      return new Panel(role, shot, scene, next, setting, faces);
+    }
+
+    /** 장면만 바꾼 컷. */
+    public Panel withScene(String next) {
+      return new Panel(role, shot, next, lines, setting, faces);
+    }
+  }
+
+  /**
+   * 컷 속 인물 한 명의 표정·몸짓.
+   *
+   * @param speaker 화자 표시(A, B…)
+   * @param face 그림 모델용 영어 3단어 이내(예: wide-eyed, hands up)
+   */
+  public record Face(String speaker, String face) {}
 
   /**
    * 말풍선 하나.
@@ -342,10 +368,7 @@ public record ComicScript(
             : panels.stream()
                 .map(
                     p ->
-                        new Panel(
-                            p.role(),
-                            p.shot(),
-                            p.scene(),
+                        p.withLines(
                             p.lines() == null
                                 ? null
                                 : p.lines().stream().filter(l -> keep.test(l.source())).toList()))
@@ -389,7 +412,7 @@ public record ComicScript(
       if (pick != null) {
         said.add(key(pick.text()));
         Line filled = new Line(pick.speaker(), pick.text(), pick.text());
-        out.set(i, withSpeakersInScene(new Panel(p.role(), p.shot(), p.scene(), List.of(filled))));
+        out.set(i, withSpeakersInScene(p.withLines(List.of(filled))));
       }
     }
     return new ComicScript(title, characters, out, reviewed, nameWarnings, concept);
@@ -512,13 +535,7 @@ public record ComicScript(
       return List.of();
     }
     return panels.stream()
-        .map(
-            p ->
-                new Panel(
-                    p.role(),
-                    p.shot(),
-                    p.scene(),
-                    p.lines() == null ? null : p.lines().stream().map(f).toList()))
+        .map(p -> p.withLines(p.lines() == null ? null : p.lines().stream().map(f).toList()))
         .toList();
   }
 
@@ -571,7 +588,7 @@ public record ComicScript(
         .distinct()
         .filter(sp -> !scene.toString().contains("{" + sp + "}"))
         .forEach(sp -> scene.append(", {").append(sp).append("} nearby"));
-    return new Panel(p.role(), p.shot(), scene.toString(), p.lines());
+    return p.withScene(scene.toString());
   }
 
   ComicScript reviewedWith(List<String> warnings) {

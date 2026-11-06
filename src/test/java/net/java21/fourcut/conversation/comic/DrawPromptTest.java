@@ -47,6 +47,37 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 콘티의 인물별 표정과 배경을 장면 뒤에 붙인다. 두 명이면 짧은 이름으로, 혼자면 표정만")
+  void facesAndSetting() {
+    var duo =
+        new ComicScript.Panel(
+            "전",
+            "medium",
+            "{B} hands {A} a phone, burger shop",
+            List.of(),
+            "burger shop, ordering kiosk, trays of burgers",
+            List.of(
+                new ComicScript.Face("A", "wide-eyed, hands up"),
+                new ComicScript.Face("B", "laughing"),
+                new ComicScript.Face("C", "not in scene")));
+    assertThat(DrawHandler.prompt("s", script, duo))
+        .isEqualTo(
+            "s, medium shot, two people, (girl, bob hair) on the left, (boy, glasses) on the right,"
+                + " the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up,"
+                + " the boy laughing, burger shop, ordering kiosk, trays of burgers");
+    var solo =
+        new ComicScript.Panel(
+            "결",
+            "close-up",
+            "{A} eats a burger",
+            List.of(),
+            " ",
+            List.of(new ComicScript.Face("A", "teary smile")));
+    assertThat(DrawHandler.prompt("s", script, solo))
+        .isEqualTo("s, close up shot, (girl, bob hair) eats a burger, teary smile");
+  }
+
+  @Test
   @DisplayName("FR-006: 동물 컨셉은 two people 대신 사람이 섞이지 않는 말을 쓴다")
   void animalCrowd() {
     var panel = new ComicScript.Panel("기", "wide", "{A} and {B} talk, {C} waits, cafe", List.of());

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 class ComicScriptTest {
 
@@ -369,5 +370,26 @@ class ComicScriptTest {
     assertThat(s.withCharacterNames(java.util.Map.of())).isSameAs(s);
     ComicScript swapped = s.withCharacterNames(java.util.Map.of("A", "도윤", "B", "민지"));
     assertThat(swapped.characters().get(0).name()).isEqualTo("도윤");
+  }
+
+  @Test
+  @DisplayName("FR-006: 컷의 배경·표정은 JSON으로 읽고, 예전 콘티에는 없어도 읽는다")
+  void panelJson() {
+    JsonMapper json = JsonMapper.builder().build();
+    ComicScript.Panel p =
+        json.readValue(
+            "{\"role\":\"기\",\"shot\":\"wide\",\"scene\":\"{A} waits\",\"lines\":[],"
+                + "\"setting\":\"bus stop, rain\",\"faces\":[{\"speaker\":\"A\",\"face\":\"sleepy\"}]}",
+            ComicScript.Panel.class);
+    assertThat(p.setting()).isEqualTo("bus stop, rain");
+    assertThat(p.faces()).containsExactly(new ComicScript.Face("A", "sleepy"));
+    assertThat(p.withLines(List.of()).faces()).isEqualTo(p.faces());
+    assertThat(p.withScene("x").setting()).isEqualTo("bus stop, rain");
+    ComicScript.Panel old =
+        json.readValue(
+            "{\"role\":\"기\",\"shot\":\"wide\",\"scene\":\"{A} waits\",\"lines\":[]}",
+            ComicScript.Panel.class);
+    assertThat(old.setting()).isNull();
+    assertThat(old.faces()).isNull();
   }
 }
