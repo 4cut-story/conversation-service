@@ -33,6 +33,6 @@ public record ComicProperties(
 
   public static final String DEFAULT_NEGATIVE =
       "text, letters, watermark, speech bubble, comic panels, multiple panels, grid, collage,"
-          + " split screen, photo, realistic, 3d, cluttered background, nsfw, extra fingers,"
-          + " deformed";
+          + " split screen, picture frame, border, photo, realistic, 3d, cluttered background,"
+          + " nsfw, extra fingers, deformed";
 }
