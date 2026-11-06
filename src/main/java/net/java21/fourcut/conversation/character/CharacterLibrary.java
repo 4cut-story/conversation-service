@@ -185,7 +185,7 @@ public class CharacterLibrary {
     return new CharacterRef(
         l.publicId(),
         l.character().name(),
-        LookHead.withNoun(l.look(), l.character().gender(), l.character().ageGroup()),
+        LookHead.withAge(l.look(), l.character().gender(), l.character().ageGroup()),
         l.character().scale(),
         l.referenceImageKey(),
         ready,

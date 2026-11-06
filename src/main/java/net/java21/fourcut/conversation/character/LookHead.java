@@ -193,6 +193,62 @@ record LookHead(String animal, String gender, String age) {
     return l.isEmpty() ? noun : noun + ", " + l;
   }
 
+  /**
+   * 첫 마디에 나이가 없으면("man in hanbok", "swordsman", "bear") 캐릭터 DB 나이대를 넣는다. 그림체별 모습을 만들 때 나이가 빠져 조선·무협
+   * 노인과 무협 아이가 젊은 어른으로, 동물 컨셉 할머니가 아기 동물처럼 그려졌다. 첫 마디가 이미 나이를 말하면 참조 그림도 그 나이라 그대로 둔다.
+   */
+  static String withAge(String look, String dbGender, String dbAge) {
+    String l = withNoun(look, dbGender, dbAge);
+    LookHead h = of(l);
+    if (dbAge == null || (h.age != null && !"ADULT".equals(h.age))) {
+      return l;
+    }
+    String[] parts = l.split(",", 2);
+    String head = parts[0].strip();
+    String rest = parts.length > 1 ? "," + parts[1] : "";
+    String lower = head.toLowerCase(Locale.ROOT);
+    String out;
+    if (h.animal != null) {
+      out =
+          switch (dbAge) {
+            case "OLD" -> "old " + head;
+            case "CHILD" -> "little " + head;
+            default -> head;
+          };
+    } else if (lower.startsWith("swordsman") || lower.startsWith("swordswoman")) {
+      out = adjective(dbAge) + head;
+    } else {
+      String g = h.gender != null ? h.gender : "FEMALE".equals(dbGender) ? "F" : null;
+      if (g == null && !"MALE".equals(dbGender)) {
+        return l;
+      }
+      boolean f = "F".equals(g);
+      int in = lower.indexOf(" in ");
+      out = noun(f, dbAge) + (in >= 0 ? head.substring(in) : "");
+    }
+    return out + rest;
+  }
+
+  private static String adjective(String age) {
+    return switch (age) {
+      case "CHILD" -> "little ";
+      case "YOUNG" -> "young ";
+      case "MIDDLE" -> "middle-aged ";
+      case "OLD" -> "old ";
+      default -> "";
+    };
+  }
+
+  private static String noun(boolean f, String age) {
+    return switch (age) {
+      case "CHILD" -> f ? "girl" : "boy";
+      case "YOUNG" -> f ? "young woman" : "young man";
+      case "MIDDLE" -> f ? "middle-aged woman" : "middle-aged man";
+      case "OLD" -> f ? "old woman" : "old man";
+      default -> f ? "woman" : "man";
+    };
+  }
+
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */
   boolean accepts(LookHead other) {
     if (animal != null || other.animal != null) {
