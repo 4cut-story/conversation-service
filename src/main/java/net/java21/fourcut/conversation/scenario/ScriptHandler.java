@@ -112,6 +112,12 @@ class ScriptHandler implements StepHandler {
     return part.isEmpty() ? "(없음)" : RealNames.apply(TranscriptText.compact(part), rename);
   }
 
+  /**
+   * 등장인물에 없는 화자의 말을 다른 인물 대사로 쓴 콘티를 다시 쓰게 하는 횟수. 그 말이 반전·결말인 경우가 많아(funny-13 "똑똑, 옆집인데요") 먼저 다시 쓰게
+   * 하고, 그래도 안 되면 그 대사를 빼고 넘어간다.
+   */
+  static final int UNCAST_RETRIES = 2;
+
   @Override
   public StepOutcome onResult(StepContext context, JsonNode result) {
     String id = context.conversation().publicId();
@@ -131,8 +137,17 @@ class ScriptHandler implements StepHandler {
             .withFictionalNames(spoken(transcript))
             .replaced(rename)
             .withLineTexts(t -> SpokenLines.snap(t, source))
-            .withLinesWhere(t -> SpokenLines.inside(t, inScene))
-            .withSourceSpeakers(sceneLines(transcript, scene, rename))
+            .withLinesWhere(t -> SpokenLines.inside(t, inScene));
+    List<ComicScript.Line> sceneLines = sceneLines(transcript, scene, rename);
+    List<String> uncast = script.uncastSourceSpeakers(sceneLines);
+    if (!uncast.isEmpty() && context.attempt() <= UNCAST_RETRIES) {
+      String reason = "등장인물에 없는 화자 " + String.join(", ", uncast) + "의 말을 다른 인물 대사로 썼다";
+      log.warn("콘티 규칙 위반: {}", reason);
+      return new StepOutcome.Retry("콘티 규칙 위반: " + reason);
+    }
+    script =
+        script
+            .withSourceSpeakers(sceneLines)
             .withoutRepeatedLines()
             .withEmptyPanelsFilled(sceneLines(transcript, scene, rename))
             .withStyledLines(SpokenLines.MAX_CHARS)

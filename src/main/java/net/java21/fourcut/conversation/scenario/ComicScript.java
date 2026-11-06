@@ -503,6 +503,22 @@ public record ComicScript(
         : new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
   }
 
+  /** 원문이 등장인물에 없는 화자의 말인 대사들의 화자(정렬). 없으면 빈 목록. */
+  public List<String> uncastSourceSpeakers(List<Line> spoken) {
+    if (panels == null || characters == null || spoken == null) {
+      return List.of();
+    }
+    Set<String> cast = new HashSet<>(characters.stream().map(Character::speaker).toList());
+    return panels.stream()
+        .flatMap(
+            p -> p.lines() == null ? java.util.stream.Stream.<Line>empty() : p.lines().stream())
+        .map(l -> sourceSpeaker(l.source(), spoken))
+        .filter(w -> w != null && !cast.contains(w))
+        .distinct()
+        .sorted()
+        .toList();
+  }
+
   /** 말(첫 문장)이 나온 장면 발화의 화자. 한 화자의 말에서만 나오면 그 화자, 없거나 여러 화자면 null. */
   private static String sourceSpeaker(String text, List<Line> spoken) {
     List<String> parts = text == null ? List.of() : SpokenLines.sentences(text);

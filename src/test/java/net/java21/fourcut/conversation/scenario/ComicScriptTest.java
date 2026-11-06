@@ -69,7 +69,9 @@ class ComicScriptTest {
             line("A", "배고프다."),
             line("A", "응"),
             line("B", "응"));
+    assertThat(script(cast(), wrong).uncastSourceSpeakers(spoken)).containsExactly("C");
     ComicScript fixed = script(cast(), wrong).withSourceSpeakers(spoken);
+    assertThat(fixed.uncastSourceSpeakers(spoken)).isEmpty();
     assertThat(fixed.panels().get(0).lines())
         .extracting(ComicScript.Line::speaker)
         .containsExactly("B");
