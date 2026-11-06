@@ -76,12 +76,25 @@ class CharacterLibraryTest {
     when(looks.findByCharacterInAndConceptAndExpression(any(), eq("JOSEON"), eq(NEUTRAL)))
         .thenReturn(List.of(haneulJoseon));
     Map<String, CharacterRef> cast =
-        library.match(List.of(new CharacterLibrary.Wanted("A", "하늘", "girl")), "JOSEON");
+        library.match(List.of(new CharacterLibrary.Wanted("A", "하늘", "young woman")), "JOSEON");
     assertThat(cast.get("A").publicId()).isEqualTo(haneulJoseon.publicId());
     assertThat(cast.get("A").look()).contains("hanbok");
     assertThat(cast.get("A").distance()).isZero();
     assertThat(cast.get("A").embedReady()).isFalse();
     verify(embedder, never()).embed(anyString());
+  }
+
+  @Test
+  @DisplayName("REQ-018: 이름이 같아도 외모 첫 마디의 성별·나이가 다르면 이름으로 쓰지 않는다")
+  void byNameNeedsHead() {
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of(haneul));
+    when(looks.findByCharacterInAndConceptAndExpression(any(), eq("JOSEON"), eq(NEUTRAL)))
+        .thenReturn(List.of(haneulJoseon));
+    when(vectors.available()).thenReturn(false);
+    Map<String, CharacterRef> cast =
+        library.match(
+            List.of(new CharacterLibrary.Wanted("A", "하늘", "old man, gray beard")), "JOSEON");
+    assertThat(cast).isEmpty();
   }
 
   @Test

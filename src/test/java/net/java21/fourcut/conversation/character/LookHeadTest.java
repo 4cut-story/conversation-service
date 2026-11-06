@@ -42,4 +42,16 @@ class LookHeadTest {
     assertThat(accepts("young woman", "fox, blue hoodie")).isFalse();
     assertThat(accepts("person in a hat", "old woman, hat")).isTrue();
   }
+
+  @Test
+  @DisplayName("REQ-018: 첫 마디에 나이가 없어도 흰머리·주름이 있으면 노인으로 보고 젊은 캐릭터를 쓰지 않는다")
+  void oldFromDetails() {
+    assertThat(LookHead.of("woman, gray hair bun, purple cardigan"))
+        .isEqualTo(new LookHead(null, "F", "OLD"));
+    assertThat(LookHead.of("man, wrinkled face, cane")).isEqualTo(new LookHead(null, "M", "OLD"));
+    assertThat(accepts("woman, gray hair bun, cardigan", "young woman, mail carrier uniform"))
+        .isFalse();
+    assertThat(LookHead.of("young woman, white hair")).isEqualTo(new LookHead(null, "F", "YOUNG"));
+    assertThat(LookHead.of("swordsman, white robe")).isEqualTo(new LookHead(null, "M", null));
+  }
 }
