@@ -41,10 +41,10 @@ public class ComicComposer {
   /** 썸네일 폭. */
   public static final int THUMB_WIDTH = 400;
 
-  private static final int MARGIN = 24;
+  static final int MARGIN = 24;
   private static final int GAP = 20;
   private static final int TITLE_HEIGHT = 90;
-  private static final int PANEL = WIDTH - 2 * MARGIN;
+  static final int PANEL = WIDTH - 2 * MARGIN;
   private static final int BUBBLE_PAD = 14;
   private static final int TITLE_FONT = 40;
   private static final int TITLE_FONT_MIN = 24;
@@ -218,7 +218,9 @@ public class ComicComposer {
             new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
             new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
             new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h),
-            belowLast(x, w, h, panelTop, taken));
+            belowLast(x, w, h, panelTop, taken),
+            belowLast(MARGIN + 16, w, h, panelTop, taken),
+            belowLast(MARGIN + PANEL - 16 - w, w, h, panelTop, taken));
     return pick(options, faces, taken);
   }
 
@@ -259,7 +261,12 @@ public class ComicComposer {
     Rectangle best = options.get(0);
     long bestCover = Long.MAX_VALUE;
     for (Rectangle o : options) {
-      long cover = covered(o, faces) * 2 + covered(o, taken) * 3;
+      long hidden = covered(o, taken);
+      long cover = covered(o, faces) * 2 + hidden * 3;
+      if (hidden > 0) {
+        // 앞 말풍선 글을 가리면 읽을 수 없다. 순서가 바뀌는 것보다 나쁘다(회차 11 love-07·funny-12 3컷)
+        cover += 4L * PANEL * PANEL;
+      }
       if (!taken.isEmpty() && !readsAfter(o, taken.getLast())) {
         cover += (long) PANEL * PANEL;
       }
