@@ -103,6 +103,25 @@ class ManualLlmFlowTest {
   }
 
   @Test
+  @DisplayName("FR-007: 수동 처리 대화의 합성 단계는 말풍선 자리 확인을 LLM 작업으로 넣을 수 있다")
+  void composeJobAllowed() throws Exception {
+    String owner = PublicId.generate();
+    String id = create(owner, true);
+    Long conversation =
+        jdbc.queryForObject("select id from conversations where public_id = ?", Long.class, id);
+    jdbc.update(
+        "insert into gpu_jobs (conversation_id, step, type, payload, manual)"
+            + " values (?, 'COMPOSE', 'LLM', '{}'::json, true)",
+        conversation);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from gpu_jobs where conversation_id = ? and step = 'COMPOSE'",
+                Integer.class,
+                conversation))
+        .isEqualTo(1);
+  }
+
+  @Test
   @DisplayName("수동 처리 표시가 없는 대화는 꺼낼 작업이 없고 답을 넣을 수 없다")
   void notManual() throws Exception {
     String owner = PublicId.generate();
