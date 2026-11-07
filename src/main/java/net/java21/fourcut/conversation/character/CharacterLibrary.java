@@ -317,7 +317,7 @@ public class CharacterLibrary {
             .map(
                 existing -> {
                   existing.describe(look.strip(), description.strip());
-                  existing.referenceChanged();
+                  referenceChanged(existing);
                   return existing;
                 })
             .orElseGet(
@@ -344,7 +344,7 @@ public class CharacterLibrary {
         throw new ApiException(ErrorCode.CONFLICT, "모습 문구가 이미 바뀌었어요.");
       }
       l.describe(next, l.description());
-      l.referenceChanged();
+      referenceChanged(l);
       if (CharacterLook.NEUTRAL.equals(l.expression())) {
         embedDescription(l);
       }
@@ -356,8 +356,15 @@ public class CharacterLibrary {
   @Transactional
   Registered replaceReference(String lookId) {
     CharacterLook l = looks.findByPublicId(lookId).orElseThrow(ApiException::notFound);
-    l.referenceChanged();
+    referenceChanged(l);
     return new Registered(view(l.character(), 0, null), lookView(l), uploadUrl(l));
+  }
+
+  /** 참조 그림이 바뀌었다. 예전 그림으로 계산한 embedding 파일이 남아 있으면 ref()가 다시 쓰므로 함께 지운다. */
+  private void referenceChanged(CharacterLook l) {
+    l.referenceChanged();
+    storage.deletePrefix(
+        CharacterKeys.embed(l.character().publicId(), l.publicId(), properties.ipAdapter()));
   }
 
   @Transactional

@@ -152,6 +152,9 @@ class CharacterDbIntegrationTest {
     mvc.perform(post("/internal/characters/looks/" + dailyLook + "/reference"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.look.embedReady").value(false));
+    // 예전 그림으로 계산한 embedding 파일도 지워 다음 그림 때 새 그림으로 다시 계산한다
+    assertThat(storage.exists(ref.embedTargetKey())).isFalse();
+    assertThat(library.match(wanted, "DAILY").get("A").embedReady()).isFalse();
 
     // 임베딩 모델을 바꾸면 기본 표정 모습(DAILY, JOSEON)을 다시 임베딩한다
     when(embedder.model()).thenReturn("new-embedding");
