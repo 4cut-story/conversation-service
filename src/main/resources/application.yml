@@ -45,6 +45,12 @@ management:
       probes:
         enabled: true
 
+conversation:
+  # 한 사람이 하루(한국 시각)에 만들 수 있는 만화 수. 0이면 제한하지 않는다
+  daily-limit: ${CONVERSATION_DAILY_LIMIT:10}
+  # 제한하지 않을 사용자 공개 ID (쉼표로 구분. 테스트 회차·스토리 게시 계정)
+  daily-limit-exempt: ${CONVERSATION_DAILY_LIMIT_EXEMPT:}
+
 pipeline:
   lease-time: 90s
   worker-seen-within: 60s
