@@ -19,6 +19,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 class ClaudeClientTest {
 
@@ -172,6 +173,45 @@ class ClaudeClientTest {
         .hasMessageContaining("max_tokens");
     assertThatThrownBy(() -> client.result(json.readTree("{\"content\":[]}")))
         .hasMessageContaining("비었다");
+  }
+
+  @Test
+  @DisplayName("작업 이름이 있으면 그 작업에 정한 모델과 생각 깊이를 쓰고, 없으면 기본값을 쓴다")
+  void taskModel() {
+    ClaudeProperties tasks =
+        new ClaudeProperties(
+            "k",
+            "opus",
+            "medium",
+            1,
+            "u",
+            Duration.ZERO,
+            Duration.ZERO,
+            java.util.Map.of(
+                "correct", new ClaudeProperties.Task("haiku", "low"),
+                "extract", new ClaudeProperties.Task("sonnet", "")));
+    ClaudeClient c = new ClaudeClient(null, tasks, json);
+    JsonNode correct = c.request(json.readTree("{\"task\":\"correct\",\"prompt\":\"p\"}"));
+    assertThat(correct.path("model").asString()).isEqualTo("haiku");
+    assertThat(correct.path("output_config").path("effort").asString()).isEqualTo("low");
+    JsonNode extract = c.request(json.readTree("{\"task\":\"extract\",\"prompt\":\"p\"}"));
+    assertThat(extract.path("model").asString()).isEqualTo("sonnet");
+    assertThat(extract.path("output_config").path("effort").asString()).isEqualTo("medium");
+    JsonNode plain = c.request(json.readTree("{\"prompt\":\"p\"}"));
+    assertThat(plain.path("model").asString()).isEqualTo("opus");
+  }
+
+  @Test
+  @DisplayName("비용 확인용으로 입력 토큰(캐시 포함)과 출력 토큰을 함께 남긴다")
+  void usage() {
+    ObjectNode out =
+        client.result(
+            json.readTree(
+                "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"ok\"}],"
+                    + "\"usage\":{\"input_tokens\":100,\"cache_read_input_tokens\":20,"
+                    + "\"cache_creation_input_tokens\":5,\"output_tokens\":40}}"));
+    assertThat(out.path("inputCount").asInt()).isEqualTo(125);
+    assertThat(out.path("evalCount").asInt()).isEqualTo(40);
   }
 
   @Test

@@ -125,7 +125,11 @@ class ExtractHandler implements StepHandler {
           () ->
               llm.parse(
                   direct
-                      .chat(Prompts.EXTRACT_SYSTEM.strip(), prompt, Prompts.EXTRACT_SCHEMA)
+                      .chat(
+                          DirectLlm.EXTRACT,
+                          Prompts.EXTRACT_SYSTEM.strip(),
+                          prompt,
+                          Prompts.EXTRACT_SCHEMA)
                       .orElseThrow(() -> new IllegalStateException("외부 LLM 응답 없음"))));
     }
     long began = System.nanoTime();
@@ -145,6 +149,7 @@ class ExtractHandler implements StepHandler {
       int w = windows.get(0);
       Optional<String> again =
           direct.chat(
+              DirectLlm.EXTRACT,
               Prompts.EXTRACT_SYSTEM.strip(),
               prompt(transcript, w) + SHORT_HINT,
               Prompts.EXTRACT_SCHEMA);

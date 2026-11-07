@@ -122,7 +122,11 @@ class PanelPlacement {
     try {
       answer =
           llm.see(
-              SYSTEM, refPrompt(script, shown) + prompt(script, planned, asked), SCHEMA, images);
+              DirectLlm.PLACEMENT,
+              SYSTEM,
+              refPrompt(script, shown) + prompt(script, planned, asked),
+              SCHEMA,
+              images);
     } catch (RuntimeException e) {
       log.warn("말풍선 자리 확인 실패: {}", e.toString());
       return fallback;

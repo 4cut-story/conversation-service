@@ -133,8 +133,8 @@ class CloudLlmRunnerTest {
     verify(claude, times(1)).chat(any());
     verify(service, times(2)).complete(any(), any(UUID.class), eq(result));
 
-    assertThat(runner.chat("s", "q", "{}")).contains("{\"a\":1}");
-    assertThat(runner.chat("s", "q", "{}")).contains("{\"a\":1}");
+    assertThat(runner.chat("correct", "s", "q", "{}")).contains("{\"a\":1}");
+    assertThat(runner.chat("correct", "s", "q", "{}")).contains("{\"a\":1}");
     verify(claude, times(2)).chat(any());
   }
 
@@ -199,7 +199,7 @@ class CloudLlmRunnerTest {
     off.onQueued(new LlmJobQueued(5L));
     assertThat(off.active()).isFalse();
     assertThat(job.getState()).isEqualTo(GpuJob.State.QUEUED);
-    assertThat(off.chat("s", "p", "{}")).isEmpty();
+    assertThat(off.chat("correct", "s", "p", "{}")).isEmpty();
   }
 
   @Test
@@ -228,14 +228,15 @@ class CloudLlmRunnerTest {
   void directChat() {
     when(claude.chat(any())).thenReturn(json.createObjectNode().put("content", "{\"fixes\":[]}"));
     assertThat(runner.available()).isTrue();
-    assertThat(runner.chat("s", "p", "{\"type\":\"object\"}")).contains("{\"fixes\":[]}");
+    assertThat(runner.chat("correct", "s", "p", "{\"type\":\"object\"}"))
+        .contains("{\"fixes\":[]}");
     verify(gemini, never()).chat(any());
 
     org.mockito.Mockito.reset(claude);
     when(claude.cooldown()).thenReturn(Duration.ofMinutes(10));
     when(claude.chat(any())).thenThrow(new IllegalStateException("Claude HTTP 500"));
     when(gemini.chat(any())).thenReturn(json.createObjectNode().put("content", "{\"g\":1}"));
-    assertThat(runner.chat("s", "p", "{}")).contains("{\"g\":1}");
+    assertThat(runner.chat("correct", "s", "p", "{}")).contains("{\"g\":1}");
 
     // 한도 초과·키 만료는 쉬고, 다른 오류는 쉬지 않는다
     org.mockito.Mockito.reset(claude, gemini);
@@ -243,9 +244,9 @@ class CloudLlmRunnerTest {
     when(gemini.cooldown()).thenReturn(Duration.ofMinutes(10));
     when(claude.chat(any())).thenThrow(new LlmClient.Unavailable("Claude HTTP 429"));
     when(gemini.chat(any())).thenThrow(new GeminiClient.RateLimited());
-    assertThat(runner.chat("s", "p", "{}")).isEmpty();
+    assertThat(runner.chat("correct", "s", "p", "{}")).isEmpty();
     assertThat(runner.available()).isFalse();
-    assertThat(runner.chat("s", "p", "{}")).isEmpty();
+    assertThat(runner.chat("correct", "s", "p", "{}")).isEmpty();
     verify(claude, times(1)).chat(any());
     verify(gemini, times(1)).chat(any());
   }

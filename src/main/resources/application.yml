@@ -65,6 +65,17 @@ claude:
   max-tokens: 16000
   timeout: 120s
   cooldown: 10m
+  # 비용을 줄이려고 서버가 바로 부르는 작업은 작업마다 모델을 나눈다. 콘티(대기열 작업)는 위 model을 쓴다
+  tasks:
+    correct:
+      model: ${CLAUDE_CORRECT_MODEL:claude-haiku-5-5}
+      effort: ${CLAUDE_CORRECT_EFFORT:low}
+    extract:
+      model: ${CLAUDE_EXTRACT_MODEL:claude-sonnet-5-5}
+      effort: ${CLAUDE_EXTRACT_EFFORT:medium}
+    placement:
+      model: ${CLAUDE_PLACEMENT_MODEL:claude-sonnet-5-5}
+      effort: ${CLAUDE_PLACEMENT_EFFORT:low}
 
 gemini:
   api-key: ${GEMINI_API_KEY:}

@@ -85,7 +85,7 @@ class PanelPlacementTest {
     List<Map<String, Side>> planned = Staging.panels(s);
     assertThat(PanelPlacement.asked(s, planned, 4)).containsExactly(0, 1, 2);
     when(llm.available()).thenReturn(true);
-    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
         .thenReturn(
             Optional.of(
                 "{\"panels\":[{\"panel\":1,\"people\":[{\"speaker\":\"A\",\"side\":\"right\"},"
@@ -97,7 +97,7 @@ class PanelPlacementTest {
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<byte[]>> sent = ArgumentCaptor.forClass(List.class);
     ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
-    verify(llm).see(anyString(), prompt.capture(), anyString(), sent.capture());
+    verify(llm).see(anyString(), anyString(), prompt.capture(), anyString(), sent.capture());
     assertThat(sent.getValue()).hasSize(3);
     assertThat(prompt.getValue()).contains("(panel 1)", "(panel 3)", "old man, white hair");
   }
@@ -109,15 +109,16 @@ class PanelPlacementTest {
     List<Map<String, Side>> planned = Staging.panels(s);
     when(llm.available()).thenReturn(false);
     assertThat(placement.check(s, images(), planned)).isEqualTo(planned);
-    verify(llm, never()).see(any(), any(), any(), any());
+    verify(llm, never()).see(any(), any(), any(), any(), any());
 
     when(llm.available()).thenReturn(true);
-    when(llm.see(anyString(), anyString(), anyString(), anyList())).thenReturn(Optional.empty());
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
+        .thenReturn(Optional.empty());
     assertThat(placement.check(s, images(), planned)).isEqualTo(planned);
-    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
         .thenReturn(Optional.of("not json"));
     assertThat(placement.check(s, images(), planned)).isEqualTo(planned);
-    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
         .thenThrow(new IllegalStateException("x"));
     assertThat(placement.check(s, images(), planned)).isEqualTo(planned);
   }
@@ -128,7 +129,7 @@ class PanelPlacementTest {
     ComicScript s = script();
     List<Map<String, Side>> planned = Staging.panels(s);
     when(llm.available()).thenReturn(true);
-    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
         .thenReturn(
             Optional.of(
                 "{\"panels\":[{\"panel\":1,\"people\":["
@@ -190,11 +191,12 @@ class PanelPlacementTest {
     ComicScript s = script();
     List<Map<String, Side>> planned = Staging.panels(s);
     when(llm.available()).thenReturn(true);
-    when(llm.see(anyString(), anyString(), anyString(), anyList())).thenReturn(Optional.empty());
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
+        .thenReturn(Optional.empty());
     placement.locate(s, images(), planned, Map.of("A", pngBytes(), "B", new byte[] {1, 2}));
     ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<List<byte[]>> sent = ArgumentCaptor.forClass(List.class);
-    verify(llm).see(anyString(), prompt.capture(), anyString(), sent.capture());
+    verify(llm).see(anyString(), anyString(), prompt.capture(), anyString(), sent.capture());
     // 참조 1장(A) + 확인할 컷 3장(1·2·3컷)
     assertThat(sent.getValue()).hasSize(4);
     assertThat(prompt.getValue()).startsWith("처음 1장은 인물 참조 그림이다.").contains("참조 1: A (민나)");
@@ -212,7 +214,7 @@ class PanelPlacementTest {
     assertThat(PanelPlacement.distinct(Map.of("A", one, "B", far))).containsOnlyKeys("A", "B");
     ComicScript s = script();
     when(llm.available()).thenReturn(true);
-    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
         .thenReturn(
             Optional.of(
                 "{\"panels\":[{\"panel\":1,\"people\":["
