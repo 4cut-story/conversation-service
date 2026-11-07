@@ -72,9 +72,22 @@ class ExtractHandler implements StepHandler {
     return Step.EXTRACT;
   }
 
+  /** 수동 처리 대화의 전사 교정 한 묶음 응답 토큰 한도. */
+  static final int CORRECT_MAX_TOKENS = 4000;
+
   @Override
   public StepOutcome start(StepContext context) {
-    if ((properties.correctTranscript() || properties.parallelExtract()) && direct.available()) {
+    if (context.conversation().manualLlm() && properties.correctTranscript()) {
+      // 테스트 전용 수동 처리: 전사 교정도 묶음마다 대기열 작업으로 두고 답을 받아 이어 간다
+      Transcript original = transcripts.loadOriginal(context.conversation().publicId());
+      if (!original.utterances().isEmpty()) {
+        return correction(context, original, 0, llm.object());
+      }
+    }
+    // 테스트 전용 수동 처리 대화는 외부 API를 부르지 않고 구간마다 대기열 작업으로 둔다
+    if ((properties.correctTranscript() || properties.parallelExtract())
+        && direct.available()
+        && !context.conversation().manualLlm()) {
       // 외부 LLM 호출은 시간이 걸리므로 트랜잭션 밖(runLocal)에서 한다
       return new StepOutcome.RunLocal();
     }
@@ -173,8 +186,52 @@ class ExtractHandler implements StepHandler {
     return nextWindow(context, transcript, -1);
   }
 
+  /** 전사 교정 한 묶음 작업. 앞 묶음까지 받은 고친 줄을 작업에 실어 다음 묶음으로 넘긴다. */
+  private StepOutcome correction(
+      StepContext context, Transcript original, int from, ObjectNode fixes) {
+    int to = Math.min(from + TranscriptCorrector.BATCH, original.utterances().size());
+    ObjectNode extra = llm.object();
+    extra.put("correctFrom", from);
+    extra.set("fixes", fixes);
+    return llm.job(
+        TranscriptCorrector.SYSTEM,
+        TranscriptCorrector.prompt(original, from, to),
+        TranscriptCorrector.SCHEMA,
+        CORRECT_MAX_TOKENS,
+        original.seed() + context.attempt(),
+        extra);
+  }
+
+  /** 전사 교정 한 묶음의 답. 마지막 묶음이면 고친 전사를 저장하고 장면 고르기를 시작한다. */
+  private StepOutcome corrected(StepContext context, JsonNode result) {
+    String id = context.conversation().publicId();
+    JsonNode payload = context.jobPayload();
+    Transcript original = transcripts.loadOriginal(id);
+    List<Transcript.Utterance> lines = original.utterances();
+    int from = payload.path("correctFrom").asInt();
+    int to = Math.min(from + TranscriptCorrector.BATCH, lines.size());
+    ObjectNode all = llm.object();
+    payload.path("fixes").properties().forEach(e -> all.set(e.getKey(), e.getValue()));
+    corrector
+        .fixes(result.path("content").asString(""), from, to, lines)
+        .forEach((i, text) -> all.put(String.valueOf(i), text));
+    if (to < lines.size()) {
+      return correction(context, original, to, all);
+    }
+    java.util.Map<Integer, String> fixes = new java.util.HashMap<>();
+    all.properties().forEach(e -> fixes.put(Integer.valueOf(e.getKey()), e.getValue().asString()));
+    Transcript corrected = TranscriptCorrector.apply(original, fixes);
+    if (!corrected.equals(original)) {
+      transcripts.saveCorrected(id, corrected);
+    }
+    return firstWindow(context, corrected);
+  }
+
   @Override
   public StepOutcome onResult(StepContext context, JsonNode result) {
+    if (context.jobPayload().has("correctFrom")) {
+      return corrected(context, result);
+    }
     String id = context.conversation().publicId();
     JsonNode content = llm.content(result);
     Transcript transcript = transcripts.load(id);

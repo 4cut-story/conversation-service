@@ -83,6 +83,10 @@ public class GpuJob extends BaseEntity {
   @Column(name = "finished_at")
   private Instant finishedAt;
 
+  /** 테스트 전용 수동 LLM 작업. 서버와 워커가 가져가지 않는다. */
+  @Column(nullable = false)
+  private boolean manual;
+
   @Column(name = "error_code", length = 50)
   private String errorCode;
 
@@ -105,6 +109,15 @@ public class GpuJob extends BaseEntity {
     this.payload = payload;
     this.enqueuedAt = now;
     this.priority = priority;
+  }
+
+  public boolean isManual() {
+    return manual;
+  }
+
+  /** 수동 LLM 작업으로 표시한다. */
+  public void markManual() {
+    this.manual = true;
   }
 
   public short getPriority() {

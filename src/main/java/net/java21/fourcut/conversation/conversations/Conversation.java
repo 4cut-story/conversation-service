@@ -63,6 +63,10 @@ public class Conversation extends BaseEntity {
   @Column(name = "comic_id", length = PublicId.LENGTH)
   private String comicId;
 
+  /** 테스트 전용: LLM 작업을 서버가 처리하지 않고 주인이 직접 답을 넣는다. */
+  @Column(name = "manual_llm", nullable = false)
+  private boolean manualLlm;
+
   @Column(name = "elapsed_sec")
   private Integer elapsedSec;
 
@@ -97,6 +101,16 @@ public class Conversation extends BaseEntity {
 
   public String getLanguage() {
     return language;
+  }
+
+  /** 테스트 전용 수동 LLM 처리 대화인지. */
+  public boolean isManualLlm() {
+    return manualLlm;
+  }
+
+  /** 테스트 전용: LLM 작업을 주인이 직접 처리하게 한다. */
+  public void markManualLlm() {
+    this.manualLlm = true;
   }
 
   /** 사용자가 고른 대사 사투리. null이면 사투리 없음. */

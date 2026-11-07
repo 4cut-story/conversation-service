@@ -56,6 +56,24 @@ class ConversationController {
     return conversations.get(userId, id);
   }
 
+  /** 테스트 전용: 답을 기다리는 수동 LLM 작업. */
+  @GetMapping("/{id}/llm-jobs")
+  java.util.List<ConversationApi.LlmJob> llmJobs(
+      @RequestHeader(HeaderNames.USER_ID) String userId, @PathVariable String id) {
+    return conversations.llmJobs(userId, id);
+  }
+
+  /** 테스트 전용: 수동 LLM 작업에 답을 넣는다. */
+  @PostMapping("/{id}/llm-jobs/{jobId}/result")
+  ResponseEntity<Void> answerLlmJob(
+      @RequestHeader(HeaderNames.USER_ID) String userId,
+      @PathVariable String id,
+      @PathVariable Long jobId,
+      @Valid @RequestBody ConversationApi.LlmAnswer body) {
+    conversations.answerLlmJob(userId, id, jobId, body.content());
+    return ResponseEntity.noContent().build();
+  }
+
   @GetMapping("/{id}/candidates")
   JsonNode candidates(@RequestHeader(HeaderNames.USER_ID) String userId, @PathVariable String id) {
     return conversations.candidates(userId, id);

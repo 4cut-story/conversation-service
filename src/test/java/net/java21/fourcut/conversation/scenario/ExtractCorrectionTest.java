@@ -119,6 +119,31 @@ class ExtractCorrectionTest {
     assertThat(((StepOutcome.Enqueue) outcome).payload().path("window").asInt()).isZero();
   }
 
+  @Test
+  @DisplayName("FR-003: 테스트 전용 수동 처리 대화는 전사 교정을 대기열 작업으로 두고, 답을 받으면 고친 전사로 장면 고르기 작업을 넣는다")
+  void manualCorrection() {
+    when(llm.available()).thenReturn(true);
+    StepContext manual =
+        new StepContext(
+            new ConversationInfo(1L, ID, "u", "ko", 1, null, null, true), Step.EXTRACT, 1, null);
+
+    StepOutcome first = parallel.start(manual);
+    assertThat(first).isInstanceOf(StepOutcome.Enqueue.class);
+    var payload = ((StepOutcome.Enqueue) first).payload();
+    assertThat(payload.path("correctFrom").asInt()).isZero();
+    assertThat(payload.path("prompt").asString()).contains("고칠 전사").contains("회의 실어");
+
+    StepContext answered = new StepContext(manual.conversation(), Step.EXTRACT, 1, payload);
+    StepOutcome next =
+        parallel.onResult(
+            answered,
+            json.createObjectNode().put("content", "{\"fixes\":[{\"i\":0,\"text\":\"회의 싫어\"}]}"));
+
+    assertThat(next).isInstanceOf(StepOutcome.Enqueue.class);
+    assertThat(((StepOutcome.Enqueue) next).payload().path("window").asInt()).isZero();
+    assertThat(transcripts.load(ID).utterances().get(0).text()).isEqualTo("회의 싫어");
+  }
+
   @BeforeEach
   void setUp() {
     transcripts.save(

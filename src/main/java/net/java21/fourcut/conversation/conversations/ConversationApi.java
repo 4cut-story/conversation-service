@@ -19,13 +19,24 @@ public final class ConversationApi {
    * @param language ko, en. 없으면 자동 감지
    * @param concept 만화 컨셉. AUTO이거나 없으면 장면에 맞게 고른다
    * @param dialect 말풍선 대사 사투리. NONE이거나 없으면 사투리로 바꾸지 않는다
+   * @param manualLlm 테스트 전용. true면 LLM 작업(장면 고르기·콘티)을 서버가 처리하지 않고 {@code llm-jobs}로 직접 답을 넣는다
    */
   public record CreateRequest(
       @NotNull Conversation.Source source,
       Boolean consent,
       @Pattern(regexp = "ko|en") String language,
       @Pattern(regexp = CONCEPTS) String concept,
-      @Pattern(regexp = DIALECTS) String dialect) {
+      @Pattern(regexp = DIALECTS) String dialect,
+      Boolean manualLlm) {
+
+    public CreateRequest(
+        Conversation.Source source,
+        Boolean consent,
+        String language,
+        String concept,
+        String dialect) {
+      this(source, consent, language, concept, dialect, null);
+    }
 
     public CreateRequest(Conversation.Source source, Boolean consent, String language) {
       this(source, consent, language, null, null);
@@ -53,6 +64,20 @@ public final class ConversationApi {
 
   /** 고를 수 있는 사투리. NONE은 사투리 없음. */
   static final String DIALECTS = "NONE|GYEONGSANG|JEOLLA|CHUNGCHEONG|GANGWON|SEOUL";
+
+  /**
+   * 수동 처리를 기다리는 LLM 작업 (테스트 전용).
+   *
+   * @param payload 서버가 만든 작업 그대로: system, prompt, jsonSchema, options
+   */
+  public record LlmJob(Long jobId, String step, tools.jackson.databind.JsonNode payload) {}
+
+  /**
+   * 수동 LLM 작업의 답.
+   *
+   * @param content LLM 응답 본문 (jsonSchema를 따르는 JSON 문자열)
+   */
+  public record LlmAnswer(@NotBlank String content) {}
 
   /** 만든 대화. id는 공개 ID다. */
   public record Created(String id, ConversationStatus status) {}

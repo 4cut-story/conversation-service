@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
+import net.java21.fourcut.conversation.pipeline.ManualLlmJobs;
 import net.java21.fourcut.conversation.pipeline.PipelineService;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
@@ -41,6 +42,7 @@ public class ConversationService {
           "audio/aac");
 
   private final ConversationRepository conversations;
+  private final ManualLlmJobs manualLlm;
   private final PipelineService pipeline;
   private final ObjectStorage storage;
   private final JsonMapper json;
@@ -49,11 +51,13 @@ public class ConversationService {
   public ConversationService(
       ConversationRepository conversations,
       PipelineService pipeline,
+      ManualLlmJobs manualLlm,
       ObjectStorage storage,
       JsonMapper json,
       Clock clock) {
     this.conversations = conversations;
     this.pipeline = pipeline;
+    this.manualLlm = manualLlm;
     this.storage = storage;
     this.json = json;
     this.clock = clock;
@@ -68,6 +72,9 @@ public class ConversationService {
         new Conversation(
             owner, request.source(), request.language(), request.chosenConcept(), clock.instant());
     c.chooseDialect(request.chosenDialect());
+    if (Boolean.TRUE.equals(request.manualLlm())) {
+      c.markManualLlm();
+    }
     Conversation saved = conversations.save(c);
     return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
   }
@@ -115,6 +122,47 @@ public class ConversationService {
     conversations.flush();
     pipeline.start(c.getId());
     return new ConversationApi.Finished(c.getStatus());
+  }
+
+  /** 테스트 전용: 답을 기다리는 수동 LLM 작업. 수동 처리 대화가 아니면 빈 목록. */
+  @Transactional(readOnly = true)
+  public List<ConversationApi.LlmJob> llmJobs(String owner, String id) {
+    Conversation c = owned(owner, id);
+    if (!c.isManualLlm()) {
+      return List.of();
+    }
+    return manualLlm.waiting(c.getId()).stream()
+        .map(j -> new ConversationApi.LlmJob(j.jobId(), j.step(), withImages(j.payload())))
+        .toList();
+  }
+
+  /**
+   * 그림이 든 작업(말풍선 자리 확인)은 저장소 키를 PNG base64(images)로 바꿔 준다. 순서는 질문 글 앞에 붙는 순서다. 저장소 주소는 클러스터 밖에서 열 수
+   * 없어 바이트를 싣는다.
+   */
+  private JsonNode withImages(String payload) {
+    tools.jackson.databind.node.ObjectNode node =
+        (tools.jackson.databind.node.ObjectNode) json.readTree(payload);
+    if (node.path("imageKeys").isArray()) {
+      var images = node.putArray("images");
+      node.path("imageKeys")
+          .forEach(
+              k ->
+                  storage
+                      .get(k.asString())
+                      .ifPresent(b -> images.add(java.util.Base64.getEncoder().encodeToString(b))));
+      node.remove("imageKeys");
+    }
+    return node;
+  }
+
+  /** 테스트 전용: 수동 LLM 작업에 답을 넣는다. 기다리는 작업이 아니면 404. */
+  @Transactional
+  public void answerLlmJob(String owner, String id, Long jobId, String content) {
+    Conversation c = owned(owner, id);
+    if (!c.isManualLlm() || !manualLlm.answer(c.getId(), jobId, content)) {
+      throw ApiException.notFound();
+    }
   }
 
   @Transactional(readOnly = true)

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
@@ -112,6 +113,46 @@ class GpuJobService {
     }
     JsonNode result = request.result() == null ? json.createObjectNode() : request.result();
     return succeed(job, result, now);
+  }
+
+  /** 수동 LLM 작업을 처리한 것으로 남기는 워커 이름. */
+  static final String MANUAL_WORKER = "manual-llm";
+
+  /** 수동 처리를 기다리는 LLM 작업 (테스트 전용). */
+  record ManualJob(Long jobId, Step step, String payload) {}
+
+  /** 대화의 수동 LLM 작업 중 답을 기다리는 것 (테스트 전용). */
+  @Transactional(readOnly = true)
+  List<ManualJob> manualJobs(Long conversationId) {
+    return jobs
+        .findByConversationIdAndStateAndManualTrue(conversationId, GpuJob.State.QUEUED)
+        .stream()
+        .map(j -> new ManualJob(j.getId(), j.getStep(), j.getPayload()))
+        .toList();
+  }
+
+  /**
+   * 수동 LLM 작업에 답을 넣는다 (테스트 전용). 결과는 서버·워커가 처리한 것과 같은 모양 {@code {content, model}}으로 남기고 다음 단계로 넘긴다.
+   *
+   * @return 그 대화의 기다리는 수동 작업이 아니면 false
+   */
+  @Transactional
+  boolean answerManual(Long conversationId, Long jobId, String content) {
+    GpuJob job =
+        jobs.lockById(jobId)
+            .filter(
+                j ->
+                    j.isManual()
+                        && j.getState() == GpuJob.State.QUEUED
+                        && j.getConversationId().equals(conversationId))
+            .orElse(null);
+    if (job == null) {
+      return false;
+    }
+    Instant now = clock.instant();
+    job.lease(MANUAL_WORKER, now, properties.leaseTime());
+    return succeed(
+        job, json.createObjectNode().put("content", content).put("model", "manual"), now);
   }
 
   /** 서버 안에서 처리한 작업(Claude·Gemini)의 결과. 임대를 잃었으면 false. 워커 연락 시각은 바꾸지 않는다. */
