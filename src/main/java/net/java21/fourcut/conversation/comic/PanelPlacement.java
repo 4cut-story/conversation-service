@@ -197,12 +197,13 @@ class PanelPlacement {
     int n = 1;
     for (String who : shown.keySet()) {
       sb.append("- 참조 ")
-          .append(n++)
+          .append(n)
           .append(": ")
           .append(who)
           .append(" (")
           .append(calls.getOrDefault(who, who))
           .append(")\n");
+      n++;
     }
     sb.append("그 뒤가 컷 그림이다. 그림 번호는 컷 그림만 센다.\n\n");
     return sb.toString();
