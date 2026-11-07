@@ -221,4 +221,45 @@ class DrawPromptTest {
             List.of());
     assertThat(DrawHandler.adults(couple)).isSameAs(couple);
   }
+
+  @Test
+  @DisplayName("FR-006: 첫 마디가 긴 외모도 나이·성별로 센다(두 남자, 노인과 젊은이)")
+  void whoFromLongHeads() {
+    var looks =
+        java.util.Map.of(
+            "A", "young man with glasses, cream sweater", "B", "man in navy hoodie, short hair");
+    var stage = java.util.Map.of("A", Staging.Side.LEFT, "B", Staging.Side.RIGHT);
+    assertThat(
+            DrawHandler.who(stage, looks, net.java21.fourcut.conversation.scenario.Concept.DAILY))
+        .isEqualTo("a young man and a man");
+    var family =
+        java.util.Map.of("A", "curly hair boy with glasses", "B", "grandfather in striped shirt");
+    assertThat(
+            DrawHandler.who(stage, family, net.java21.fourcut.conversation.scenario.Concept.DAILY))
+        .isEqualTo("a boy and an old man");
+    var unknown = java.util.Map.of("A", "glasses, blue hoodie", "B", "man in hanbok");
+    assertThat(
+            DrawHandler.who(stage, unknown, net.java21.fourcut.conversation.scenario.Concept.DAILY))
+        .isNull();
+    assertThat(
+            net.java21.fourcut.conversation.character.CharacterLibrary.personWord(
+                "old lady in hanbok"))
+        .isEqualTo("old woman");
+    assertThat(
+            net.java21.fourcut.conversation.character.CharacterLibrary.personWord(
+                "tall adult man, beard"))
+        .isEqualTo("tall adult man");
+    assertThat(
+            net.java21.fourcut.conversation.character.CharacterLibrary.personWord(
+                "little girl, pigtails"))
+        .isEqualTo("little girl");
+    assertThat(
+            net.java21.fourcut.conversation.character.CharacterLibrary.personWord(
+                "middle-aged man, suit"))
+        .isEqualTo("middle-aged man");
+    assertThat(
+            net.java21.fourcut.conversation.character.CharacterLibrary.personWord(
+                "rabbit, red scarf"))
+        .isNull();
+  }
 }
