@@ -51,6 +51,32 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 컷에 나오는 인물마다 자리와 성별·나이를 그린 뒤 확인할 항목으로 보낸다")
+  void checks() {
+    var duo = new ComicScript.Panel("전", "medium", "{B} hands {A} a phone, cafe", List.of());
+    var stage = Staging.panel(script, duo);
+    var checks = DrawHandler.checks(script, duo, stage);
+    assertThat(checks).hasSize(2);
+    assertThat(checks.get(0).path("region").asString())
+        .isEqualTo(stage.get("A").name().toLowerCase(java.util.Locale.ROOT));
+    assertThat(checks.get(0).path("gender").asString()).isEqualTo("F");
+    assertThat(checks.get(0).path("age").asString()).isEqualTo("CHILD");
+    assertThat(checks.get(1).path("gender").asString()).isEqualTo("M");
+    var animals =
+        new ComicScript(
+            "t",
+            List.of(new ComicScript.Character("A", "곰돌", "", "bear, red cap")),
+            List.of(),
+            true,
+            List.of());
+    var solo = new ComicScript.Panel("결", "close-up", "{A} eats, cafe", List.of());
+    var one = DrawHandler.checks(animals, solo, Staging.panel(animals, solo));
+    assertThat(one).hasSize(1);
+    assertThat(one.get(0).path("animal").asString()).isEqualTo("bear");
+    assertThat(one.get(0).has("gender")).isFalse();
+  }
+
+  @Test
   @DisplayName("자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다")
   void legacy() {
     var panel = new ComicScript.Panel("기", null, "two friends at a table", List.of());

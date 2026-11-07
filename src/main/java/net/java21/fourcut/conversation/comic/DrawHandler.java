@@ -10,6 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.character.CharacterRef;
+import net.java21.fourcut.conversation.character.LookHead;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -89,6 +90,10 @@ class DrawHandler implements StepHandler {
           regions(style(script, properties), script, script.panels().get(i), stages.get(i));
       if (!regions.isEmpty()) {
         image.set("regions", regions);
+      }
+      ArrayNode checks = checks(script, script.panels().get(i), stages.get(i));
+      if (!checks.isEmpty()) {
+        image.set("checks", checks);
       }
       ArrayNode refs =
           references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
@@ -200,6 +205,38 @@ class DrawHandler implements StepHandler {
         + scene
         + detail
         + cast;
+  }
+
+  /**
+   * 그린 뒤 워커가 확인할 인물별 자리·성별·나이·동물(워커가 CLIP으로 보고 틀리면 시드를 바꿔 다시 그린다). 심각 오류 대부분이 아이가 어른으로, 여자가 남자로,
+   * 토끼가 다른 동물로 그려지는 것이었다(회차 14·15). 자리는 {@link Staging}과 같다. 성별·나이·동물을 하나도 모르는 인물은 넣지 않는다.
+   */
+  static ArrayNode checks(
+      ComicScript script, ComicScript.Panel panel, Map<String, Staging.Side> stage) {
+    ArrayNode out = tools.jackson.databind.node.JsonNodeFactory.instance.arrayNode();
+    String scene = panel.scene() == null ? "" : panel.scene();
+    for (ComicScript.Character c : script.characters()) {
+      if (!scene.contains("{" + c.speaker() + "}") || !stage.containsKey(c.speaker())) {
+        continue;
+      }
+      LookHead h = LookHead.of(c.look());
+      if (h.animal() == null && h.gender() == null && h.age() == null) {
+        continue;
+      }
+      ObjectNode check = out.addObject();
+      check.put("region", stage.get(c.speaker()).name().toLowerCase(java.util.Locale.ROOT));
+      if (h.animal() != null) {
+        check.put("animal", h.animal());
+      } else {
+        if (h.gender() != null) {
+          check.put("gender", h.gender());
+        }
+        if (h.age() != null) {
+          check.put("age", h.age());
+        }
+      }
+    }
+    return out;
   }
 
   /**

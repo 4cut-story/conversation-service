@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * @param gender F, M (모르면 null)
  * @param age CHILD, YOUNG, MIDDLE, OLD, ADULT(어른인 것만 앎) (모르면 null)
  */
-record LookHead(String animal, String gender, String age) {
+public record LookHead(String animal, String gender, String age) {
 
   private static final Set<String> ANIMALS =
       Set.of("rabbit", "bear", "fox", "panda", "cat", "deer", "dog", "squirrel");
@@ -111,7 +111,7 @@ record LookHead(String animal, String gender, String age) {
     };
   }
 
-  static LookHead of(String look) {
+  public static LookHead of(String look) {
     if (look == null) {
       return new LookHead(null, null, null);
     }
