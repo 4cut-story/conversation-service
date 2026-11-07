@@ -157,7 +157,9 @@ final class Prompts {
         이상에 나온다. 이야기의 중심인 동물(반려동물 등)도 핵심 물건으로 보고, 나오는 컷마다 "a small hamster"처럼
         크기·색·종을 써서 넣고, 모든 컷에 같은 말로 쓴다(예: 모든 컷에
         "a small old brown-and-white dog"). "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는 모습만 쓰지 않는다.
-        그 컷에서 대사를 하는 인물은 모두 scene에 넣는다.
+        scene에는 그 컷의 주인공 한 명만 넣는다(보통 그 컷의 핵심 말을 하거나 가장 크게 반응하는 사람). 두 사람이 함께
+        보여야 순간이 읽히는 컷(물건을 건넴, 둘이 같이 놀람, 마주 보고 다툼)에만 두 명을 넣고, 이런 컷은 전체 컷의 절반을
+        넘지 않게 한다. scene에 없는 인물의 대사는 컷 밖 말풍선으로 들어가므로 대사는 그대로 둔다. 세 명 이상은 넣지 않는다.
         장소는 대화 내용에 맞게 하나 정해 모든 컷에 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
         예: "{A} drops ice cream cone on ground, {B} gasps, park",
         "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"

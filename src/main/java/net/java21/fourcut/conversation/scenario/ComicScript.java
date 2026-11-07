@@ -847,9 +847,13 @@ public record ComicScript(
     return text == null ? null : text.replaceFirst("^\\s*\\{?[A-Z]}?\\s*[:：]\\s*", "");
   }
 
-  /** 대사가 있는 인물이 장면 설명에 없으면 그림에도 나오도록 붙인다("{B} looks surprised" + ", {A} nearby"). */
+  /**
+   * 장면 설명에 인물이 아무도 없으면 대사가 있는 인물을 붙인다("at the park" + ", {A} nearby"). 인물이 한 명이라도 있으면 그대로 둔다. 장면에
+   * 없는 화자의 대사는 컷 밖 말풍선이 된다. 대사 화자를 모두 붙이면 거의 모든 컷이 두 사람 컷이 되었고, 그림 모델이 두 사람을 한 프롬프트로 받아 성별이 옆 사람
+   * 쪽으로 바뀌거나 참조 그림이 없는 인물이 빠졌다(회차 12·13 love-07, family-09).
+   */
   static Panel withSpeakersInScene(Panel p) {
-    if (p.scene() == null || p.lines() == null) {
+    if (p.scene() == null || p.lines() == null || p.scene().matches("(?s).*\\{[A-Z]}.*")) {
       return p;
     }
     StringBuilder scene = new StringBuilder(p.scene().strip());
