@@ -41,6 +41,9 @@ class LookHeadTest {
     assertThat(accepts("fox, red hoodie", "fox, blue hoodie")).isTrue();
     assertThat(accepts("young woman", "fox, blue hoodie")).isFalse();
     assertThat(accepts("person in a hat", "old woman, hat")).isTrue();
+    // 아이는 아이로 확인된 모습만 받는다 (회차 10: 어린 소협에 어른 무림 고수 모습)
+    assertThat(accepts("little swordsman, blue robe", "swordsman, blue robe")).isFalse();
+    assertThat(accepts("little swordsman, blue robe", "little boy, blue robe")).isTrue();
   }
 
   @Test
