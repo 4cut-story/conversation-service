@@ -691,22 +691,57 @@ public record ComicScript(
     return none;
   }
 
+  /** 외모 첫 마디에 있는 동물(목록에 있는 것만). 없으면 null. */
+  private static String animalOf(String look, List<String> animals) {
+    if (look == null) {
+      return null;
+    }
+    String head = look.split(",", 2)[0].toLowerCase(Locale.ROOT);
+    for (String word : head.split("[^\\p{L}]+")) {
+      if (animals.contains(word)) {
+        return word;
+      }
+    }
+    return null;
+  }
+
   private static String key(String text) {
     return text == null ? "" : text.replaceAll("\\s+", "");
   }
 
-  /** 인물 외모의 첫 단어(동물)를 코드로 정한 동물로 바꾼다. LLM은 두 인물을 같은 동물로 자주 고른다. */
+  /**
+   * 인물 외모의 첫 마디(동물)를 정한다. LLM이 고른 동물이 목록에 있고 앞 인물과 겹치지 않으면 그대로 둔다(이야기 속 종이 바뀌면 곰이던 아들이 토끼로 그려졌다,
+   * funny-12). 동물이 없거나 겹치면 코드로 정한 순서에서 아직 안 쓴 동물을 쓴다. LLM은 두 인물을 같은 동물로 자주 고른다.
+   */
   public ComicScript withAnimals(List<String> animals) {
     if (characters == null || animals.isEmpty()) {
       return this;
     }
+    Set<String> used = new HashSet<>();
+    List<String> kept = new java.util.ArrayList<>();
+    for (Character c : characters) {
+      String own = animalOf(c.look(), animals);
+      kept.add(own != null && used.add(own) ? own : null);
+    }
     List<Character> cast = new java.util.ArrayList<>();
+    int next = 0;
     for (int i = 0; i < characters.size(); i++) {
       Character c = characters.get(i);
+      if (kept.get(i) != null) {
+        cast.add(c);
+        continue;
+      }
+      String animal = animals.get(next % animals.size());
+      for (int tries = 0; tries < animals.size() && used.contains(animal); tries++) {
+        next++;
+        animal = animals.get(next % animals.size());
+      }
+      next++;
+      used.add(animal);
       String look = c.look() == null ? "" : c.look().strip();
       int comma = look.indexOf(',');
       String rest = comma < 0 ? "" : look.substring(comma);
-      cast.add(c.withLook(animals.get(i % animals.size()) + rest));
+      cast.add(c.withLook(animal + rest));
     }
     return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
   }

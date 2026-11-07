@@ -158,7 +158,11 @@ class LookHeadTest {
             LookHead.fitsOutfit(
                 "young woman, police uniform", "young woman, police cap, police uniform"))
         .isTrue();
+    // 흔한 옷 낱말(apron, cap)만 같으면 직업 옷을 받지 않는다 (회차 10: 경찰 모자를 쓴 아들, 화가 할머니)
     assertThat(LookHead.fitsOutfit("old woman, green apron", "old woman, gray bun, florist apron"))
+        .isFalse();
+    assertThat(LookHead.fitsOutfit("bear, red cap", "rabbit, police cap, blue overalls")).isFalse();
+    assertThat(LookHead.fitsOutfit("old woman, florist apron", "old woman, florist apron"))
         .isTrue();
     assertThat(LookHead.fitsOutfit("girl, red dress", "little girl, pigtails, pink hoodie"))
         .isTrue();
