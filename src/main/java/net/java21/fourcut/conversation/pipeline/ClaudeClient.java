@@ -3,6 +3,8 @@ package net.java21.fourcut.conversation.pipeline;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.http.MediaType;
@@ -17,6 +19,7 @@ import tools.jackson.databind.node.ObjectNode;
  * 않는다.
  */
 class ClaudeClient implements LlmClient {
+  private static final Logger log = LoggerFactory.getLogger(ClaudeClient.class);
 
   static final String API_VERSION = "2023-06-01";
 
@@ -202,7 +205,20 @@ class ClaudeClient implements LlmClient {
     ObjectNode out = json.createObjectNode();
     out.put("content", text.toString());
     out.put("model", response.path("model").asString(properties.model()));
-    out.put("evalCount", response.path("usage").path("output_tokens").asInt(0));
+    JsonNode usage = response.path("usage");
+    int input =
+        usage.path("input_tokens").asInt(0)
+            + usage.path("cache_read_input_tokens").asInt(0)
+            + usage.path("cache_creation_input_tokens").asInt(0);
+    int output = usage.path("output_tokens").asInt(0);
+    out.put("evalCount", output);
+    out.put("inputCount", input);
+    log.info(
+        "Claude 사용량 model={} input={} cacheRead={} output={}",
+        out.path("model").asString(""),
+        input,
+        usage.path("cache_read_input_tokens").asInt(0),
+        output);
     return out;
   }
 }
