@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.scenario.ComicScript;
 import org.springframework.stereotype.Component;
@@ -441,10 +442,18 @@ public class ComicComposer {
       i += Character.charCount(cp);
     }
     if (!row.toString().isBlank()) {
-      rows.add(row.toString().strip());
+      String last = row.toString().strip();
+      if (!rows.isEmpty() && PUNCTUATION_ONLY.matcher(last).matches()) {
+        // 문장부호만 다음 줄로 넘어가지 않게 앞 줄 끝에 붙인다
+        rows.set(rows.size() - 1, rows.getLast() + last);
+      } else {
+        rows.add(last);
+      }
     }
     return rows;
   }
+
+  private static final Pattern PUNCTUATION_ONLY = Pattern.compile("[.,?!…~·\"'”’)\\]]+");
 
   String family() {
     return family;
