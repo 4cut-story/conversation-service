@@ -246,4 +246,16 @@ class ComicComposerTest {
     assertThat(ComicComposer.readsAfter(b, a)).isTrue();
     assertThat(b.intersects(a)).isFalse();
   }
+
+  @Test
+  @DisplayName("FR-007: 앞 말풍선이 컷 아래에 있으면 순서보다 가리지 않는 것을 먼저 지킨다")
+  void neverHidesEarlierBubble() {
+    int top = 100;
+    int panel = ComicComposer.PANEL;
+    var face = ComicComposer.face(new PanelPlacement.Head(0.5, 0.4, 0.15), top);
+    var low =
+        new java.awt.Rectangle(ComicComposer.MARGIN + 40, top + panel - 16 - 100, panel - 80, 100);
+    var b = ComicComposer.place(face, 400, 90, top, List.of(face), List.of(low));
+    assertThat(b.intersects(low)).isFalse();
+  }
 }
