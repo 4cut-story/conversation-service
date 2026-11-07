@@ -561,11 +561,11 @@ class PipelineFlowIntegrationTest {
     String draw = claim();
     List<String> urls = JsonPath.read(draw, "$.input.images[*].uploadUrl");
     assertThat(urls).hasSize(4);
-    // CLIP은 앞 77토큰만 읽으므로 짧은 그림체 → 구도 → 장면 순이고, 두 명 컷은 왼쪽부터 외모 + 자리를 먼저 적는다
+    // CLIP은 앞 77토큰을 가장 세게 읽으므로 그림체 → 인물 외모(두 명 컷은 왼쪽부터 외모 + 자리) → 구도 → 장면 순이다
     assertThat((String) JsonPath.read(draw, "$.input.images[0].prompt"))
         .startsWith("simple cartoon")
         .containsSubsequence(
-            "wide shot", "(girl, short black hair, yellow hoodie) on the left, (boy");
+            "(girl, short black hair, yellow hoodie) on the left, (boy", "wide shot");
     // 네 컷을 같은 시드로 그려 인물이 컷마다 바뀌지 않게 한다
     List<Number> seeds = JsonPath.read(draw, "$.input.images[*].seed");
     assertThat(seeds).hasSize(4);

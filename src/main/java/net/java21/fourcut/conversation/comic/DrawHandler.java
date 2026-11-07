@@ -172,7 +172,7 @@ class DrawHandler implements StepHandler {
       }
     } else {
       for (Map.Entry<String, String> e : looks.entrySet()) {
-        scene = scene.replace("{" + e.getKey() + "}", "(" + e.getValue() + ")");
+        scene = scene.replace("{" + e.getKey() + "}", e.getValue().split(",")[0].strip());
       }
     }
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
@@ -191,17 +191,22 @@ class DrawHandler implements StepHandler {
                 + SIDE_BY_SIDE
                 + ", "
             : "";
+    // 인물 외모(옷·머리)를 그림체 바로 뒤에 둔다. 뒤쪽에 두면 앞 77토큰 묶음보다 약하게 읽혀 같은 인물의 옷·머리가 컷마다 바뀌었다(회차 21·22).
+    // 한 명이면 장면 문장에는 짧은 이름만 남긴다.
+    String lead =
+        people >= 2
+            ? count + lineup
+            : looks.size() == 1 ? looks.values().iterator().next() + ", " : "";
     return style
         + light(panel)
         + ", "
+        + lead
         + QUALITY
         + ", "
         + SINGLE
         + ", "
         + shot
         + keyObject(panel)
-        + count
-        + lineup
         + scene
         + detail
         + cast;
