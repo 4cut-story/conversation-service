@@ -116,6 +116,7 @@ public class CharacterLibrary {
           && !used.contains(l.character().publicId())
           && LookHead.of(w.look()).acceptsKnown(head(l))
           && LookHead.fitsOutfit(w.look(), l.look())
+          && agesWithDb(l)
           && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
@@ -156,6 +157,7 @@ public class CharacterLibrary {
         if (l.isPresent()
             && (strict ? wanted.acceptsKnown(head(l.get())) : wanted.accepts(head(l.get())))
             && LookHead.fitsOutfit(look, l.get().look())
+            && agesWithDb(l.get())
             && !used.contains(l.get().character().publicId())
             && hasReference(l.get())) {
           used.add(l.get().character().publicId());
@@ -169,6 +171,11 @@ public class CharacterLibrary {
   /** 모습 문구의 첫 마디에 없는 성별·나이는 캐릭터 DB 값으로 채운다. */
   private static LookHead head(CharacterLook l) {
     return LookHead.of(l.look()).orDb(l.character().gender(), l.character().ageGroup());
+  }
+
+  /** 모습 문구의 아이·어른이 DB 나이대와 어긋나는 모습은 쓰지 않는다(그림책 모습을 다시 그리기 전까지). */
+  private static boolean agesWithDb(CharacterLook l) {
+    return LookHead.agesWithDb(l.look(), l.character().ageGroup());
   }
 
   private boolean hasReference(CharacterLook l) {

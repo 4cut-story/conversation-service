@@ -165,4 +165,15 @@ class LookHeadTest {
     assertThat(LookHead.fitsOutfit("boy, yellow hoodie", "bear, fire helmet")).isFalse();
     assertThat(LookHead.fitsOutfit("boy", null)).isTrue();
   }
+
+  @Test
+  @DisplayName("REQ-018: 모습 문구의 아이·어른이 DB 나이대와 어긋나면 쓰지 않는다")
+  void agesWithDb() {
+    assertThat(LookHead.agesWithDb("little girl, brown pigtails", "MIDDLE")).isFalse();
+    assertThat(LookHead.agesWithDb("woman, black bob", "CHILD")).isFalse();
+    assertThat(LookHead.agesWithDb("little boy, cap", "CHILD")).isTrue();
+    assertThat(LookHead.agesWithDb("old man, cane", "OLD")).isTrue();
+    assertThat(LookHead.agesWithDb("blue overalls", "YOUNG")).isTrue();
+    assertThat(LookHead.agesWithDb("little girl", null)).isTrue();
+  }
 }
