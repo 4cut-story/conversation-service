@@ -223,6 +223,27 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 무협 아이(little swordsman)는 아이 낱말을 붙여 어른으로 그려지지 않게 한다")
+  void wuxiaKids() {
+    var heroes =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "소협", "", "little swordsman, blue robe"),
+                new ComicScript.Character("B", "단짝", "", "little swordswoman, pink robe"),
+                new ComicScript.Character("C", "노고수", "", "old swordsman, gray robe")),
+            List.of(),
+            true,
+            List.of());
+    assertThat(DrawHandler.adults(heroes).characters())
+        .extracting(ComicScript.Character::look)
+        .containsExactly(
+            "little boy swordsman, child, blue robe",
+            "little girl swordswoman, child, pink robe",
+            "old swordsman, gray robe");
+  }
+
+  @Test
   @DisplayName("FR-006: 첫 마디가 긴 외모도 나이·성별로 센다(두 남자, 노인과 젊은이)")
   void whoFromLongHeads() {
     var looks =
