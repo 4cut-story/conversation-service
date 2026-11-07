@@ -46,7 +46,10 @@ final class RealNames {
     return Pattern.compile(Pattern.quote(name) + "(?:야|아)(?![가-힣])");
   }
 
-  /** 실명 → 그 이름으로 불리는 화자. 화자가 둘이고 한 화자가 "민지야"처럼 부르면 그 이름은 다른 화자다. 알 수 없으면 빈 문자열("친구"로 바뀐다). */
+  /**
+   * 실명 → 그 이름으로 불리는 화자. 화자가 둘이고 한 화자가 "민지야"처럼 부르면 그 이름은 다른 화자다. 다만 그 다른 화자도 그 이름을 입에 올리면("콩이가 누웠어")
+   * 둘 다 아닌 사람이나 반려동물이다. 알 수 없으면 빈 문자열("친구"로 바뀐다).
+   */
   static Map<String, String> whose(List<String> names, Transcript transcript) {
     Map<String, String> out = new LinkedHashMap<>();
     List<String> speakers = transcript.speakers();
@@ -62,7 +65,11 @@ final class RealNames {
         }
         if (callers.size() == 1) {
           String caller = callers.iterator().next();
-          who = speakers.get(0).equals(caller) ? speakers.get(1) : speakers.get(0);
+          String other = speakers.get(0).equals(caller) ? speakers.get(1) : speakers.get(0);
+          boolean otherSaysIt =
+              transcript.utterances().stream()
+                  .anyMatch(u -> u.speaker().equals(other) && u.text().contains(name));
+          who = otherSaysIt ? "" : other;
         }
       }
       out.put(name, who);

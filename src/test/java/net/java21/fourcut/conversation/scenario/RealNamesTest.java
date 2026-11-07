@@ -60,6 +60,19 @@ class RealNamesTest {
   }
 
   @Test
+  @DisplayName("FR-005: 한 화자가 부른 이름을 다른 화자도 입에 올리면 화자가 아닌 사람·반려동물로 보고 화자 가명으로 바꾸지 않는다")
+  void petIsNotSpeaker() {
+    Transcript t =
+        new Transcript(
+            "ko",
+            List.of("A", "B"),
+            List.of(
+                new Transcript.Utterance("A", 1, 2, "콩이야, 산책하자."),
+                new Transcript.Utterance("B", 3, 4, "콩이가 현관 앞에서 드러누웠어.")));
+    assertThat(RealNames.whose(List.of("콩이"), t)).containsEntry("콩이", "");
+  }
+
+  @Test
   @DisplayName("FR-005: 콘티 입력은 장면 앞·장면·뒤 대화로 나누고 실명을 가명으로 바꿔 넣는다")
   void scriptPrompt() {
     Transcript t =
