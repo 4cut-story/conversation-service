@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.conversations;
 
 import jakarta.validation.Valid;
+import net.java21.fourcut.conversation.pipeline.GpuStatus;
 import net.java21.fourcut.conversation.support.CursorPage;
 import net.java21.fourcut.conversation.web.HeaderNames;
 import org.springframework.http.HttpStatus;
@@ -23,10 +24,18 @@ class ConversationController {
 
   private final ConversationService conversations;
   private final DailyLimit dailyLimit;
+  private final GpuStatus gpu;
 
-  ConversationController(ConversationService conversations, DailyLimit dailyLimit) {
+  ConversationController(ConversationService conversations, DailyLimit dailyLimit, GpuStatus gpu) {
     this.conversations = conversations;
     this.dailyLimit = dailyLimit;
+    this.gpu = gpu;
+  }
+
+  /** GPU PC가 켜져 있는지. 꺼져 있으면 녹음은 받아 두고 켜지면 이어서 만든다. */
+  @GetMapping("/gpu-status")
+  ConversationApi.GpuStatusView gpuStatus(@RequestHeader(HeaderNames.USER_ID) String userId) {
+    return new ConversationApi.GpuStatusView(gpu.online());
   }
 
   @PostMapping

@@ -91,6 +91,9 @@ public final class ConversationApi {
 
   public record Finished(ConversationStatus status) {}
 
+  /** GPU PC 상태. online이 false면 만화는 PC가 켜진 뒤에 만들어진다. */
+  public record GpuStatusView(boolean online) {}
+
   /**
    * 대화 진행 상태.
    *
