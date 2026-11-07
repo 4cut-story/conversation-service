@@ -83,7 +83,7 @@ class CharacterDbIntegrationTest {
                     .content(
                         "{\"name\":\"윤슬\",\"job\":\"의사\",\"gender\":\"FEMALE\","
                             + "\"ageGroup\":\"YOUNG\",\"look\":\"young woman, short red bob hair,"
-                            + " round glasses, white doctor coat\",\"scale\":0.6}"))
+                            + " round glasses, white blouse\",\"scale\":0.6}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.look.concept").value("DAILY"))
             .andExpect(jsonPath("$.look.expression").value("NEUTRAL"))
