@@ -127,8 +127,59 @@ class ComicScriptTest {
         .containsExactly("누구야?");
   }
 
+  static List<ComicScript.Panel> panelsOf(String... roles) {
+    String[] shots = {"wide", "medium", "close-up"};
+    String[] acts = {
+      "sits", "runs", "cooks", "laughs", "reads", "jumps", "sleeps", "sings", "waves", "cries",
+      "dances"
+    };
+    String[] things = {
+      "cake",
+      "phone",
+      "dog",
+      "umbrella",
+      "bicycle",
+      "letter",
+      "pizza",
+      "guitar",
+      "camera",
+      "kite",
+      "lamp"
+    };
+    var out = new java.util.ArrayList<ComicScript.Panel>();
+    for (int i = 0; i < roles.length; i++) {
+      out.add(
+          new ComicScript.Panel(
+              roles[i],
+              shots[i % 3],
+              "{A} " + acts[i] + " with " + things[i],
+              List.of(line("A", "대사" + i))));
+    }
+    return out;
+  }
+
   @Test
-  @DisplayName("FR-005: 네 컷 구도가 모두 같거나 장면이 거의 같으면 위반이다")
+  @DisplayName("FR-005: 컷은 4~10개이고 기로 시작해 결로 끝나며, 승·전을 여러 컷으로 늘릴 수 있다")
+  void panelCount() {
+    assertThat(script(cast(), panelsOf("기", "승", "승", "전", "전", "결")).violation()).isNull();
+    assertThat(
+            script(cast(), panelsOf("기", "기", "승", "승", "승", "전", "전", "전", "전", "결")).violation())
+        .isNull();
+    assertThat(script(cast(), panelsOf("기", "승", "결")).violation()).contains("4~10개");
+    assertThat(
+            script(cast(), panelsOf("기", "승", "승", "승", "승", "승", "전", "전", "전", "전", "결"))
+                .violation())
+        .contains("4~10개");
+    assertThat(script(cast(), panelsOf("기", "전", "승", "전", "결")).violation()).contains("3번 컷의 역할");
+    assertThat(script(cast(), panelsOf("기", "승", "승", "승", "결")).violation()).contains("빠진 역할");
+    assertThat(script(cast(), panelsOf("기", "승", "전", "결", "결")).violation()).contains("결은 한 컷");
+    assertThat(script(cast(), panelsOf("기", "기", "기", "승", "전", "결")).violation())
+        .contains("기는 두 컷");
+    assertThat(script(cast(), panelsOf("승", "기", "전", "결")).violation()).contains("역할");
+  }
+
+  @Test
+  @DisplayName("FR-005: 모든 컷 구도가 같거나 장면이 거의 같으면 위반이다")
   void repetition() {
     var sameShot =
         panels().stream()
@@ -453,8 +504,9 @@ class ComicScriptTest {
     JsonMapper json = JsonMapper.builder().build();
     ComicScript.Panel p =
         json.readValue(
-            "{\"role\":\"기\",\"shot\":\"wide\",\"scene\":\"{A} waits\",\"lines\":[],"
-                + "\"setting\":\"bus stop, rain\",\"faces\":[{\"speaker\":\"A\",\"face\":\"sleepy\"}]}",
+            "{\"role\":\"기\",\"shot\":\"wide\",\"scene\":\"{A}"
+                + " waits\",\"lines\":[],\"setting\":\"bus stop,"
+                + " rain\",\"faces\":[{\"speaker\":\"A\",\"face\":\"sleepy\"}]}",
             ComicScript.Panel.class);
     assertThat(p.setting()).isEqualTo("bus stop, rain");
     assertThat(p.faces()).containsExactly(new ComicScript.Face("A", "sleepy"));

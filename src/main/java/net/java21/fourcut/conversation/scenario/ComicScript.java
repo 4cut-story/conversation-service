@@ -14,8 +14,8 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
- * 4컷 콘티 (docs specs/001 pipeline-schemas.md). 규칙: 컷 4개(기·승·전·결), 컷당 대사 2문장 이내, 대화와 같은 언어, 실명 없음. 네
- * 컷은 서로 다른 순간이어야 해서 구도(shot)가 모두 같거나 장면 설명이 거의 같으면 위반이다.
+ * 콘티 (docs specs/001 pipeline-schemas.md). 규칙: 컷 4~10개(기·승·전·결 흐름), 컷당 대사 2문장 이내, 대화와 같은 언어, 실명 없음.
+ * 컷 수는 콘티를 만드는 LLM이 이야기에 맞게 고른다(기본 4컷). 모든 컷은 서로 다른 순간이어야 해서 구도(shot)가 모두 같거나 장면 설명이 거의 같으면 위반이다.
  *
  * @param nameWarnings 콘티를 만들며 가명으로 바꾼 실명 의심 단어. 올리기 전 경고에 쓴다
  * @param concept 그림 컨셉({@link Concept} 이름). 예전 콘티에는 없을 수 있다(일상 웹툰)
@@ -145,6 +145,12 @@ public record ComicScript(
     }
   }
 
+  /** 컷 수 하한. 기본은 4컷이다. */
+  public static final int MIN_PANELS = 4;
+
+  /** 컷 수 상한. 컷마다 그림 한 장이라 생성 시간이 컷 수에 비례해 늘어난다. */
+  public static final int MAX_PANELS = 10;
+
   /** 컷당 최대 말풍선 수. */
   public static final int MAX_LINES = 2;
 
@@ -244,18 +250,26 @@ public record ComicScript(
     if (title == null || title.isBlank() || title.length() > 100) {
       return "제목이 없거나 100자를 넘는다";
     }
-    if (characters == null || characters.isEmpty() || panels == null || panels.size() != 4) {
-      return "등장인물이 없거나 컷이 4개가 아니다";
+    if (characters == null
+        || characters.isEmpty()
+        || panels == null
+        || panels.size() < MIN_PANELS
+        || panels.size() > MAX_PANELS) {
+      return "등장인물이 없거나 컷이 " + MIN_PANELS + "~" + MAX_PANELS + "개가 아니다";
     }
     String cast = castViolation();
     if (cast != null) {
       return cast;
     }
     Set<String> speakers = Set.copyOf(characters.stream().map(Character::speaker).toList());
-    for (int i = 0; i < 4; i++) {
+    String flow = roleViolation();
+    if (flow != null) {
+      return flow;
+    }
+    for (int i = 0; i < panels.size(); i++) {
       Panel p = panels.get(i);
-      if (!ROLES.get(i).equals(p.role()) || p.scene() == null || p.scene().isBlank()) {
-        return (i + 1) + "번 컷의 역할이나 장면 설명이 틀렸다";
+      if (p.scene() == null || p.scene().isBlank()) {
+        return (i + 1) + "번 컷의 장면 설명이 없다";
       }
       if (!SHOTS.contains(p.shot())) {
         return (i + 1) + "번 컷의 구도(shot)가 틀렸다";
@@ -271,6 +285,34 @@ public record ComicScript(
       }
     }
     return repetition();
+  }
+
+  /**
+   * 컷 역할 흐름: 첫 컷은 기, 마지막 컷은 결, 기·승·전·결이 모두 나오고 순서가 거꾸로 가지 않는다. 컷이 4개면 기·승·전·결 한 컷씩이고, 더 많으면 승이나 전이
+   * 여러 컷이 된다(예: 6컷 기·승·승·전·전·결).
+   */
+  private String roleViolation() {
+    int last = -1;
+    Set<String> seen = new HashSet<>();
+    for (int i = 0; i < panels.size(); i++) {
+      int r = ROLES.indexOf(panels.get(i).role());
+      if (r < 0 || r < last) {
+        return (i + 1) + "번 컷의 역할이 틀렸다(기·승·전·결 순서)";
+      }
+      last = r;
+      seen.add(ROLES.get(r));
+    }
+    if (!"기".equals(panels.getFirst().role()) || !"결".equals(panels.getLast().role())) {
+      return "첫 컷은 기, 마지막 컷은 결이어야 한다";
+    }
+    if (seen.size() != ROLES.size()) {
+      return "기·승·전·결 중 빠진 역할이 있다";
+    }
+    if (panels.stream().filter(p -> "결".equals(p.role())).count() > 1
+        || panels.stream().filter(p -> "기".equals(p.role())).count() > 2) {
+      return "기는 두 컷, 결은 한 컷까지다";
+    }
+    return null;
   }
 
   private String castViolation() {
@@ -290,10 +332,10 @@ public record ComicScript(
     return null;
   }
 
-  /** 네 컷이 서로 다른 순간인지: 구도가 모두 같거나, 같은 대사가 두 번 나오거나, 장면 단어가 거의 같은 컷이 있으면 위반. */
+  /** 모든 컷이 서로 다른 순간인지: 구도가 모두 같거나, 같은 대사가 두 번 나오거나, 장면 단어가 거의 같은 컷이 있으면 위반. */
   private String repetition() {
     if (panels.stream().map(Panel::shot).distinct().count() == 1) {
-      return "네 컷의 구도가 모두 같다";
+      return "모든 컷의 구도가 같다";
     }
     Set<String> said = new HashSet<>();
     for (Panel p : panels) {
@@ -303,8 +345,8 @@ public record ComicScript(
         }
       }
     }
-    for (int i = 0; i < 4; i++) {
-      for (int j = i + 1; j < 4; j++) {
+    for (int i = 0; i < panels.size(); i++) {
+      for (int j = i + 1; j < panels.size(); j++) {
         if (overlap(panels.get(i).scene(), panels.get(j).scene()) >= MAX_SCENE_OVERLAP) {
           return (i + 1) + "번과 " + (j + 1) + "번 컷 장면이 거의 같다";
         }

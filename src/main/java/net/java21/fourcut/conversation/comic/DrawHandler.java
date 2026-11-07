@@ -27,8 +27,8 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * DRAW: 콘티의 컷 4장을 GPU 워커(SDXL)에 그리게 한다. 워커는 사전 서명 PUT 주소로 PNG를 올린다. 컷마다 구도와 시드가 다르고, 인물 모습은 외모 문구로
- * 맞춘다. 그림에는 글자를 넣지 않고, 말풍선은 COMPOSE에서 코드로 그린다.
+ * DRAW: 콘티의 컷(4~10장)을 GPU 워커(SDXL)에 그리게 한다. 워커는 사전 서명 PUT 주소로 PNG를 올린다. 컷마다 구도와 시드가 다르고, 인물 모습은 외모
+ * 문구로 맞춘다. 그림에는 글자를 넣지 않고, 말풍선은 COMPOSE에서 코드로 그린다.
  *
  * <p>캐릭터 DB(REQ-018)에서 찾은 인물은 외모 문구를 캐릭터의 문구로 바꾸고, 그 인물이 나오는 컷에 IP-Adapter 참조({@code references})를
  * 붙인다. 워커는 참조 그림의 embedding이 있으면 받아 쓰고, 없으면 참조 그림으로 계산해 올린다. 찾은 인물의 가명은 캐릭터 이름으로 바꿔 콘티에 다시 저장해,
@@ -36,8 +36,6 @@ import tools.jackson.databind.node.ObjectNode;
  */
 @Component
 class DrawHandler implements StepHandler {
-
-  static final int PANELS = 4;
 
   private final ScenarioStore scenarios;
   private final ObjectStorage storage;
@@ -79,7 +77,7 @@ class DrawHandler implements StepHandler {
     long seed = Math.floorMod(seedOf(written), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
-    for (int i = 0; i < PANELS; i++) {
+    for (int i = 0; i < script.panels().size(); i++) {
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
       image.put(
@@ -112,7 +110,12 @@ class DrawHandler implements StepHandler {
     Set<String> uploaded = new HashSet<>();
     result.path("uploaded").forEach(n -> uploaded.add(n.asString()));
     String id = context.conversation().publicId();
-    for (int i = 0; i < PANELS; i++) {
+    // 컷 수는 콘티마다 다르다(4~10). 보낸 그림 작업의 컷 수만큼 올라왔는지 본다
+    int count =
+        context.jobPayload() == null || context.jobPayload().path("images").isEmpty()
+            ? scenarios.script(id).panels().size()
+            : context.jobPayload().path("images").size();
+    for (int i = 0; i < count; i++) {
       if (!uploaded.contains(panelName(i)) || !storage.exists(WorkKeys.panel(id, i + 1))) {
         return new StepOutcome.Retry(panelName(i) + " 그림이 올라오지 않았다");
       }

@@ -24,7 +24,8 @@ import net.java21.fourcut.conversation.scenario.ComicScript;
 import org.springframework.stereotype.Component;
 
 /**
- * 세로 4컷 합성. 그림 위에 말풍선을 코드로 그려 한글이 깨지지 않게 한다 (FR-007). 글꼴은 Noto Sans CJK(이미지에 설치)를 먼저 찾는다.
+ * 세로 만화 합성(컷 4~10개를 위에서 아래로). 그림 위에 말풍선을 코드로 그려 한글이 깨지지 않게 한다 (FR-007). 글꼴은 Noto Sans CJK(이미지에 설치)를
+ * 먼저 찾는다.
  *
  * <p>그림에서 화자 얼굴 위치를 알면({@link PanelPlacement.Head}) 말풍선을 그 얼굴 위(자리가 없으면 아래·옆)에 얼굴과 다른 말풍선을 가리지 않게
  * 놓고, 꼬리가 얼굴을 가리킨다. 얼굴을 모르면 화자가 선 쪽({@link Staging})에 붙이고 첫 대사는 위, 둘째 대사는 아래에 둔다. 화자가 그 컷에 없으면 꼬리
