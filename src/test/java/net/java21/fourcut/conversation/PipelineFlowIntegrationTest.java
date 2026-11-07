@@ -766,15 +766,18 @@ class PipelineFlowIntegrationTest {
   }
 
   @Test
-  @DisplayName("Edge: 장면 후보가 없으면 NO_SCENE")
+  @DisplayName("FR-006: 장면 후보가 없어도 장면 없음으로 끝내지 않고 있었던 일을 기록하는 콘티로 넘어간다")
   void noScene() throws Exception {
     String owner = PublicId.generate();
     String id = startedConversation(owner);
     result(claim(), transcript());
     result(claim(), llm(java.util.Map.of("candidates", List.of())));
     mvc.perform(as(get("/api/v1/conversations/{id}", id), owner))
-        .andExpect(jsonPath("$.status").value("NO_SCENE"))
-        .andExpect(jsonPath("$.failureReason").value("만화로 만들 장면을 찾지 못했어요."));
+        .andExpect(jsonPath("$.status").value(org.hamcrest.Matchers.not("NO_SCENE")));
+    mvc.perform(as(get("/api/v1/conversations/{id}/candidates", id), owner))
+        .andExpect(jsonPath("$.candidates[0].selected").value(true))
+        .andExpect(jsonPath("$.candidates[0].kind").value("CORE"));
+    assertThat((String) JsonPath.read(claim(), "$.input.prompt")).contains("일기처럼");
   }
 
   @Test
