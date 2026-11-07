@@ -164,6 +164,8 @@ final class Prompts {
       - setting: 그 컷의 배경을 그림 모델용 영어 10단어 이내로 자세히 쓴다. 장소와, 이야기에 맞는 눈에 보이는 배경
         물건 2~3개(예: "burger shop, ordering kiosk with menu screen, trays of burgers", "city bus aisle,
         hanging straps, rainy window"). 장소가 같은 컷은 같은 장소 낱말로 시작한다. 인물과 표정은 쓰지 않는다.
+        밤·새벽·저녁이거나 비·눈이 오면 그 때와 하늘을 꼭 넣고, 대사에 나오는 별·달·노을도 눈에 보이게 쓴다(예: "temple
+        courtyard, night, dark sky full of stars, paper lanterns").
       - faces: 그 컷 scene에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
         쓴다(예: "wide-eyed, hands on cheeks", "laughing, pointing at phone", "teary smile"). 대사와 상황에 맞게
         컷마다 바꾸고, 모든 컷을 같은 표정으로 두지 않는다. 성격·외모·이름은 쓰지 않는다.

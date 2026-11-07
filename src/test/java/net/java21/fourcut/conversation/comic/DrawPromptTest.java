@@ -221,4 +221,30 @@ class DrawPromptTest {
             List.of());
     assertThat(DrawHandler.adults(couple)).isSameAs(couple);
   }
+
+  @Test
+  @DisplayName("FR-006: 배경의 밤·새벽·별 같은 빛 조각은 그림체 바로 뒤에 두고, 어두운 때는 낮 하늘을 뺀다")
+  void nightLight() {
+    var night =
+        new ComicScript.Panel(
+            "전",
+            "wide",
+            "{A} looks up, temple",
+            List.of(),
+            "temple courtyard, night, dark sky full of stars, paper lanterns",
+            List.of());
+    assertThat(DrawHandler.prompt("ink", script, night))
+        .startsWith(
+            "ink, night, dark sky full of stars, paper lanterns, dark night lighting, high quality");
+    assertThat(DrawHandler.dayNegative(night)).contains("daylight");
+    var day =
+        new ComicScript.Panel(
+            "기", "wide", "{A} waves, park", List.of(), "park, benches, trees", List.of());
+    assertThat(DrawHandler.light(day)).isEmpty();
+    assertThat(DrawHandler.dayNegative(day)).isEmpty();
+    var dusk =
+        new ComicScript.Panel(
+            "기", "wide", "{A} waves", List.of(), "beach, sunset glow, seagulls", List.of());
+    assertThat(DrawHandler.light(dusk)).isEqualTo(", sunset glow");
+  }
 }
