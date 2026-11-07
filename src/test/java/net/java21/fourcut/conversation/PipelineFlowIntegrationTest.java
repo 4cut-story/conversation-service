@@ -795,4 +795,25 @@ class PipelineFlowIntegrationTest {
     assertThat(storage.exists(WorkKeys.audioChunk(id, 0))).isFalse();
     mvc.perform(as(get("/api/v1/conversations/{id}", id), owner)).andExpect(status().isNotFound());
   }
+
+  @Test
+  @DisplayName("FR-014: 녹음 전에 GPU PC가 켜져 있는지 알려 준다 (워커가 최근에 연락했는지)")
+  void gpuStatus() throws Exception {
+    String owner = PublicId.generate();
+    mvc.perform(as(get("/api/v1/conversations/gpu-status"), owner))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.online").value(false));
+    // 할 일이 없어도 가져가기 요청이 오면 워커가 켜져 있는 것이다
+    mvc.perform(
+        worker(post("/internal/gpu-jobs/claim"))
+            .content("{\"types\":[\"IMAGE\"],\"version\":\"0.1.0\"}"));
+    mvc.perform(as(get("/api/v1/conversations/gpu-status"), owner))
+        .andExpect(jsonPath("$.online").value(true))
+        .andDo(
+            doc(
+                "conversations-gpu-status",
+                responseFields(
+                    fieldWithPath("online")
+                        .description("최근 60초 안에 GPU 워커가 연락했는지. false면 PC가 켜진 뒤에 만들어진다"))));
+  }
 }
