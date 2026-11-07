@@ -6,8 +6,11 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.imageio.ImageIO;
+import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -31,18 +34,21 @@ class ComposeHandler implements StepHandler {
   private final ComicComposer composer;
   private final ContentClient content;
   private final PanelPlacement placement;
+  private final CharacterLibrary characters;
 
   ComposeHandler(
       ScenarioStore scenarios,
       ObjectStorage storage,
       ComicComposer composer,
       ContentClient content,
-      PanelPlacement placement) {
+      PanelPlacement placement,
+      CharacterLibrary characters) {
     this.scenarios = scenarios;
     this.storage = storage;
     this.composer = composer;
     this.content = content;
     this.placement = placement;
+    this.characters = characters;
   }
 
   @Override
@@ -68,7 +74,8 @@ class ComposeHandler implements StepHandler {
       panels.add(gray ? gray(panel) : panel);
     }
     // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리와 얼굴 위치를 확인해 맞춘다
-    PanelPlacement.Spots spots = placement.locate(script, panels, Staging.panels(script));
+    PanelPlacement.Spots spots =
+        placement.locate(script, panels, Staging.panels(script), references(script));
     ComicComposer.Result result = composer.compose(script, panels, spots.stages(), spots.heads());
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);
@@ -90,6 +97,18 @@ class ComposeHandler implements StepHandler {
                 Concept.of(script.concept()).name(),
                 Dialect.of(context.conversation().dialect()).name()));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /** 화자별 참조 그림(그림을 그릴 때 IP-Adapter에 쓴 것). 캐릭터를 못 찾은 인물은 없다. */
+  Map<String, byte[]> references(ComicScript script) {
+    Map<String, byte[]> out = new LinkedHashMap<>();
+    if (script.characters() == null) {
+      return out;
+    }
+    for (ComicScript.Character c : script.characters()) {
+      characters.referenceImage(c.lookId()).ifPresent(png -> out.put(c.speaker(), png));
+    }
+    return out;
   }
 
   /** 만화 아래 등장인물 소개: 호칭, 캐릭터 이름, 캐릭터 모습. */
