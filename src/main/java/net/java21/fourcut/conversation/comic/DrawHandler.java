@@ -85,11 +85,6 @@ class DrawHandler implements StepHandler {
           prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
       image.put(
           "negativePrompt", negative(script, properties) + dayNegative(script.panels().get(i)));
-      ArrayNode regions =
-          regions(style(script, properties), script, script.panels().get(i), stages.get(i));
-      if (!regions.isEmpty()) {
-        image.set("regions", regions);
-      }
       ArrayNode refs =
           references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast));
@@ -200,41 +195,6 @@ class DrawHandler implements StepHandler {
         + scene
         + detail
         + cast;
-  }
-
-  /**
-   * 두 명 이상 나오는 컷의 자리별 인물 프롬프트(워커가 그 자리 안에서만 섞는다). 두 사람 외모를 한 줄에 적으면 그림 모델이 둘을 섞어 여자가 옆 남자처럼 그려지고 참조
-   * 그림이 없는 인물이 빠졌다(회차 12·13 love-07, family-09). 자리는 IP-Adapter 마스크·말풍선과 같다({@link Staging}). 한 명이면
-   * 비어 있다.
-   */
-  static ArrayNode regions(
-      String style, ComicScript script, ComicScript.Panel panel, Map<String, Staging.Side> stage) {
-    ArrayNode out = tools.jackson.databind.node.JsonNodeFactory.instance.arrayNode();
-    String scene = panel.scene() == null ? "" : panel.scene();
-    Map<String, String> looks = new java.util.LinkedHashMap<>();
-    for (ComicScript.Character c : script.characters()) {
-      if (scene.contains("{" + c.speaker() + "}") && stage.containsKey(c.speaker())) {
-        looks.put(c.speaker(), c.look().strip());
-      }
-    }
-    if (looks.size() < 2) {
-      return out;
-    }
-    Map<String, String> faces = new java.util.HashMap<>();
-    if (panel.faces() != null) {
-      for (ComicScript.Face f : panel.faces()) {
-        if (f != null && f.face() != null && !f.face().isBlank()) {
-          faces.put(f.speaker(), ", " + f.face().strip());
-        }
-      }
-    }
-    looks.forEach(
-        (who, look) -> {
-          ObjectNode r = out.addObject();
-          r.put("region", stage.get(who).name().toLowerCase(java.util.Locale.ROOT));
-          r.put("prompt", style + ", solo, " + look + faces.getOrDefault(who, ""));
-        });
-    return out;
   }
 
   /**
