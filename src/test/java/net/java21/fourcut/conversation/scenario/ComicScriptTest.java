@@ -351,15 +351,21 @@ class ComicScriptTest {
   }
 
   @Test
-  @DisplayName("FR-005: 대사를 하는 인물이 장면 설명에 없으면 그림에 나오도록 붙인다")
+  @DisplayName("FR-005: 장면 설명에 인물이 없을 때만 대사 화자를 붙이고, 한 명이라도 있으면 나머지는 컷 밖 대사로 둔다")
   void speakersInScene() {
     var ps = new java.util.ArrayList<>(panels());
     ps.set(
         1,
         new ComicScript.Panel(
             "승", "medium", "{B} looks surprised", List.of(line("A", "예약했지"), line("B", "역시"))));
+    ps.set(
+        2,
+        new ComicScript.Panel(
+            "전", "wide", "empty kitchen at night", List.of(line("A", "누구야"), line("B", "나야"))));
     ComicScript fixed = script(cast(), ps).normalized();
-    assertThat(fixed.panels().get(1).scene()).isEqualTo("{B} looks surprised, {A} nearby");
+    assertThat(fixed.panels().get(1).scene()).isEqualTo("{B} looks surprised");
+    assertThat(fixed.panels().get(2).scene())
+        .isEqualTo("empty kitchen at night, {A} nearby, {B} nearby");
     assertThat(fixed.panels().get(0).scene()).isEqualTo(panels().get(0).scene());
     assertThat(fixed.replaced(java.util.Map.of())).isSameAs(fixed);
   }
