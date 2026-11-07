@@ -96,6 +96,7 @@ comic:
   ip-early-scale: ${COMIC_IP_EARLY_SCALE:0.2}
   ip-early-steps: ${COMIC_IP_EARLY_STEPS:2}
   ip-late-boost: ${COMIC_IP_LATE_BOOST:0.0}
+  panel-seed-step: ${COMIC_PANEL_SEED_STEP:0}
 
 # 캐릭터 DB (REQ-018). 콘티 인물을 이름이나 설명 임베딩(pgvector, BGE-M3 1024차원)으로 찾아 IP-Adapter 참조로 그린다
 characters:

@@ -97,7 +97,7 @@ class DrawHandler implements StepHandler {
       }
       ArrayNode refs =
           references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
-      image.put("seed", panelSeed(seed, i, stages.get(i), cast));
+      image.put("seed", panelSeed(seed, i, stages.get(i), cast, properties.panelSeedStep()));
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
       image.put("uploadPutKey", WorkKeys.panel(id, i + 1));
@@ -664,16 +664,19 @@ class DrawHandler implements StepHandler {
 
   /**
    * 컷 시드. 참조 없는 인물이 나오는 컷은 네 컷이 같은 시드다: 컷마다 시드를 달리하면 같은 외모 문구로도 얼굴·옷 색이 바뀌었다(GPU PC 3회차 비교). 컷 인물이
-   * 모두 캐릭터 참조(IP-Adapter)로 그려지면 정체성은 참조가 지키므로 컷마다 시드를 바꾼다. 같은 시드면 첫 노이즈가 같아 네 컷이 같은 자세·구도로 나왔다(100편
-   * 배치 13편 중 5편).
+   * 모두 캐릭터 참조(IP-Adapter)로 그려지면 step만큼 컷마다 시드를 바꾼다. 같은 시드면 첫 노이즈가 같아 네 컷이 같은 자세·구도로 나왔다(100편 배치 13편
+   * 중 5편, SDXL 기본 모델). DreamShaper XL Lightning에서는 시드가 달라도 정면 자세가 되풀이되고 한 편 안에서 그림체·옷이 컷마다 갈려(회차
+   * 23·24) step 0(네 컷 같은 시드)을 시험한다.
    */
   static long panelSeed(
-      long seed, int index, Map<String, Staging.Side> stage, Map<String, CharacterRef> cast) {
+      long seed,
+      int index,
+      Map<String, Staging.Side> stage,
+      Map<String, CharacterRef> cast,
+      long step) {
     boolean allRef = !stage.isEmpty() && stage.keySet().stream().allMatch(cast::containsKey);
-    return allRef ? seed + PANEL_SEED_STEP * (index + 1) : seed;
+    return allRef ? seed + step * (index + 1) : seed;
   }
-
-  static final long PANEL_SEED_STEP = 7919;
 
   /** 캐릭터 참조 강도 스케줄. 설정으로 고쳐 GPU PC 워커를 다시 띄우지 않고 조정한다. */
   ObjectNode ipSchedule(ComicProperties p) {
