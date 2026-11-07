@@ -105,7 +105,8 @@ class ClaudeClient implements LlmClient {
 
   ObjectNode request(JsonNode job) {
     ObjectNode body = json.createObjectNode();
-    body.put("model", properties.model());
+    String task = job.path("task").asString(null);
+    body.put("model", properties.model(task));
     body.put("max_tokens", properties.maxTokens());
     String system = job.path("system").asString("");
     if (!system.isBlank()) {
@@ -128,7 +129,7 @@ class ClaudeClient implements LlmClient {
       message.put("content", job.path("prompt").asString(""));
     }
     ObjectNode output = body.putObject("output_config");
-    output.put("effort", properties.effort());
+    output.put("effort", properties.effort(task));
     if (job.path("jsonSchema").isObject()) {
       output
           .putObject("format")

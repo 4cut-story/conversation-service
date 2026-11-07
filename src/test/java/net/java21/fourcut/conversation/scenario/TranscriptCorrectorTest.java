@@ -35,7 +35,7 @@ class TranscriptCorrectorTest {
   @DisplayName("FR-003: 잘못 들은 줄만 고치고 화자·시각은 그대로 둔다")
   void fixesMisheardLines() {
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), contains("[1] B: 같이 갈 레"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("[1] B: 같이 갈 레"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[{\"i\":1,\"text\":\"같이 갈래?\"}]}"));
 
     Transcript raw = transcript("오늘 뭐 해", "같이 갈 레", "좋아");
@@ -53,7 +53,7 @@ class TranscriptCorrectorTest {
   @DisplayName("FR-003: 원문과 너무 다른 줄(지어낸 내용)과 범위 밖 번호는 버린다")
   void rejectsInventedLines() {
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), anyString(), anyString()))
+    when(llm.chat(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(
             Optional.of(
                 "{\"fixes\":[{\"i\":0,\"text\":\"우리는 내일 제주도로 가족 여행을 떠나기로 했다\"},"
@@ -68,7 +68,7 @@ class TranscriptCorrectorTest {
   @DisplayName("FR-003: Gemini 호출이 실패하면 원문 전사를 그대로 쓴다")
   void keepsRawWhenCallFails() {
     when(llm.available()).thenReturn(false);
-    when(llm.chat(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
+    when(llm.chat(anyString(), anyString(), anyString(), anyString())).thenReturn(Optional.empty());
     Transcript raw = transcript("밥 먹었어", "응");
 
     assertThat(corrector.correct(raw)).isSameAs(raw);
@@ -78,7 +78,8 @@ class TranscriptCorrectorTest {
   @DisplayName("FR-003: 응답이 JSON이 아니면 원문을 쓴다")
   void keepsRawOnBadJson() {
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), anyString(), anyString())).thenReturn(Optional.of("모르겠어요"));
+    when(llm.chat(anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(Optional.of("모르겠어요"));
     Transcript raw = transcript("밥 먹었어");
 
     assertThat(corrector.correct(raw)).isSameAs(raw);
@@ -89,12 +90,12 @@ class TranscriptCorrectorTest {
   void batchesAndStopsWhenPaused() {
     String[] texts = new String[TranscriptCorrector.BATCH * 3];
     java.util.Arrays.fill(texts, "응");
-    when(llm.chat(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
+    when(llm.chat(anyString(), anyString(), anyString(), anyString())).thenReturn(Optional.empty());
     when(llm.available()).thenReturn(true, false);
 
     corrector.correct(transcript(texts));
 
-    verify(llm, times(1)).chat(anyString(), anyString(), anyString());
+    verify(llm, times(1)).chat(anyString(), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -108,16 +109,16 @@ class TranscriptCorrectorTest {
     texts[second + 1] = "회의 실어";
     texts[third + 1] = "됬어";
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), contains("(0~"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(0~"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[{\"i\":1,\"text\":\"같이 갈래?\"}]}"));
-    when(llm.chat(anyString(), contains("(" + second + "~"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(" + second + "~"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[{\"i\":" + (second + 1) + ",\"text\":\"회의 싫어\"}]}"));
-    when(llm.chat(anyString(), contains("(" + third + "~"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(" + third + "~"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[{\"i\":" + (third + 1) + ",\"text\":\"됐어\"}]}"));
 
     Transcript fixed = corrector.correct(transcript(texts));
 
-    verify(llm, times(3)).chat(anyString(), anyString(), anyString());
+    verify(llm, times(3)).chat(anyString(), anyString(), anyString(), anyString());
     assertThat(fixed.utterances().get(1).text()).isEqualTo("같이 갈래?");
     assertThat(fixed.utterances().get(second + 1).text()).isEqualTo("회의 싫어");
     assertThat(fixed.utterances().get(third + 1).text()).isEqualTo("됐어");
@@ -136,7 +137,7 @@ class TranscriptCorrectorTest {
   @DisplayName("FR-003: 인식 환각 줄(영상 끝인사 등)만 지우고, 실제 대화는 drop이 와도 지우지 않는다")
   void dropsOnlyHallucinations() {
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), anyString(), anyString()))
+    when(llm.chat(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(
             Optional.of(
                 "{\"fixes\":[{\"i\":1,\"text\":\"시청해 주셔서 감사합니다\",\"drop\":true},"

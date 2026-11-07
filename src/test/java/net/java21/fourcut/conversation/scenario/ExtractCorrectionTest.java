@@ -80,15 +80,15 @@ class ExtractCorrectionTest {
   void extractsWindowsAtOnce() {
     twoWindows();
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), contains("(0분부터)"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(0분부터)"), anyString()))
         .thenReturn(
             Optional.of(
                 "{\"candidates\":[" + candidate("00:00", "00:55", "앞 장면") + "],\"names\":[]}"));
-    when(llm.chat(anyString(), contains("(10분부터)"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(10분부터)"), anyString()))
         .thenReturn(
             Optional.of(
                 "{\"candidates\":[" + candidate("10:00", "10:55", "뒤 장면") + "],\"names\":[]}"));
-    when(llm.chat(anyString(), contains("고칠 전사"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("고칠 전사"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[]}"));
 
     assertThat(parallel.start(context)).isInstanceOf(StepOutcome.RunLocal.class);
@@ -106,10 +106,11 @@ class ExtractCorrectionTest {
   void fallsBackToQueue() {
     twoWindows();
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), contains("(0분부터)"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(0분부터)"), anyString()))
         .thenReturn(Optional.of("{\"candidates\":[],\"names\":[]}"));
-    when(llm.chat(anyString(), contains("(10분부터)"), anyString())).thenReturn(Optional.empty());
-    when(llm.chat(anyString(), contains("고칠 전사"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(10분부터)"), anyString()))
+        .thenReturn(Optional.empty());
+    when(llm.chat(anyString(), anyString(), contains("고칠 전사"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[]}"));
 
     StepOutcome outcome = parallel.runLocal(context);
@@ -134,7 +135,7 @@ class ExtractCorrectionTest {
   @DisplayName("FR-003: Gemini가 있으면 장면 추출 전에 서버에서 전사를 고치고, 장면 추출은 고친 전사를 쓴다")
   void correctsBeforeExtract() {
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), anyString(), anyString()))
+    when(llm.chat(anyString(), anyString(), anyString(), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[{\"i\":0,\"text\":\"회의 싫어\"}]}"));
 
     assertThat(handler.start(context)).isInstanceOf(StepOutcome.RunLocal.class);
@@ -154,7 +155,8 @@ class ExtractCorrectionTest {
   @DisplayName("FR-003: 교정이 실패하면 원문 전사로 장면 추출을 이어 간다")
   void keepsRawOnFailure() {
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), anyString(), anyString())).thenThrow(new IllegalStateException("x"));
+    when(llm.chat(anyString(), anyString(), anyString(), anyString()))
+        .thenThrow(new IllegalStateException("x"));
 
     StepOutcome outcome = handler.runLocal(context);
 
@@ -180,13 +182,13 @@ class ExtractCorrectionTest {
     }
     transcripts.save(ID, new Transcript("ko", List.of("A", "B"), lines));
     when(llm.available()).thenReturn(true);
-    when(llm.chat(anyString(), contains("(0분부터)"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("(0분부터)"), anyString()))
         .thenReturn(Optional.of("{\"candidates\":[],\"names\":[]}"));
-    when(llm.chat(anyString(), contains("가장 나은 장면 하나"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("가장 나은 장면 하나"), anyString()))
         .thenReturn(
             Optional.of(
                 "{\"candidates\":[" + candidate("00:00", "00:20", "짧은 장면") + "],\"names\":[]}"));
-    when(llm.chat(anyString(), contains("고칠 전사"), anyString()))
+    when(llm.chat(anyString(), anyString(), contains("고칠 전사"), anyString()))
         .thenReturn(Optional.of("{\"fixes\":[]}"));
 
     parallel.start(context);

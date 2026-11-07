@@ -108,7 +108,8 @@ class TranscriptCorrector {
               // 한도 초과 등으로 쉬는 중이면 원문으로 둔다
               return Map.of();
             }
-            Optional<String> answer = llm.chat(SYSTEM, prompt(transcript, start, to), SCHEMA);
+            Optional<String> answer =
+                llm.chat(DirectLlm.CORRECT, SYSTEM, prompt(transcript, start, to), SCHEMA);
             return answer.map(a -> fixes(a, start, to, utterances)).orElse(Map.of());
           });
     }

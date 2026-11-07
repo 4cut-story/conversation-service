@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
@@ -71,7 +72,10 @@ class CloudLlmRunner implements DirectLlm {
         tx,
         clients(claude, gemini, builder, json),
         cacheEnabled
-            ? new LlmCache(storage, json, claude.model() + "," + gemini.model())
+            ? new LlmCache(
+                storage,
+                json,
+                claude.model() + new TreeMap<>(claude.tasks()) + "," + gemini.model())
             : LlmCache.off(json));
   }
 
@@ -130,19 +134,22 @@ class CloudLlmRunner implements DirectLlm {
   }
 
   @Override
-  public Optional<String> chat(String system, String prompt, String jsonSchema) {
-    return direct(system, prompt, jsonSchema, List.of());
+  public Optional<String> chat(String task, String system, String prompt, String jsonSchema) {
+    return direct(task, system, prompt, jsonSchema, List.of());
   }
 
   @Override
   public Optional<String> see(
-      String system, String prompt, String jsonSchema, List<byte[]> images) {
-    return direct(system, prompt, jsonSchema, images);
+      String task, String system, String prompt, String jsonSchema, List<byte[]> images) {
+    return direct(task, system, prompt, jsonSchema, images);
   }
 
   private Optional<String> direct(
-      String system, String prompt, String jsonSchema, List<byte[]> images) {
+      String task, String system, String prompt, String jsonSchema, List<byte[]> images) {
     ObjectNode job = json.createObjectNode();
+    if (task != null) {
+      job.put("task", task);
+    }
     job.put("system", system.strip());
     job.put("prompt", prompt);
     job.set("jsonSchema", json.readTree(jsonSchema));
