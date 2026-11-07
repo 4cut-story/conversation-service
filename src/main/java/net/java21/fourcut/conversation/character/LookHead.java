@@ -369,6 +369,10 @@ record LookHead(String animal, String gender, String age) {
   }
 
   private static boolean ages(String a, String b) {
+    if ("CHILD".equals(a)) {
+      // 아이에게는 아이로 확인된 모습만 쓴다. 나이를 모르는 어른 무림 고수 모습이 어린 소협에 붙어 어른으로 그려졌다(회차 10 mystery-08)
+      return "CHILD".equals(b);
+    }
     if (a == null || b == null || a.equals(b)) {
       return true;
     }
