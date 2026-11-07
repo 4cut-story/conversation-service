@@ -13,6 +13,7 @@ import java.util.Set;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
+import net.java21.fourcut.conversation.support.PublicId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -176,6 +177,18 @@ public class CharacterLibrary {
   /** 모습 문구의 아이·어른이 DB 나이대와 어긋나는 모습은 쓰지 않는다(그림책 모습을 다시 그리기 전까지). */
   private static boolean agesWithDb(CharacterLook l) {
     return LookHead.agesWithDb(l.look(), l.character().ageGroup());
+  }
+
+  /**
+   * 모습의 참조 그림(PNG). 말풍선 자리를 확인할 때 그림을 읽는 모델에 인물 참조로 보여 준다. 모습이 없거나 그림이 아직 없으면 비어 있다.
+   *
+   * @param lookId 모습 공개 ID
+   */
+  public Optional<byte[]> referenceImage(String lookId) {
+    if (lookId == null || !PublicId.isValid(lookId)) {
+      return Optional.empty();
+    }
+    return looks.findByPublicId(lookId).flatMap(l -> storage.get(l.referenceImageKey()));
   }
 
   private boolean hasReference(CharacterLook l) {
