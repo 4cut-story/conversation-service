@@ -97,4 +97,4 @@ characters:
   max-distance: ${CHARACTERS_MAX_DISTANCE:0.30}
   embedding-url: ${CHARACTERS_EMBEDDING_URL:https://emb.java21.net}
   embedding-model: ${CHARACTERS_EMBEDDING_MODEL:bge-m3}
-  ip-adapter: ${CHARACTERS_IP_ADAPTER:plus-face-sdxl-vit-h}
+  ip-adapter: ${CHARACTERS_IP_ADAPTER:plus-sdxl-vit-h}
