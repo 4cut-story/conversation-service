@@ -183,4 +183,42 @@ class DrawPromptTest {
                 net.java21.fourcut.conversation.scenario.Concept.ANIMALS))
         .isEqualTo("two foxes, animal characters, no humans");
   }
+
+  @Test
+  @DisplayName("FR-006: 아이가 나오는 만화의 나이 없는 어른은 tall adult로 그리고, 인원도 그대로 센다")
+  void adultsWithChild() {
+    var family =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "딸", "", "little girl, pigtails"),
+                new ComicScript.Character("B", "엄마", "", "Woman, bun hair, yellow blouse"),
+                new ComicScript.Character("C", "할머니", "", "old woman, gray hair"),
+                new ComicScript.Character("D", "아빠", "", "man")),
+            List.of(),
+            true,
+            List.of());
+    var grown = DrawHandler.adults(family);
+    assertThat(grown.characters())
+        .extracting(ComicScript.Character::look)
+        .containsExactly(
+            "little girl, pigtails",
+            "tall adult woman, bun hair, yellow blouse",
+            "old woman, gray hair",
+            "tall adult man");
+    var panel = new ComicScript.Panel("기", "wide", "{B} hugs {A}, kitchen", List.of());
+    assertThat(DrawHandler.prompt("s", grown, panel))
+        .contains("a little girl and a tall adult woman")
+        .contains("the tall adult woman hugs the little girl");
+    // 아이가 없으면 그대로다
+    assertThat(DrawHandler.adults(script)).isSameAs(script);
+    var couple =
+        new ComicScript(
+            "t",
+            List.of(new ComicScript.Character("A", "엄마", "", "woman, bob hair")),
+            List.of(),
+            true,
+            List.of());
+    assertThat(DrawHandler.adults(couple)).isSameAs(couple);
+  }
 }

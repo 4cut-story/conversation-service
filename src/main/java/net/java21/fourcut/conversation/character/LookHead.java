@@ -145,6 +145,20 @@ record LookHead(String animal, String gender, String age) {
   }
 
   /**
+   * 모습 문구의 아이·어른이 캐릭터 DB 나이대와 맞는지. 그림책 모습은 DB 나이와 상관없이 모두 "little girl/boy"로 만들어져, 어른 캐릭터의 아이 모습이
+   * 엄마·아빠 자리에 붙어 엄마·아빠가 아이로 그려졌고(시험 8회 지우개 만화), 아이 자리(딸)에는 어른 캐릭터가 붙었다. 한쪽이라도 모르면 맞는 것으로 본다.
+   *
+   * @param dbAge CHILD, YOUNG, MIDDLE, OLD (없으면 null)
+   */
+  static boolean agesWithDb(String look, String dbAge) {
+    String age = of(look).age();
+    if (age == null || dbAge == null) {
+      return true;
+    }
+    return "CHILD".equals(age) == "CHILD".equals(dbAge);
+  }
+
+  /**
    * 캐릭터 DB의 성별·나이대로 비어 있는 값을 채운다. DB 모습 문구가 "blonde hair, blue overalls"처럼 성별·나이 없이 시작하면 무엇과도 맞아서
    * 할아버지 자리에 금발 소녀가 붙었다.
    *
