@@ -29,6 +29,29 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 두 명이 나오는 컷은 자리마다 그 인물의 외모·표정만 담은 프롬프트를 함께 보낸다. 한 명이면 보내지 않는다")
+  void regions() {
+    var duo =
+        new ComicScript.Panel(
+            "전",
+            "medium",
+            "{B} hands {A} a phone, cafe",
+            List.of(),
+            "cafe",
+            List.of(new ComicScript.Face("A", "wide-eyed")));
+    var stage = Staging.panel(script, duo);
+    var regions = DrawHandler.regions("s", script, duo, stage);
+    assertThat(regions).hasSize(2);
+    assertThat(regions.get(0).path("region").asString())
+        .isEqualTo(stage.get("A").name().toLowerCase(java.util.Locale.ROOT));
+    assertThat(regions.get(0).path("prompt").asString())
+        .isEqualTo("s, solo, girl, bob hair, wide-eyed");
+    assertThat(regions.get(1).path("prompt").asString()).isEqualTo("s, solo, boy, glasses");
+    var solo = new ComicScript.Panel("결", "close-up", "{A} eats, cafe", List.of());
+    assertThat(DrawHandler.regions("s", script, solo, Staging.panel(script, solo))).isEmpty();
+  }
+
+  @Test
   @DisplayName("자리 표시가 없는 예전 콘티는 끝에 인물 외모를 붙인다")
   void legacy() {
     var panel = new ComicScript.Panel("기", null, "two friends at a table", List.of());
