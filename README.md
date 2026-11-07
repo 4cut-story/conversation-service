@@ -28,4 +28,7 @@ GET    /internal/characters/{id}                 캐릭터와 모든 모습
 POST   /internal/characters/looks/{lookId}/reference   참조 그림 교체용 업로드 주소 (embedding은 다시 계산)
 DELETE /internal/characters/{id}                 끄기 (지우지 않는다)
 POST   /internal/characters/reindex              설명 임베딩이 없는 기본 표정 모습을 임베딩
+PUT    /internal/gpu-jobs/character-looks/{lookId}  {before?, look} → {character, look, referenceUploadUrl}
+                                                 GPU PC 워커용(게이트웨이가 워커 토큰 확인). 다시 그린 참조 그림과 함께 모습 문구를 바꾼다.
+                                                 before가 지금 문구와 다르면 409, 이미 새 문구면 주소만 다시 준다
 ```

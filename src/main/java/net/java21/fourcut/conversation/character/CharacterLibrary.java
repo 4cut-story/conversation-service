@@ -304,6 +304,27 @@ public class CharacterLibrary {
     return l;
   }
 
+  /**
+   * GPU PC가 새로 그린 참조 그림과 함께 모습 문구를 바꾼다. 클러스터 밖의 GPU PC는 내부 캐릭터 API를 부를 수 없어 워커 경로로 받는다. before가 지금
+   * 문구와 다르면 다른 사람이 먼저 바꾼 것이라 거절한다. 이미 새 문구면 업로드 주소만 다시 준다(다시 시도해도 안전하다).
+   */
+  @Transactional
+  Registered relook(String lookId, String before, String look) {
+    CharacterLook l = looks.findByPublicId(lookId).orElseThrow(ApiException::notFound);
+    String next = look.strip();
+    if (!next.equals(l.look())) {
+      if (before != null && !before.strip().equals(l.look())) {
+        throw new ApiException(ErrorCode.CONFLICT, "모습 문구가 이미 바뀌었어요.");
+      }
+      l.describe(next, l.description());
+      l.referenceChanged();
+      if (CharacterLook.NEUTRAL.equals(l.expression())) {
+        embedDescription(l);
+      }
+    }
+    return new Registered(view(l.character(), 0, null), lookView(l), uploadUrl(l));
+  }
+
   /** 참조 그림을 새로 올릴 주소. 예전 embedding은 버린다. */
   @Transactional
   Registered replaceReference(String lookId) {

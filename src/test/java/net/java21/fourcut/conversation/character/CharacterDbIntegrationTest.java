@@ -83,7 +83,7 @@ class CharacterDbIntegrationTest {
                     .content(
                         "{\"name\":\"윤슬\",\"job\":\"의사\",\"gender\":\"FEMALE\","
                             + "\"ageGroup\":\"YOUNG\",\"look\":\"young woman, short red bob hair,"
-                            + " round glasses, white doctor coat\",\"scale\":0.6}"))
+                            + " round glasses, white blouse\",\"scale\":0.6}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.look.concept").value("DAILY"))
             .andExpect(jsonPath("$.look.expression").value("NEUTRAL"))
@@ -166,6 +166,30 @@ class CharacterDbIntegrationTest {
             post("/internal/characters")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"윤슬\",\"look\":\"x\"}"))
+        .andExpect(status().isConflict());
+
+    // GPU PC는 워커 경로로 모습 문구를 바꾸고 새 참조 그림 주소를 받는다. 지금 문구가 다르면 거절하고, 같은 요청을 다시 보내도 된다
+    String relook =
+        "{\"before\":\"woman in hanbok, red braided hair, pink chima\","
+            + "\"look\":\"young woman in hanbok, red braided hair, pink chima\"}";
+    mvc.perform(
+            put("/internal/gpu-jobs/character-looks/" + joseonLook)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(relook))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.look.look").value("young woman in hanbok, red braided hair, pink chima"))
+        .andExpect(jsonPath("$.look.embedReady").value(false))
+        .andExpect(jsonPath("$.referenceUploadUrl").isNotEmpty());
+    mvc.perform(
+            put("/internal/gpu-jobs/character-looks/" + joseonLook)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(relook))
+        .andExpect(status().isOk());
+    mvc.perform(
+            put("/internal/gpu-jobs/character-looks/" + joseonLook)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"before\":\"other\",\"look\":\"old woman in hanbok\"}"))
         .andExpect(status().isConflict());
 
     mvc.perform(delete("/internal/characters/" + id)).andExpect(status().isNoContent());
