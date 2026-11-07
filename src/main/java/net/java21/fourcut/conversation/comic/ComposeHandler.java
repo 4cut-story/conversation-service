@@ -5,12 +5,15 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.character.CharacterLibrary;
+import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -22,6 +25,9 @@ import net.java21.fourcut.conversation.scenario.ScenarioStore;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /** COMPOSE: 컷(4~10장)에 말풍선을 그려 세로 만화 한 장과 썸네일을 만들고, content-service 만화함에 등록한다. 서버에서 실행한다. */
 @Component
@@ -35,6 +41,7 @@ class ComposeHandler implements StepHandler {
   private final ContentClient content;
   private final PanelPlacement placement;
   private final CharacterLibrary characters;
+  private final JsonMapper json;
 
   ComposeHandler(
       ScenarioStore scenarios,
@@ -42,7 +49,9 @@ class ComposeHandler implements StepHandler {
       ComicComposer composer,
       ContentClient content,
       PanelPlacement placement,
-      CharacterLibrary characters) {
+      CharacterLibrary characters,
+      JsonMapper json) {
+    this.json = json;
     this.scenarios = scenarios;
     this.storage = storage;
     this.composer = composer;
@@ -74,10 +83,26 @@ class ComposeHandler implements StepHandler {
       panels.add(gray ? gray(panel) : panel);
     }
     // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리와 얼굴 위치를 확인해 맞춘다
-    PanelPlacement.Spots spots =
-        context.conversation().manualLlm()
-            ? placement.locate(script, panels, Staging.panels(script), Map.of(), false)
-            : placement.locate(script, panels, Staging.panels(script), references(script));
+    List<Map<String, Staging.Side>> planned = Staging.panels(script);
+    PanelPlacement.Spots spots;
+    if (context.conversation().manualLlm()) {
+      // 테스트 전용 수동 처리: 질문을 대기열 작업으로 두고, 답이 오면(onResult) 다시 여기로 와서 그 답으로 맞춘다
+      Optional<byte[]> answered = storage.get(placementAnswer(id));
+      if (answered.isPresent()) {
+        List<Integer> asked = PanelPlacement.asked(script, planned, panels.size());
+        spots =
+            placement.answered(planned, asked, new String(answered.get(), StandardCharsets.UTF_8));
+      } else {
+        Optional<PanelPlacement.Question> question =
+            placement.question(script, panels, planned, references(script));
+        if (question.isPresent()) {
+          return ask(id, question.get());
+        }
+        spots = PanelPlacement.fallback(planned);
+      }
+    } else {
+      spots = placement.locate(script, panels, planned, references(script));
+    }
     ComicComposer.Result result = composer.compose(script, panels, spots.stages(), spots.heads());
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);
@@ -99,6 +124,37 @@ class ComposeHandler implements StepHandler {
                 Concept.of(script.concept()).name(),
                 Dialect.of(context.conversation().dialect()).name()));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /** 수동 처리 대화의 말풍선 자리 답을 둔 곳. */
+  static String placementAnswer(String id) {
+    return WorkKeys.work(id, "placement-answer.json");
+  }
+
+  /** 말풍선 자리 질문을 수동 LLM 작업으로 둔다. 그림은 저장소에 두고 키만 싣는다 (꺼낼 때 주소로 바꿔 준다). */
+  private StepOutcome ask(String id, PanelPlacement.Question q) {
+    ObjectNode payload = json.createObjectNode();
+    payload.put("system", q.system().strip());
+    payload.put("prompt", q.prompt());
+    payload.set("jsonSchema", json.readTree(q.schema()));
+    var keys = payload.putArray("imageKeys");
+    for (int i = 0; i < q.images().size(); i++) {
+      String key = WorkKeys.work(id, "placement/" + i + ".png");
+      storage.put(key, q.images().get(i), PNG);
+      keys.add(key);
+    }
+    return new StepOutcome.Enqueue(JobType.LLM, payload, null);
+  }
+
+  /** 수동 처리 대화의 말풍선 자리 답: 저장해 두고 다시 합성한다. */
+  @Override
+  public StepOutcome onResult(StepContext context, JsonNode result) {
+    String id = context.conversation().publicId();
+    storage.put(
+        placementAnswer(id),
+        result.path("content").asString("").getBytes(StandardCharsets.UTF_8),
+        "application/json");
+    return new StepOutcome.RunLocal();
   }
 
   /** 화자별 참조 그림(그림을 그릴 때 IP-Adapter에 쓴 것). 캐릭터를 못 찾은 인물은 없다. */

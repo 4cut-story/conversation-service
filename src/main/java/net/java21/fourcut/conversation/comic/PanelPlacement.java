@@ -118,34 +118,65 @@ class PanelPlacement {
       List<Map<String, Staging.Side>> planned,
       Map<String, byte[]> refs,
       boolean ask) {
-    List<Map<String, Head>> none = new ArrayList<>();
-    planned.forEach(p -> none.add(Map.of()));
-    Spots fallback = new Spots(planned, none);
-    List<Integer> asked = asked(script, planned, panels.size());
-    if (!ask || asked.isEmpty() || !llm.available()) {
+    Spots fallback = fallback(planned);
+    Optional<Question> question = question(script, panels, planned, refs);
+    if (!ask || question.isEmpty() || !llm.available()) {
       return fallback;
     }
-    Map<String, byte[]> shown = shown(refs, planned, asked);
-    List<byte[]> images = new ArrayList<>(shown.values());
-    asked.forEach(i -> images.add(png(panels.get(i), SIZE)));
+    Question q = question.get();
     Optional<String> answer;
     try {
-      answer =
-          llm.see(
-              DirectLlm.PLACEMENT,
-              SYSTEM,
-              refPrompt(script, shown) + prompt(script, planned, asked),
-              SCHEMA,
-              images);
+      answer = llm.see(DirectLlm.PLACEMENT, q.system(), q.prompt(), q.schema(), q.images());
     } catch (RuntimeException e) {
       log.warn("말풍선 자리 확인 실패: {}", e.toString());
       return fallback;
     }
-    if (answer.isEmpty()) {
-      return fallback;
+    return answer.map(a -> answered(planned, q.asked(), a)).orElse(fallback);
+  }
+
+  /** 그림을 묻지 않은 자리: 콘티의 좌우 그대로, 얼굴 위치는 모른다. */
+  static Spots fallback(List<Map<String, Staging.Side>> planned) {
+    List<Map<String, Head>> none = new ArrayList<>();
+    planned.forEach(p -> none.add(Map.of()));
+    return new Spots(planned, none);
+  }
+
+  /**
+   * 그림에 물을 질문. 확인할 컷이 없으면 빈 값.
+   *
+   * @param images 참조 그림들, 그다음 확인할 컷들 (PNG). 질문 글 앞에 이 순서로 붙인다
+   * @param asked 확인할 컷 (0부터)
+   */
+  record Question(
+      String system, String prompt, String schema, List<byte[]> images, List<Integer> asked) {}
+
+  /** 그림에 물을 질문 (테스트 전용 수동 처리 대화는 이것을 대기열 작업으로 둔다). */
+  Optional<Question> question(
+      ComicScript script,
+      List<BufferedImage> panels,
+      List<Map<String, Staging.Side>> planned,
+      Map<String, byte[]> refs) {
+    List<Integer> asked = asked(script, planned, panels.size());
+    if (asked.isEmpty()) {
+      return Optional.empty();
     }
-    Map<Integer, Map<String, String>> seen = read(answer.get(), asked);
-    Map<Integer, Map<String, Head>> faces = heads(answer.get(), asked);
+    Map<String, byte[]> shown = shown(refs, planned, asked);
+    List<byte[]> images = new ArrayList<>(shown.values());
+    asked.forEach(i -> images.add(png(panels.get(i), SIZE)));
+    return Optional.of(
+        new Question(
+            SYSTEM,
+            refPrompt(script, shown) + prompt(script, planned, asked),
+            SCHEMA,
+            images,
+            asked));
+  }
+
+  /** 질문의 답으로 고친 자리와 얼굴. 답이 깨졌으면 그 컷은 정해 둔 자리 그대로다. */
+  Spots answered(List<Map<String, Staging.Side>> planned, List<Integer> asked, String answer) {
+    List<Map<String, Head>> none = fallback(planned).heads();
+    Map<Integer, Map<String, String>> seen = read(answer, asked);
+    Map<Integer, Map<String, Head>> faces = heads(answer, asked);
     List<Map<String, Staging.Side>> out = new ArrayList<>(planned);
     List<Map<String, Head>> heads = new ArrayList<>(none);
     for (Map.Entry<Integer, Map<String, String>> e : seen.entrySet()) {

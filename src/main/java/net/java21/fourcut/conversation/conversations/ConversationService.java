@@ -41,6 +41,9 @@ public class ConversationService {
           "audio/x-m4a",
           "audio/aac");
 
+  /** 수동 LLM 작업의 그림 주소 유효 시간. */
+  private static final Duration IMAGE_URL_TTL = Duration.ofHours(1);
+
   private final ConversationRepository conversations;
   private final ManualLlmJobs manualLlm;
   private final PipelineService pipeline;
@@ -132,8 +135,21 @@ public class ConversationService {
       return List.of();
     }
     return manualLlm.waiting(c.getId()).stream()
-        .map(j -> new ConversationApi.LlmJob(j.jobId(), j.step(), json.readTree(j.payload())))
+        .map(j -> new ConversationApi.LlmJob(j.jobId(), j.step(), withImageUrls(j.payload())))
         .toList();
+  }
+
+  /** 그림이 든 작업(말풍선 자리 확인)은 저장소 키를 잠깐 쓸 수 있는 주소(imageUrls)로 바꿔 준다. 순서는 질문 글 앞에 붙는 순서다. */
+  private JsonNode withImageUrls(String payload) {
+    tools.jackson.databind.node.ObjectNode node =
+        (tools.jackson.databind.node.ObjectNode) json.readTree(payload);
+    if (node.path("imageKeys").isArray()) {
+      var urls = node.putArray("imageUrls");
+      node.path("imageKeys")
+          .forEach(k -> urls.add(storage.presignGet(k.asString(), IMAGE_URL_TTL)));
+      node.remove("imageKeys");
+    }
+    return node;
   }
 
   /** 테스트 전용: 수동 LLM 작업에 답을 넣는다. 기다리는 작업이 아니면 404. */

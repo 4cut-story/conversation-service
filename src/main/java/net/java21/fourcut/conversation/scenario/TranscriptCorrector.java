@@ -121,6 +121,12 @@ class TranscriptCorrector {
       }
       results.get(b).ifPresent(fixes::putAll);
     }
+    return apply(transcript, fixes);
+  }
+
+  /** 고친 줄(번호 → 내용, 지울 줄은 빈 문자열)을 전사에 반영한다. 고친 것이 없거나 모두 지워지면 받은 전사 그대로다. */
+  static Transcript apply(Transcript transcript, Map<Integer, String> fixes) {
+    List<Transcript.Utterance> utterances = transcript.utterances();
     if (fixes.isEmpty()) {
       log.info("전사 교정: 발화 {}개, 고친 줄 없음", utterances.size());
       return transcript;
