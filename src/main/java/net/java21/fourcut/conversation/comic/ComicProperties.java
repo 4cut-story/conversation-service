@@ -32,8 +32,14 @@ public record ComicProperties(
   public static final String DEFAULT_STYLE =
       "simple cartoon, thick outlines, flat colors, simple background";
 
+  /**
+   * 모든 컷에 거는 negative. guidance 2(CFG)부터 negative가 실제로 먹는다. 회차 23에서 한 편 안에 반실사 컷(solo-01 1컷,
+   * twist-08 1·4컷, family-09 3·4컷)과 혼자 흑백인 컷(mystery-08 3컷)이 섞여, 반실사·피부 질감·흑백 말을 더해 그림체를 컷마다 같게
+   * 묶는다. 흑백 신문 만화는 합성 단계에서 흑백으로 바꾸므로 그리는 단계에서는 컬러가 맞다.
+   */
   public static final String DEFAULT_NEGATIVE =
       "text, letters, watermark, signature, logo, speech bubble, comic panels, multiple panels,"
           + " grid, collage, split screen, picture frame, border, photo, realistic, 3d, cluttered background,"
+          + " photorealistic, semi-realistic, detailed skin texture, monochrome, grayscale,"
           + " nsfw, extra fingers, deformed, clones, duplicate person";
 }
