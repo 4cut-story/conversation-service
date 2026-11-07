@@ -115,6 +115,7 @@ public class CharacterLibrary {
       if (l != null
           && !used.contains(l.character().publicId())
           && LookHead.of(w.look()).acceptsKnown(head(l))
+          && LookHead.fitsOutfit(w.look(), l.look())
           && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
@@ -154,6 +155,7 @@ public class CharacterLibrary {
         Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
         if (l.isPresent()
             && (strict ? wanted.acceptsKnown(head(l.get())) : wanted.accepts(head(l.get())))
+            && LookHead.fitsOutfit(look, l.get().look())
             && !used.contains(l.get().character().publicId())
             && hasReference(l.get())) {
           used.add(l.get().character().publicId());

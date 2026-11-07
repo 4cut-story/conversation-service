@@ -344,6 +344,11 @@ public record ComicScript(
   /** 대화에 나온 이름과 겹칠 때 대신 쓰는 가명. */
   static final List<String> SPARE_NAMES = CastNames.POOL;
 
+  /** 코드가 고른 가명인지. 가명은 무작위라 같은 이름의 캐릭터 DB 인물(유진, 도담 등)과 이어 붙이면 안 된다. */
+  public static boolean pseudonym(String name) {
+    return name != null && CastNames.POOL.contains(name.strip());
+  }
+
   /** 코드로 정한 가명을 인물에 넣는다(LLM이 다른 이름을 냈어도 덮어쓴다). 대사·제목 속 LLM 가명도 함께 바꾼다. */
   public ComicScript withNames(Map<String, String> assigned) {
     if (assigned.isEmpty() || characters == null) {

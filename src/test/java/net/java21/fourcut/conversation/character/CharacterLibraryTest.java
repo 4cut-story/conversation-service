@@ -35,8 +35,7 @@ class CharacterLibraryTest {
       new StoryCharacter("하늘", "woman", "의사", "FEMALE", "YOUNG", 0.6);
   private final StoryCharacter haesol = new StoryCharacter("해솔", "man", null, "MALE", "OLD", 0.7);
   private final CharacterLook haneulDaily =
-      new CharacterLook(
-          haneul, "DAILY", NEUTRAL, "young woman, red bob, white doctor coat", "doctor");
+      new CharacterLook(haneul, "DAILY", NEUTRAL, "young woman, red bob, white blouse", "doctor");
   private final CharacterLook haneulJoseon =
       new CharacterLook(
           haneul, "JOSEON", NEUTRAL, "woman in hanbok, black head cloth", "physician");
@@ -290,5 +289,27 @@ class CharacterLibraryTest {
   void literal() {
     assertThat(CharacterVectors.literal(new float[] {0.5f, -1f}))
         .isEqualTo("[0.5000000,-1.000000]");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 콘티가 말하지 않은 직업 옷 모습은 가까워도 붙이지 않는다")
+  void skipsCostume() {
+    CharacterLook cop =
+        new CharacterLook(
+            haneul, "DAILY", NEUTRAL, "young woman, police cap, police uniform", "police");
+    when(looks.findByPublicId(cop.publicId())).thenReturn(Optional.of(cop));
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
+    when(vectors.nearest(any(), any()))
+        .thenReturn(List.of(new CharacterVectors.Nearest(cop.publicId(), 0.1, cop.look())));
+    assertThat(
+            library.match(
+                List.of(new CharacterLibrary.Wanted("A", null, "young woman, beige knit sweater")),
+                "DAILY"))
+        .isEmpty();
+    assertThat(
+            library.match(
+                List.of(new CharacterLibrary.Wanted("A", null, "young woman, police uniform")),
+                "DAILY"))
+        .containsKey("A");
   }
 }

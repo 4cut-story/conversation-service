@@ -144,4 +144,25 @@ class LookHeadTest {
         .isEqualTo("middle-aged man, navy suit");
     assertThat(LookHead.withAge("man, navy suit", "MALE", null)).isEqualTo("man, navy suit");
   }
+
+  @Test
+  @DisplayName("REQ-018: 콘티가 말하지 않은 직업 옷(경찰복, 의사 가운, 우주복) 모습은 어울리지 않는다")
+  void fitsOutfit() {
+    assertThat(
+            LookHead.fitsOutfit(
+                "middle-aged man, gray sweater", "middle-aged man, white doctor coat"))
+        .isFalse();
+    assertThat(LookHead.fitsOutfit("young man, space suit", "young man, space helmet, space suit"))
+        .isTrue();
+    assertThat(
+            LookHead.fitsOutfit(
+                "young woman, police uniform", "young woman, police cap, police uniform"))
+        .isTrue();
+    assertThat(LookHead.fitsOutfit("old woman, green apron", "old woman, gray bun, florist apron"))
+        .isTrue();
+    assertThat(LookHead.fitsOutfit("girl, red dress", "little girl, pigtails, pink hoodie"))
+        .isTrue();
+    assertThat(LookHead.fitsOutfit("boy, yellow hoodie", "bear, fire helmet")).isFalse();
+    assertThat(LookHead.fitsOutfit("boy", null)).isTrue();
+  }
 }

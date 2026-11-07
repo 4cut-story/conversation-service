@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.character;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -247,6 +248,57 @@ record LookHead(String animal, String gender, String age) {
       case "OLD" -> f ? "old woman" : "old man";
       default -> f ? "woman" : "man";
     };
+  }
+
+  /** 직업 옷·소품. 콘티가 말하지 않았는데 붙으면 장면과 어긋난다. */
+  private static final List<String> COSTUMES =
+      List.of(
+          "doctor coat",
+          "firefighter coat",
+          "fire helmet",
+          "trench coat",
+          "fedora",
+          "police uniform",
+          "police cap",
+          "postal uniform",
+          "waitress uniform",
+          "chef jacket",
+          "chef hat",
+          "work coverall",
+          "space suit",
+          "space helmet",
+          "florist apron",
+          "painter apron",
+          "barista apron",
+          "shop apron",
+          "sports jersey",
+          "armor",
+          "monk robe",
+          "doublet",
+          "medieval gown",
+          "hooded cloak");
+
+  /**
+   * 캐릭터 모습이 콘티 인물에 어울리는지. 캐릭터 DB 일상 모습의 절반(1,013명 중 480명)이 경찰복·의사 가운·우주복 같은 직업 옷이다. 콘티가 그 옷을 말하지
+   * 않았으면 그 모습은 쓰지 않는다. 집에서 저녁 먹는 아빠가 우주복을, 할머니 집 손녀가 우체부 옷을 입고 나왔다. 콘티가 같은 낱말(uniform, apron, coat
+   * 등)을 쓰면 받는다.
+   */
+  static boolean fitsOutfit(String wantedLook, String characterLook) {
+    if (characterLook == null) {
+      return true;
+    }
+    String c = characterLook.toLowerCase(Locale.ROOT);
+    String w = wantedLook == null ? "" : wantedLook.toLowerCase(Locale.ROOT);
+    Set<String> wanted =
+        Arrays.stream(w.split("[^\\p{L}\\p{N}-]+"))
+            .filter(x -> !x.isEmpty())
+            .collect(Collectors.toSet());
+    for (String costume : COSTUMES) {
+      if (c.contains(costume) && Arrays.stream(costume.split(" ")).noneMatch(wanted::contains)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */
