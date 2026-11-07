@@ -331,22 +331,51 @@ class DrawHandler implements StepHandler {
   }
 
   /**
-   * 배경의 첫 물건(장소 바로 뒤 조각)을 구도 바로 뒤에 둔다. 콘티는 핵심 물건을 장면과 배경에 두 번 썼지만 인물 줄 뒤라 힘이 약해 키오스크, 망원경, 바둑판이 그림에
-   * 나오지 않았다(회차 10, D2 17컷). 빛·날씨 조각은 {@link #light}가 이미 앞에 둔다.
+   * 배경 조각 가운데 장면 문장과 가장 많이 겹치는 물건을 구도 바로 뒤에 둔다. 겹치는 조각이 없으면 장소 바로 뒤 첫 물건을 둔다. 콘티는 핵심 물건을 장면과 배경에 두
+   * 번 썼지만 인물 줄 뒤라 힘이 약해 키오스크, 망원경, 바둑판이 그림에 나오지 않았다(회차 10, D2 17컷). 처음에는 배경의 첫 물건을 골랐는데, 망원경 컷의 배경이
+   * "mountain cabin, wooden deck, huge brass telescope on tripod"처럼 쓰여 데크가 앞에 오고 망원경은 회차 19까지 한 번도
+   * 그려지지 않았다. 빛·날씨 조각은 {@link #light}가 이미 앞에 둔다.
    */
   static String keyObject(ComicScript.Panel panel) {
     String s = panel.setting();
     if (s == null || s.isBlank()) {
       return "";
     }
+    Set<String> said = words(panel.scene());
     String[] parts = s.split(",");
+    String best = null;
+    int most = 0;
     for (int i = 1; i < parts.length; i++) {
       String part = parts[i].strip();
-      if (!part.isEmpty() && !LIGHT.matcher(part).find()) {
-        return part + ", ";
+      if (part.isEmpty() || LIGHT.matcher(part).find()) {
+        continue;
+      }
+      int shared = 0;
+      for (String w : words(part)) {
+        if (said.contains(w)) {
+          shared++;
+        }
+      }
+      if (best == null || shared > most) {
+        best = part;
+        most = shared;
       }
     }
-    return "";
+    return best == null ? "" : best + ", ";
+  }
+
+  /** 문장의 낱말(소문자, 세 글자 이상). 장면과 배경 조각이 같은 물건을 말하는지 견줄 때 쓴다. */
+  private static Set<String> words(String text) {
+    Set<String> out = new HashSet<>();
+    if (text == null) {
+      return out;
+    }
+    for (String w : text.toLowerCase(java.util.Locale.ROOT).split("[^a-z]+")) {
+      if (w.length() >= 3) {
+        out.add(w);
+      }
+    }
+    return out;
   }
 
   /** 밤·새벽 컷은 밝은 낮 하늘을 빼게 한다. */

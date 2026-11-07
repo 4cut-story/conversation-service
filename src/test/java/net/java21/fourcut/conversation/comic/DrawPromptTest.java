@@ -379,4 +379,27 @@ class DrawPromptTest {
     var bare = new ComicScript.Panel("기", "wide", "{A} waves", List.of(), "park", List.of());
     assertThat(DrawHandler.keyObject(bare)).isEmpty();
   }
+
+  @Test
+  @DisplayName("FR-006: 배경 조각 가운데 장면 문장과 겹치는 물건을 핵심 물건으로 고른다")
+  void keyObjectMatchesScene() {
+    var telescope =
+        new ComicScript.Panel(
+            "전",
+            "medium",
+            "{C} steps out beside a huge brass telescope, mountain cabin",
+            List.of(),
+            "mountain cabin, wooden deck, huge brass telescope on tripod, pine trees",
+            List.of());
+    assertThat(DrawHandler.keyObject(telescope)).isEqualTo("huge brass telescope on tripod, ");
+    var go =
+        new ComicScript.Panel(
+            "승",
+            "medium",
+            "{A} places a black stone on the go board, sweating",
+            List.of(),
+            "hanok room, low wooden table, go board with black and white stones",
+            List.of());
+    assertThat(DrawHandler.keyObject(go)).isEqualTo("go board with black and white stones, ");
+  }
 }
