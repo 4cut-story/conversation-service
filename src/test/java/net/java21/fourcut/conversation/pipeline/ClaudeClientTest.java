@@ -19,6 +19,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 class ClaudeClientTest {
 
@@ -172,6 +173,19 @@ class ClaudeClientTest {
         .hasMessageContaining("max_tokens");
     assertThatThrownBy(() -> client.result(json.readTree("{\"content\":[]}")))
         .hasMessageContaining("비었다");
+  }
+
+  @Test
+  @DisplayName("비용 확인용으로 입력 토큰(캐시 포함)과 출력 토큰을 함께 남긴다")
+  void usage() {
+    ObjectNode out =
+        client.result(
+            json.readTree(
+                "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"ok\"}],"
+                    + "\"usage\":{\"input_tokens\":100,\"cache_read_input_tokens\":20,"
+                    + "\"cache_creation_input_tokens\":5,\"output_tokens\":40}}"));
+    assertThat(out.path("inputCount").asInt()).isEqualTo(125);
+    assertThat(out.path("evalCount").asInt()).isEqualTo(40);
   }
 
   @Test
