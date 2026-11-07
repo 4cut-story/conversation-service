@@ -83,7 +83,8 @@ class DrawHandler implements StepHandler {
       image.put(
           "prompt",
           prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
-      image.put("negativePrompt", negative(script, properties));
+      image.put(
+          "negativePrompt", negative(script, properties) + dayNegative(script.panels().get(i)));
       ArrayNode refs =
           references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast));
@@ -180,7 +181,18 @@ class DrawHandler implements StepHandler {
                 + SIDE_BY_SIDE
                 + ", "
             : "";
-    return style + ", " + QUALITY + ", " + SINGLE + ", " + shot + count + lineup + scene + detail
+    return style
+        + light(panel)
+        + ", "
+        + QUALITY
+        + ", "
+        + SINGLE
+        + ", "
+        + shot
+        + count
+        + lineup
+        + scene
+        + detail
         + cast;
   }
 
@@ -205,6 +217,45 @@ class DrawHandler implements StepHandler {
       out.append(f.face().strip());
     }
     return out.toString();
+  }
+
+  /** 밤·새벽·저녁·비·눈처럼 빛과 날씨를 바꾸는 낱말. */
+  static final Pattern LIGHT =
+      Pattern.compile(
+          "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dusk|twilight|sunset|evening|dark|starry|stars?|moon(lit|light)?|"
+              + "lanterns?|candles?|candlelight|rain(y|ing)?|snow(y|ing)?|storm|fog(gy)?)\\b");
+
+  /** 어둡게 그려야 하는 때. */
+  static final Pattern DARK =
+      Pattern.compile(
+          "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dark|starry|stars?|moonlit)\\b");
+
+  /**
+   * 배경에서 빛·날씨를 말하는 조각을 그림체 바로 뒤에 둔다. 배경은 프롬프트 끝에 붙어 힘이 약해, 새벽 3시 별 보는 장면이 낮처럼 밝게 그려지고 별이 빠졌다(시험 8회
+   * 템플스테이 만화). 밤·새벽이면 "dark night lighting"도 붙인다.
+   */
+  static String light(ComicScript.Panel panel) {
+    String s = panel.setting();
+    if (s == null || s.isBlank()) {
+      return "";
+    }
+    List<String> parts = new ArrayList<>();
+    for (String part : s.split(",")) {
+      if (LIGHT.matcher(part).find()) {
+        parts.add(part.strip());
+      }
+    }
+    if (parts.isEmpty()) {
+      return "";
+    }
+    String dark = DARK.matcher(s).find() ? ", dark night lighting" : "";
+    return ", " + String.join(", ", parts) + dark;
+  }
+
+  /** 밤·새벽 컷은 밝은 낮 하늘을 빼게 한다. */
+  static String dayNegative(ComicScript.Panel panel) {
+    String s = panel.setting();
+    return s != null && DARK.matcher(s).find() ? ", daylight, bright sky, sunny" : "";
   }
 
   /** 콘티의 배경(장소와 배경 물건). */
