@@ -189,6 +189,7 @@ class DrawHandler implements StepHandler {
         + SINGLE
         + ", "
         + shot
+        + keyObject(panel)
         + count
         + lineup
         + scene
@@ -250,6 +251,25 @@ class DrawHandler implements StepHandler {
     }
     String dark = DARK.matcher(s).find() ? ", dark night lighting" : "";
     return ", " + String.join(", ", parts) + dark;
+  }
+
+  /**
+   * 배경의 첫 물건(장소 바로 뒤 조각)을 구도 바로 뒤에 둔다. 콘티는 핵심 물건을 장면과 배경에 두 번 썼지만 인물 줄 뒤라 힘이 약해 키오스크, 망원경, 바둑판이 그림에
+   * 나오지 않았다(회차 10, D2 17컷). 빛·날씨 조각은 {@link #light}가 이미 앞에 둔다.
+   */
+  static String keyObject(ComicScript.Panel panel) {
+    String s = panel.setting();
+    if (s == null || s.isBlank()) {
+      return "";
+    }
+    String[] parts = s.split(",");
+    for (int i = 1; i < parts.length; i++) {
+      String part = parts[i].strip();
+      if (!part.isEmpty() && !LIGHT.matcher(part).find()) {
+        return part + ", ";
+      }
+    }
+    return "";
   }
 
   /** 밤·새벽 컷은 밝은 낮 하늘을 빼게 한다. */

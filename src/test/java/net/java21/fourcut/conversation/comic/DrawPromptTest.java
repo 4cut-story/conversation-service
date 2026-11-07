@@ -66,7 +66,7 @@ class DrawPromptTest {
                 new ComicScript.Face("C", "not in scene")));
     assertThat(DrawHandler.prompt("s", script, duo))
         .isEqualTo(
-            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
+            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, medium shot, ordering kiosk, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right,"
                 + " the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up,"
                 + " the boy laughing, burger shop, ordering kiosk, trays of burgers");
     var solo =
@@ -308,5 +308,27 @@ class DrawPromptTest {
         new ComicScript.Panel(
             "기", "wide", "{A} waves", List.of(), "beach, sunset glow, seagulls", List.of());
     assertThat(DrawHandler.light(dusk)).isEqualTo(", sunset glow");
+  }
+
+  @Test
+  @DisplayName("FR-006: 배경의 첫 물건(핵심 물건)은 구도 바로 뒤에 둔다")
+  void keyObjectFirst() {
+    var kiosk =
+        new ComicScript.Panel(
+            "승",
+            "close-up",
+            "{A} taps the kiosk screen, burger shop",
+            List.of(),
+            "burger shop, ordering kiosk with menu screen, trays of burgers",
+            List.of());
+    assertThat(DrawHandler.keyObject(kiosk)).isEqualTo("ordering kiosk with menu screen, ");
+    assertThat(DrawHandler.prompt("ink", script, kiosk))
+        .contains("close up shot, ordering kiosk with menu screen, ");
+    var night =
+        new ComicScript.Panel(
+            "전", "wide", "{A} looks up", List.of(), "village hill, night, lit cabin", List.of());
+    assertThat(DrawHandler.keyObject(night)).isEqualTo("lit cabin, ");
+    var bare = new ComicScript.Panel("기", "wide", "{A} waves", List.of(), "park", List.of());
+    assertThat(DrawHandler.keyObject(bare)).isEmpty();
   }
 }

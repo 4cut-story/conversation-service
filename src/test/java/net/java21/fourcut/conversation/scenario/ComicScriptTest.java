@@ -207,6 +207,16 @@ class ComicScriptTest {
     assertThat(animals.characters())
         .extracting(ComicScript.Character::look)
         .containsExactly("fox, bob hair, yellow hoodie", "bear, glasses, blue shirt");
+    ComicScript bearAndRabbit =
+        s.withCharacters(
+                List.of(
+                    s.characters().get(0).withLook("bear, red cap"),
+                    s.characters().get(1).withLook("bear, green apron")))
+            .withAnimals(List.of("bear", "rabbit", "fox"));
+    // 콘티가 고른 동물은 그대로 두고, 겹친 둘째 인물만 안 쓴 동물로 바꾼다 (funny-12)
+    assertThat(bearAndRabbit.characters())
+        .extracting(ComicScript.Character::look)
+        .containsExactly("bear, red cap", "rabbit, green apron");
     assertThat(ScriptHandler.animals(3))
         .startsWith("panda", "cat")
         .hasSize(8)

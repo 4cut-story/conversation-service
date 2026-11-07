@@ -61,6 +61,19 @@ class ComicComposerTest {
   }
 
   @Test
+  @DisplayName("FR-007: 문장부호만 다음 줄로 넘어가지 않는다")
+  void wrapKeepsPunctuation() {
+    Graphics2D g = new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB).createGraphics();
+    g.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 20));
+    FontMetrics fm = g.getFontMetrics();
+    List<String> rows = ComicComposer.wrap("가나다라마?", fm, fm.stringWidth("가나다라마"));
+    assertThat(rows).containsExactly("가나다라마?");
+    rows = ComicComposer.wrap("가나다라마바사아자차…", fm, fm.stringWidth("가나다라마"));
+    assertThat(rows).containsExactly("가나다라마", "바사아자차…");
+    g.dispose();
+  }
+
+  @Test
   @DisplayName("FR-007: 대사 앞에 붙은 화자 표시는 지우고 가명을 한 번만 쓴다")
   void bubbleText() {
     assertThat(ComicComposer.bubbleText("민지", new ComicScript.Line("A", "A: A: 내 접시!")))
