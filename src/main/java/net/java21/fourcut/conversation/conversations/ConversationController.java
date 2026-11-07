@@ -22,15 +22,19 @@ import tools.jackson.databind.JsonNode;
 class ConversationController {
 
   private final ConversationService conversations;
+  private final DailyLimit dailyLimit;
 
-  ConversationController(ConversationService conversations) {
+  ConversationController(ConversationService conversations, DailyLimit dailyLimit) {
     this.conversations = conversations;
+    this.dailyLimit = dailyLimit;
   }
 
   @PostMapping
   ResponseEntity<ConversationApi.Created> create(
       @RequestHeader(HeaderNames.USER_ID) String userId,
+      @RequestHeader(value = HeaderNames.USER_ROLES, required = false) String roles,
       @Valid @RequestBody ConversationApi.CreateRequest body) {
+    dailyLimit.check(userId, roles);
     return ResponseEntity.status(HttpStatus.CREATED).body(conversations.create(userId, body));
   }
 
