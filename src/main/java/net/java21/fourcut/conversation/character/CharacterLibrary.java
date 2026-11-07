@@ -82,6 +82,11 @@ public class CharacterLibrary {
     return look.isEmpty() ? head : head + ", " + look;
   }
 
+  /** 인원 세기에 쓰는 사람 말("young man" 등). 동물이거나 성별을 모르면 null. */
+  public static String personWord(String look) {
+    return LookHead.personWord(look);
+  }
+
   /** 콘티 인물 하나. key는 화자 표시(A, B…), look은 그림용 영어 외모. */
   public record Wanted(String key, String name, String look) {}
 

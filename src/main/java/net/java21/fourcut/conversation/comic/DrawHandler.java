@@ -283,20 +283,29 @@ class DrawHandler implements StepHandler {
       return null;
     }
     List<String> heads = new ArrayList<>();
+    List<String> fullLooks = new ArrayList<>();
     for (Staging.Side side : List.of(Staging.Side.LEFT, Staging.Side.CENTER, Staging.Side.RIGHT)) {
       for (Map.Entry<String, Staging.Side> e : stage.entrySet()) {
         if (e.getValue() == side && looks.containsKey(e.getKey())) {
           heads.add(looks.get(e.getKey()).split(",")[0].strip().toLowerCase(java.util.Locale.ROOT));
+          fullLooks.add(looks.get(e.getKey()));
         }
       }
     }
     if (heads.size() < 2 || heads.size() > COUNTS.size()) {
       return null;
     }
-    for (String h : heads) {
-      if (!(animals ? ANIMAL.matcher(h).matches() : PERSON.matcher(h).matches())) {
+    for (int i = 0; i < heads.size(); i++) {
+      String h = heads.get(i);
+      if (animals ? ANIMAL.matcher(h).matches() : PERSON.matcher(h).matches()) {
+        continue;
+      }
+      // "man in hanbok", "young man with glasses"처럼 긴 첫 마디는 외모 문구에서 나이·성별을 읽어 센다
+      String word = animals ? null : CharacterLibrary.personWord(fullLooks.get(i));
+      if (word == null) {
         return null;
       }
+      heads.set(i, word);
     }
     String counted = counted(heads);
     // 동물 컨셉은 종을 세어 주어도 사람이 섞이지 않게 컨셉의 crowd 말을 남긴다

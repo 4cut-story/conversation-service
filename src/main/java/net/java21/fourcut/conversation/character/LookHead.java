@@ -85,6 +85,32 @@ record LookHead(String animal, String gender, String age) {
   private static final Set<String> ADULT =
       Set.of("man", "men", "woman", "women", "lady", "gentleman", "남자", "여자");
 
+  /**
+   * 인원 세기에 쓰는 사람 말("young man", "old woman", "little girl"). 첫 마디가 "man in hanbok", "young man with
+   * glasses"처럼 길면 "two people"로만 셌고, 그림 모델은 남녀 한 쌍이나 같은 나이로 그렸다(시험 8회 우산 만화 두 남자가 남녀로, 고추 자랑 만화 손주가
+   * 노인으로). 동물이거나 성별을 모르면 null.
+   */
+  static String personWord(String look) {
+    LookHead h = of(look);
+    if (h.animal() != null || h.gender() == null) {
+      return null;
+    }
+    boolean f = "F".equals(h.gender());
+    String head = look.split(",", 2)[0].toLowerCase(Locale.ROOT);
+    if ("CHILD".equals(h.age())) {
+      return (head.contains("little") ? "little " : "") + (f ? "girl" : "boy");
+    }
+    String noun = f ? "woman" : "man";
+    if (h.age() == null || "ADULT".equals(h.age())) {
+      return head.startsWith("tall adult") ? "tall adult " + noun : noun;
+    }
+    return switch (h.age()) {
+      case "OLD" -> "old " + noun;
+      case "MIDDLE" -> "middle-aged " + noun;
+      default -> "young " + noun;
+    };
+  }
+
   static LookHead of(String look) {
     if (look == null) {
       return new LookHead(null, null, null);
