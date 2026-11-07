@@ -159,6 +159,13 @@ public class ComicComposer {
         if (toFace != null) {
           shape.add(new Area(toFace));
         }
+      } else if (!heads.isEmpty()) {
+        // 그림에 얼굴이 보이는데 이 화자만 없으면 컷 밖에서 하는 말이다. 보이는 사람을 가리키면 그 사람 말로 읽혀서(국밥집 4컷), 얼굴과 앞
+        // 말풍선을 피한 모서리에 꼬리 없이 둔다
+        Rectangle box = offscreen(side, w, h, panelTop, faces, taken);
+        x = box.x;
+        y = box.y;
+        shape = new Area(new RoundRectangle2D.Float(x, y, w, h, 28, 28));
       } else {
         x = bubbleX(side, top, w);
         y = top ? panelTop + 16 : panelTop + PANEL - 16 - h;
@@ -210,6 +217,40 @@ public class ComicComposer {
             new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
             new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
             new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h));
+    Rectangle best = options.get(0);
+    long bestCover = Long.MAX_VALUE;
+    for (Rectangle o : options) {
+      long cover = covered(o, faces) * 2 + covered(o, taken) * 3;
+      if (cover == 0) {
+        return o;
+      }
+      if (cover < bestCover) {
+        best = o;
+        bestCover = cover;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * 컷 밖 화자의 말풍선 자리. 화자 쪽 위 모서리, 반대쪽 위, 화자 쪽 아래, 반대쪽 아래 순서로 보고 얼굴과 앞 말풍선을 가리지 않는 첫 자리를 쓴다. 모두 가리면 가장
+   * 적게 가리는 자리다.
+   */
+  static Rectangle offscreen(
+      Staging.Side side, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
+    int left = MARGIN + 16;
+    int right = MARGIN + PANEL - 16 - w;
+    int up = panelTop + 16;
+    int down = panelTop + PANEL - 16 - h;
+    boolean rightFirst = side == Staging.Side.RIGHT;
+    int near = rightFirst ? right : left;
+    int far = rightFirst ? left : right;
+    List<Rectangle> options =
+        List.of(
+            new Rectangle(near, up, w, h),
+            new Rectangle(far, up, w, h),
+            new Rectangle(near, down, w, h),
+            new Rectangle(far, down, w, h));
     Rectangle best = options.get(0);
     long bestCover = Long.MAX_VALUE;
     for (Rectangle o : options) {

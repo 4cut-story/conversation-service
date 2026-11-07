@@ -204,4 +204,20 @@ class ComicComposerTest {
     assertThat(ImageIO.read(new ByteArrayInputStream(result.full())).getWidth())
         .isEqualTo(ComicComposer.WIDTH);
   }
+
+  @Test
+  @DisplayName("FR-007: 컷에 안 보이는 화자의 말풍선은 보이는 얼굴과 앞 말풍선을 피한 모서리에 둔다")
+  void offscreenBubble() {
+    int top = 100;
+    var face = ComicComposer.face(new PanelPlacement.Head(0.5, 0.35, 0.3), top);
+    var first = ComicComposer.place(face, 300, 90, top, List.of(face), List.of());
+    var other =
+        ComicComposer.offscreen(Staging.Side.RIGHT, 300, 90, top, List.of(face), List.of(first));
+    assertThat(other.intersects(face)).isFalse();
+    assertThat(other.intersects(first)).isFalse();
+    var left = ComicComposer.offscreen(Staging.Side.LEFT, 200, 80, top, List.of(), List.of());
+    var right = ComicComposer.offscreen(Staging.Side.RIGHT, 200, 80, top, List.of(), List.of());
+    assertThat(left.x).isLessThan(right.x);
+    assertThat(left.y).isEqualTo(right.y);
+  }
 }
