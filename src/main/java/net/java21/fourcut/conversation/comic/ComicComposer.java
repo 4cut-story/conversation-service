@@ -276,10 +276,8 @@ public class ComicComposer {
   /** 앞 말풍선 다음에 읽히는 자리인지: 더 아래이거나, 거의 같은 높이에서 오른쪽. */
   static boolean readsAfter(Rectangle next, Rectangle previous) {
     int row = 24;
-    if (next.y >= previous.y + row) {
-      return true;
-    }
-    return Math.abs(next.y - previous.y) < row && next.x >= previous.x + previous.width / 2;
+    return next.y >= previous.y + row
+        || Math.abs(next.y - previous.y) < row && next.x >= previous.x + previous.width / 2;
   }
 
   private static long covered(Rectangle r, List<Rectangle> others) {
