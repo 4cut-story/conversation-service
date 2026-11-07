@@ -468,7 +468,7 @@ class DrawHandler implements StepHandler {
                     return c;
                   }
                   String kid =
-                      m.group(1).equalsIgnoreCase("swordswoman")
+                      "swordswoman".equalsIgnoreCase(m.group(1))
                           ? "little girl swordswoman, child"
                           : "little boy swordsman, child";
                   return c.withLook(kid + look.substring(m.end()));
