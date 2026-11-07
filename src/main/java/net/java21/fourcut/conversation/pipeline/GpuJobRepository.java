@@ -17,7 +17,8 @@ interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
    */
   @Query(
       value =
-          "select * from {h-schema}gpu_jobs where state = 'QUEUED' and type in (:types)"
+          "select * from {h-schema}gpu_jobs where state = 'QUEUED' and manual = false"
+              + " and type in (:types)"
               + " order by priority, case when type = :preferred then 0 else 1 end, enqueued_at"
               + " limit 1 for update skip locked",
       nativeQuery = true)
@@ -35,6 +36,8 @@ interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
               + " for update skip locked",
       nativeQuery = true)
   List<GpuJob> lockExpired(Instant now);
+
+  List<GpuJob> findByConversationIdAndStateAndManualTrue(Long conversationId, GpuJob.State state);
 
   boolean existsByConversationIdAndState(Long conversationId, GpuJob.State state);
 

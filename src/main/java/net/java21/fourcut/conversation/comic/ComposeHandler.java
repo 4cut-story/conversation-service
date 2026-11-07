@@ -75,7 +75,9 @@ class ComposeHandler implements StepHandler {
     }
     // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리와 얼굴 위치를 확인해 맞춘다
     PanelPlacement.Spots spots =
-        placement.locate(script, panels, Staging.panels(script), references(script));
+        context.conversation().manualLlm()
+            ? placement.locate(script, panels, Staging.panels(script), Map.of(), false)
+            : placement.locate(script, panels, Staging.panels(script), references(script));
     ComicComposer.Result result = composer.compose(script, panels, spots.stages(), spots.heads());
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);

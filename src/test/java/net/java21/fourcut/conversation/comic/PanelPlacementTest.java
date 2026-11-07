@@ -103,6 +103,16 @@ class PanelPlacementTest {
   }
 
   @Test
+  @DisplayName("FR-006: 테스트 전용 수동 처리 대화는 그림을 묻지 않고 정해 둔 자리 그대로다")
+  void noAsk() {
+    ComicScript s = script();
+    List<Map<String, Side>> planned = Staging.panels(s);
+    when(llm.available()).thenReturn(true);
+    assertThat(placement.locate(s, images(), planned, Map.of(), false).stages()).isEqualTo(planned);
+    verify(llm, never()).see(any(), any(), any(), any(), any());
+  }
+
+  @Test
   @DisplayName("FR-006: 외부 LLM을 부를 수 없거나 답이 없거나 깨졌으면 정해 둔 자리 그대로다")
   void fallback() {
     ComicScript s = script();

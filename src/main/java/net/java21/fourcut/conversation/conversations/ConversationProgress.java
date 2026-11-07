@@ -28,7 +28,8 @@ class ConversationProgress implements PipelineObserver {
                     c.getLanguage(),
                     c.getChunkCount(),
                     c.getConcept(),
-                    c.getDialect()))
+                    c.getDialect(),
+                    c.isManualLlm()))
         .orElse(null);
   }
 

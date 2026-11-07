@@ -256,7 +256,11 @@ class CloudLlmRunner implements DirectLlm {
   private Lease lease(Long jobId) {
     GpuJob job =
         jobs.lockById(jobId)
-            .filter(j -> j.getState() == GpuJob.State.QUEUED && j.getType() == JobType.LLM)
+            .filter(
+                j ->
+                    j.getState() == GpuJob.State.QUEUED
+                        && j.getType() == JobType.LLM
+                        && !j.isManual())
             .orElse(null);
     if (job == null) {
       return null;

@@ -74,7 +74,10 @@ class ExtractHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    if ((properties.correctTranscript() || properties.parallelExtract()) && direct.available()) {
+    // 테스트 전용 수동 처리 대화는 외부 API를 부르지 않고 구간마다 대기열 작업으로 둔다
+    if ((properties.correctTranscript() || properties.parallelExtract())
+        && direct.available()
+        && !context.conversation().manualLlm()) {
       // 외부 LLM 호출은 시간이 걸리므로 트랜잭션 밖(runLocal)에서 한다
       return new StepOutcome.RunLocal();
     }

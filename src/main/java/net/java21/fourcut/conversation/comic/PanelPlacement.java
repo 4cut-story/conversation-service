@@ -108,11 +108,21 @@ class PanelPlacement {
       List<BufferedImage> panels,
       List<Map<String, Staging.Side>> planned,
       Map<String, byte[]> refs) {
+    return locate(script, panels, planned, refs, true);
+  }
+
+  /** ask가 false면 그림을 묻지 않고 콘티의 좌우를 그대로 쓴다 (테스트 전용 수동 처리 대화). */
+  Spots locate(
+      ComicScript script,
+      List<BufferedImage> panels,
+      List<Map<String, Staging.Side>> planned,
+      Map<String, byte[]> refs,
+      boolean ask) {
     List<Map<String, Head>> none = new ArrayList<>();
     planned.forEach(p -> none.add(Map.of()));
     Spots fallback = new Spots(planned, none);
     List<Integer> asked = asked(script, planned, panels.size());
-    if (asked.isEmpty() || !llm.available()) {
+    if (!ask || asked.isEmpty() || !llm.available()) {
       return fallback;
     }
     Map<String, byte[]> shown = shown(refs, planned, asked);

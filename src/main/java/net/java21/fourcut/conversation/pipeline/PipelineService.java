@@ -222,19 +222,23 @@ public class PipelineService {
       case StepOutcome.Enqueue e -> {
         // 앞 작업의 상태 변경을 먼저 반영해야 "대화당 진행 중 작업 1개" 유니크 인덱스에 걸리지 않는다
         jobs.flush();
-        GpuJob job =
-            jobs.saveAndFlush(
-                new GpuJob(
-                    conversation.id(),
-                    step.getStep(),
-                    e.type(),
-                    json.writeValueAsString(e.payload()),
-                    now()));
+        GpuJob created =
+            new GpuJob(
+                conversation.id(),
+                step.getStep(),
+                e.type(),
+                json.writeValueAsString(e.payload()),
+                now());
+        boolean manual = e.type() == JobType.LLM && conversation.manualLlm();
+        if (manual) {
+          created.markManual();
+        }
+        GpuJob job = jobs.saveAndFlush(created);
         step.jobEnqueued(job.getId());
         if (e.modelInfo() != null) {
           step.modelInfo(e.modelInfo());
         }
-        if (e.type() == JobType.LLM) {
+        if (e.type() == JobType.LLM && !manual) {
           events.publishEvent(new LlmJobQueued(job.getId()));
         }
       }

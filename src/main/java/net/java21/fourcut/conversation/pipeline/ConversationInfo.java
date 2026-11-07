@@ -9,6 +9,7 @@ package net.java21.fourcut.conversation.pipeline;
  * @param language 사용자가 고른 언어. 없으면 null(자동 감지)
  * @param concept 사용자가 고른 만화 컨셉. 없으면 null(자동)
  * @param dialect 사용자가 고른 대사 사투리. 없으면 null(사투리 없음)
+ * @param manualLlm 테스트 전용. LLM 작업을 서버가 처리하지 않고 주인이 직접 답을 넣는다
  */
 public record ConversationInfo(
     Long id,
@@ -17,7 +18,19 @@ public record ConversationInfo(
     String language,
     int chunkCount,
     String concept,
-    String dialect) {
+    String dialect,
+    boolean manualLlm) {
+
+  public ConversationInfo(
+      Long id,
+      String publicId,
+      String ownerId,
+      String language,
+      int chunkCount,
+      String concept,
+      String dialect) {
+    this(id, publicId, ownerId, language, chunkCount, concept, dialect, false);
+  }
 
   public ConversationInfo(
       Long id, String publicId, String ownerId, String language, int chunkCount, String concept) {
