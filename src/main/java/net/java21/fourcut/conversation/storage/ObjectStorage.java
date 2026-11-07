@@ -1,6 +1,8 @@
 package net.java21.fourcut.conversation.storage;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -23,4 +25,12 @@ public interface ObjectStorage {
 
   /** 접두어 아래 객체를 모두 지운다. 없어도 성공이다. */
   void deletePrefix(String prefix);
+
+  /** 접두어 아래 객체의 키와 마지막으로 바뀐 시각. */
+  default List<Stored> list(String prefix) {
+    throw new UnsupportedOperationException("list");
+  }
+
+  /** 저장된 객체 하나. */
+  record Stored(String key, Instant lastModified) {}
 }

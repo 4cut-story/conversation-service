@@ -79,6 +79,15 @@ public class S3ObjectStorage implements ObjectStorage {
   }
 
   @Override
+  public List<Stored> list(String prefix) {
+    List<Stored> found = new java.util.ArrayList<>();
+    for (var page : client.listObjectsV2Paginator(r -> r.bucket(bucket).prefix(prefix))) {
+      page.contents().forEach(o -> found.add(new Stored(o.key(), o.lastModified())));
+    }
+    return found;
+  }
+
+  @Override
   public void deletePrefix(String prefix) {
     for (var page : client.listObjectsV2Paginator(r -> r.bucket(bucket).prefix(prefix))) {
       List<ObjectIdentifier> ids =
