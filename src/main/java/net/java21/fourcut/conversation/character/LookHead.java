@@ -319,6 +319,13 @@ record LookHead(String animal, String gender, String age) {
           "hooded cloak");
 
   /**
+   * 직업 옷 이름 중 흔한 옷 낱말. 콘티의 "red cap", "green apron"이 "police cap", "painter apron"을 받아 경찰 모자를 쓴 아들,
+   * 화가 앞치마를 두른 할머니가 그려졌다(회차 10). 직업을 가리는 낱말(police, painter 등)이 콘티에 있을 때만 받는다.
+   */
+  private static final Set<String> GENERIC_WEAR =
+      Set.of("coat", "cap", "hat", "apron", "uniform", "jacket", "helmet", "suit", "robe", "gown");
+
+  /**
    * 캐릭터 모습이 콘티 인물에 어울리는지. 캐릭터 DB 일상 모습의 절반(1,013명 중 480명)이 경찰복·의사 가운·우주복 같은 직업 옷이다. 콘티가 그 옷을 말하지
    * 않았으면 그 모습은 쓰지 않는다. 집에서 저녁 먹는 아빠가 우주복을, 할머니 집 손녀가 우체부 옷을 입고 나왔다. 콘티가 같은 낱말(uniform, apron, coat
    * 등)을 쓰면 받는다.
@@ -334,7 +341,10 @@ record LookHead(String animal, String gender, String age) {
             .filter(x -> !x.isEmpty())
             .collect(Collectors.toSet());
     for (String costume : COSTUMES) {
-      if (c.contains(costume) && Arrays.stream(costume.split(" ")).noneMatch(wanted::contains)) {
+      if (c.contains(costume)
+          && Arrays.stream(costume.split(" "))
+              .filter(word -> !GENERIC_WEAR.contains(word))
+              .noneMatch(wanted::contains)) {
         return false;
       }
     }
