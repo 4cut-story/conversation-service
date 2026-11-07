@@ -581,4 +581,13 @@ class ComicScriptTest {
         .isEqualTo("손녀야 손녀랑 손녀도");
     assertThat(CastNames.toRoles("민지야, 민지가", java.util.Map.of("민지", "할머니"))).isEqualTo("할머니, 할머니가");
   }
+
+  @Test
+  @DisplayName("REQ-018: 코드가 고른 가명인지 가린다")
+  void pseudonym() {
+    org.assertj.core.api.Assertions.assertThat(ComicScript.pseudonym("유진")).isTrue();
+    org.assertj.core.api.Assertions.assertThat(ComicScript.pseudonym(" 도담 ")).isTrue();
+    org.assertj.core.api.Assertions.assertThat(ComicScript.pseudonym("민준")).isFalse();
+    org.assertj.core.api.Assertions.assertThat(ComicScript.pseudonym(null)).isFalse();
+  }
 }

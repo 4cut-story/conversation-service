@@ -318,10 +318,18 @@ class DrawHandler implements StepHandler {
           Staging.Side.RIGHT,
           " on the right");
 
-  /** 캐릭터 DB에서 찾을 콘티 인물. */
+  /**
+   * 캐릭터 DB에서 찾을 콘티 인물. 가명은 이름으로 찾지 않는다. 가명 24개 중 4개(유진, 보람, 도담, 은솔)가 DB 캐릭터 이름과 같아서, 그 가명을 받은 인물은
+   * 장면과 상관없이 우체부·형사 모습으로 그려졌다.
+   */
   static List<CharacterLibrary.Wanted> wanted(ComicScript script) {
     return script.characters().stream()
-        .map(c -> new CharacterLibrary.Wanted(c.speaker(), c.displayName(), c.look()))
+        .map(
+            c ->
+                new CharacterLibrary.Wanted(
+                    c.speaker(),
+                    ComicScript.pseudonym(c.displayName()) ? null : c.displayName(),
+                    c.look()))
         .toList();
   }
 
