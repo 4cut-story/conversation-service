@@ -6,8 +6,11 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.imageio.ImageIO;
+import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -20,7 +23,7 @@ import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
 
-/** COMPOSE: 컷 4장에 말풍선을 그려 세로 4컷 한 장과 썸네일을 만들고, content-service 만화함에 등록한다. 서버에서 실행한다. */
+/** COMPOSE: 컷(4~10장)에 말풍선을 그려 세로 만화 한 장과 썸네일을 만들고, content-service 만화함에 등록한다. 서버에서 실행한다. */
 @Component
 class ComposeHandler implements StepHandler {
 
@@ -31,18 +34,21 @@ class ComposeHandler implements StepHandler {
   private final ComicComposer composer;
   private final ContentClient content;
   private final PanelPlacement placement;
+  private final CharacterLibrary characters;
 
   ComposeHandler(
       ScenarioStore scenarios,
       ObjectStorage storage,
       ComicComposer composer,
       ContentClient content,
-      PanelPlacement placement) {
+      PanelPlacement placement,
+      CharacterLibrary characters) {
     this.scenarios = scenarios;
     this.storage = storage;
     this.composer = composer;
     this.content = content;
     this.placement = placement;
+    this.characters = characters;
   }
 
   @Override
@@ -61,15 +67,16 @@ class ComposeHandler implements StepHandler {
     ComicScript script = scenarios.script(id);
     boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
     List<BufferedImage> panels = new ArrayList<>();
-    for (int i = 1; i <= DrawHandler.PANELS; i++) {
+    for (int i = 1; i <= script.panels().size(); i++) {
       String key = WorkKeys.panel(id, i);
       byte[] bytes = storage.get(key).orElseThrow(() -> new IllegalStateException(key + " 그림이 없다"));
       BufferedImage panel = read(bytes);
       panels.add(gray ? gray(panel) : panel);
     }
-    // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리를 확인해 맞춘다
-    ComicComposer.Result result =
-        composer.compose(script, panels, placement.check(script, panels, Staging.panels(script)));
+    // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리와 얼굴 위치를 확인해 맞춘다
+    PanelPlacement.Spots spots =
+        placement.locate(script, panels, Staging.panels(script), references(script));
+    ComicComposer.Result result = composer.compose(script, panels, spots.stages(), spots.heads());
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);
     storage.put(full, result.full(), PNG);
@@ -90,6 +97,18 @@ class ComposeHandler implements StepHandler {
                 Concept.of(script.concept()).name(),
                 Dialect.of(context.conversation().dialect()).name()));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /** 화자별 참조 그림(그림을 그릴 때 IP-Adapter에 쓴 것). 캐릭터를 못 찾은 인물은 없다. */
+  Map<String, byte[]> references(ComicScript script) {
+    Map<String, byte[]> out = new LinkedHashMap<>();
+    if (script.characters() == null) {
+      return out;
+    }
+    for (ComicScript.Character c : script.characters()) {
+      characters.referenceImage(c.lookId()).ifPresent(png -> out.put(c.speaker(), png));
+    }
+    return out;
   }
 
   /** 만화 아래 등장인물 소개: 호칭, 캐릭터 이름, 캐릭터 모습. */

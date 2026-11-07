@@ -136,4 +136,88 @@ class ComicComposerTest {
             new ContentClient.CastMember("할머니", "하늘", "look1"),
             new ContentClient.CastMember("도윤", "도윤", null));
   }
+
+  @Test
+  @DisplayName("FR-007: 얼굴을 알면 말풍선은 얼굴 위에 두고, 위에 자리가 없으면 아래에 두며 얼굴을 가리지 않는다")
+  void placeAtFace() {
+    int top = 100;
+    var high = ComicComposer.face(new PanelPlacement.Head(0.3, 0.1, 0.15), top);
+    var low = ComicComposer.face(new PanelPlacement.Head(0.7, 0.7, 0.15), top);
+    List<java.awt.Rectangle> faces = List.of(high, low);
+    var below = ComicComposer.place(high, 260, 90, top, faces, List.of());
+    assertThat(below.intersects(high)).isFalse();
+    assertThat(below.y).isGreaterThan(high.y);
+    var above = ComicComposer.place(low, 260, 90, top, faces, List.of());
+    assertThat(above.intersects(low)).isFalse();
+    assertThat(above.y + above.height).isLessThan(low.y);
+    // 앞 말풍선이 차지한 자리는 피한다
+    var next = ComicComposer.place(low, 260, 90, top, faces, List.of(above));
+    assertThat(next.intersects(above)).isFalse();
+    assertThat(next.intersects(low)).isFalse();
+  }
+
+  @Test
+  @DisplayName("FR-007: 꼬리는 말풍선에서 얼굴 쪽으로 나오고, 붙어 있으면 그리지 않는다")
+  void tailToFace() {
+    var face = new java.awt.Rectangle(300, 400, 100, 100);
+    var box = new java.awt.Rectangle(250, 200, 200, 100);
+    var tail = ComicComposer.tailTo(box, face).getBounds();
+    assertThat(tail.y + tail.height).isGreaterThan(box.y + box.height + 10);
+    assertThat(tail.y + tail.height).isLessThan(face.y + 20);
+    var side = new java.awt.Rectangle(500, 400, 150, 100);
+    var sideTail = ComicComposer.tailTo(side, face).getBounds();
+    assertThat(sideTail.x).isLessThan(side.x - 10);
+    assertThat(ComicComposer.tailTo(new java.awt.Rectangle(300, 300, 100, 99), face)).isNull();
+  }
+
+  @Test
+  @DisplayName("FR-007: 얼굴 위치를 받아도 네 컷을 한 장으로 합친다")
+  void composeWithHeads() throws Exception {
+    ComicScript.Panel panel =
+        new ComicScript.Panel(
+            "기",
+            "wide",
+            "장면",
+            List.of(new ComicScript.Line("A", "안녕"), new ComicScript.Line("B", "응 안녕 반가워")));
+    ComicScript script =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "민지", "", "girl"),
+                new ComicScript.Character("B", "도윤", "", "boy")),
+            List.of(panel, panel, panel, panel),
+            true,
+            List.of());
+    var heads =
+        java.util.Map.of(
+            "A",
+            new PanelPlacement.Head(0.3, 0.4, 0.2),
+            "B",
+            new PanelPlacement.Head(0.7, 0.4, 0.2));
+    BufferedImage image = new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
+    ComicComposer.Result result =
+        composer.compose(
+            script,
+            List.of(image, image, image, image),
+            Staging.panels(script),
+            List.of(heads, java.util.Map.of(), heads, heads));
+    assertThat(ImageIO.read(new ByteArrayInputStream(result.full())).getWidth())
+        .isEqualTo(ComicComposer.WIDTH);
+  }
+
+  @Test
+  @DisplayName("FR-007: 컷에 안 보이는 화자의 말풍선은 보이는 얼굴과 앞 말풍선을 피한 모서리에 둔다")
+  void offscreenBubble() {
+    int top = 100;
+    var face = ComicComposer.face(new PanelPlacement.Head(0.5, 0.35, 0.3), top);
+    var first = ComicComposer.place(face, 300, 90, top, List.of(face), List.of());
+    var other =
+        ComicComposer.offscreen(Staging.Side.RIGHT, 300, 90, top, List.of(face), List.of(first));
+    assertThat(other.intersects(face)).isFalse();
+    assertThat(other.intersects(first)).isFalse();
+    var left = ComicComposer.offscreen(Staging.Side.LEFT, 200, 80, top, List.of(), List.of());
+    var right = ComicComposer.offscreen(Staging.Side.RIGHT, 200, 80, top, List.of(), List.of());
+    assertThat(left.x).isLessThan(right.x);
+    assertThat(left.y).isEqualTo(right.y);
+  }
 }

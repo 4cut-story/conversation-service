@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.Area;
 import java.awt.geom.Path2D;
@@ -23,10 +24,12 @@ import net.java21.fourcut.conversation.scenario.ComicScript;
 import org.springframework.stereotype.Component;
 
 /**
- * 세로 4컷 합성. 그림 위에 말풍선을 코드로 그려 한글이 깨지지 않게 한다 (FR-007). 글꼴은 Noto Sans CJK(이미지에 설치)를 먼저 찾는다.
+ * 세로 만화 합성(컷 4~10개를 위에서 아래로). 그림 위에 말풍선을 코드로 그려 한글이 깨지지 않게 한다 (FR-007). 글꼴은 Noto Sans CJK(이미지에 설치)를
+ * 먼저 찾는다.
  *
- * <p>말풍선은 화자가 선 쪽({@link Staging}: 그림을 그릴 때와 같은 자리)에 붙이고, 꼬리가 화자를 가리킨다. 첫 대사는 위, 둘째 대사는 아래에 둔다. 화자가
- * 그 컷에 없으면(자리를 모르면) 꼬리 없이 예전처럼 왼쪽 위·오른쪽 아래에 둔다.
+ * <p>그림에서 화자 얼굴 위치를 알면({@link PanelPlacement.Head}) 말풍선을 그 얼굴 위(자리가 없으면 아래·옆)에 얼굴과 다른 말풍선을 가리지 않게
+ * 놓고, 꼬리가 얼굴을 가리킨다. 얼굴을 모르면 화자가 선 쪽({@link Staging})에 붙이고 첫 대사는 위, 둘째 대사는 아래에 둔다. 화자가 그 컷에 없으면 꼬리
+ * 없이 왼쪽 위·오른쪽 아래에 둔다.
  */
 @Component
 public class ComicComposer {
@@ -75,6 +78,15 @@ public class ComicComposer {
   /** stages: 컷별 인물 자리(그림에서 확인해 고친 자리). 말풍선을 그 쪽에 둔다. */
   Result compose(
       ComicScript script, List<BufferedImage> panels, List<Map<String, Staging.Side>> stages) {
+    return compose(script, panels, stages, List.of());
+  }
+
+  /** heads: 컷별 인물 얼굴(그림에서 본 위치). 아는 화자는 말풍선을 얼굴 쪽에 둔다. */
+  Result compose(
+      ComicScript script,
+      List<BufferedImage> panels,
+      List<Map<String, Staging.Side>> stages,
+      List<Map<String, PanelPlacement.Head>> heads) {
     int height = MARGIN + TITLE_HEIGHT + panels.size() * (PANEL + GAP) - GAP + MARGIN;
     BufferedImage out = new BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = out.createGraphics();
@@ -98,7 +110,8 @@ public class ComicComposer {
         g.drawRect(MARGIN, y, PANEL, PANEL);
         List<ComicScript.Line> lines = script.panels().get(i).lines();
         Map<String, Staging.Side> stage = i < stages.size() ? stages.get(i) : Map.of();
-        drawBubbles(g, lines == null ? List.of() : lines, names, stage, y);
+        Map<String, PanelPlacement.Head> faces = i < heads.size() ? heads.get(i) : Map.of();
+        drawBubbles(g, lines == null ? List.of() : lines, names, stage, faces, y);
         y += PANEL + GAP;
       }
     } finally {
@@ -112,9 +125,13 @@ public class ComicComposer {
       List<ComicScript.Line> lines,
       Map<String, String> names,
       Map<String, Staging.Side> stage,
+      Map<String, PanelPlacement.Head> heads,
       int panelTop) {
     g.setFont(new Font(family, Font.PLAIN, 28));
     FontMetrics fm = g.getFontMetrics();
+    List<Rectangle> faces = new ArrayList<>();
+    heads.values().forEach(h -> faces.add(face(h, panelTop)));
+    List<Rectangle> taken = new ArrayList<>();
     for (int i = 0; i < lines.size(); i++) {
       ComicScript.Line line = lines.get(i);
       Staging.Side side = line.speaker() == null ? null : stage.get(line.speaker());
@@ -128,12 +145,36 @@ public class ComicComposer {
               max - 2 * BUBBLE_PAD);
       int w = rows.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
       int h = rows.size() * fm.getHeight() + 2 * BUBBLE_PAD;
-      int x = bubbleX(side, top, w);
-      int y = top ? panelTop + 16 : panelTop + PANEL - 16 - h;
-      Area shape = new Area(new RoundRectangle2D.Float(x, y, w, h, 28, 28));
-      if (side != null) {
-        shape.add(new Area(tail(side, top, x, y, w, h)));
+      PanelPlacement.Head head = line.speaker() == null ? null : heads.get(line.speaker());
+      Area shape;
+      int x;
+      int y;
+      if (head != null) {
+        Rectangle face = face(head, panelTop);
+        Rectangle box = place(face, w, h, panelTop, faces, taken);
+        x = box.x;
+        y = box.y;
+        shape = new Area(new RoundRectangle2D.Float(x, y, w, h, 28, 28));
+        Path2D toFace = tailTo(box, face);
+        if (toFace != null) {
+          shape.add(new Area(toFace));
+        }
+      } else if (!heads.isEmpty()) {
+        // 그림에 얼굴이 보이는데 이 화자만 없으면 컷 밖에서 하는 말이다. 보이는 사람을 가리키면 그 사람 말로 읽혀서(국밥집 4컷), 얼굴과 앞
+        // 말풍선을 피한 모서리에 꼬리 없이 둔다
+        Rectangle box = offscreen(side, w, h, panelTop, faces, taken);
+        x = box.x;
+        y = box.y;
+        shape = new Area(new RoundRectangle2D.Float(x, y, w, h, 28, 28));
+      } else {
+        x = bubbleX(side, top, w);
+        y = top ? panelTop + 16 : panelTop + PANEL - 16 - h;
+        shape = new Area(new RoundRectangle2D.Float(x, y, w, h, 28, 28));
+        if (side != null) {
+          shape.add(new Area(tail(side, top, x, y, w, h)));
+        }
       }
+      taken.add(new Rectangle(x, y, w, h));
       g.setColor(new Color(255, 255, 255, 235));
       g.fill(shape);
       g.setColor(Color.BLACK);
@@ -145,6 +186,142 @@ public class ComicComposer {
         baseline += fm.getHeight();
       }
     }
+  }
+
+  /** 말풍선과 얼굴 사이 여백(꼬리가 보일 만큼). */
+  private static final int FACE_GAP = 36;
+
+  /** 얼굴 자리(합성 이미지 좌표). 머리카락까지 덮게 얼굴 높이보다 조금 크게 잡는다. */
+  static Rectangle face(PanelPlacement.Head head, int panelTop) {
+    int cx = MARGIN + (int) Math.round(head.x() * PANEL);
+    int cy = panelTop + (int) Math.round(head.y() * PANEL);
+    int r = Math.max(24, (int) Math.round(head.size() * PANEL * 0.65));
+    return new Rectangle(cx - r, cy - r, 2 * r, 2 * r);
+  }
+
+  /**
+   * 얼굴 쪽 말풍선 자리. 얼굴 위, 아래, 바깥 옆, 안쪽 옆 순서로 보고 컷 안에 들어가며 얼굴과 앞 말풍선을 가리지 않는 첫 자리를 쓴다. 모두 가리면 가장 적게 가리는
+   * 자리다.
+   */
+  static Rectangle place(
+      Rectangle face, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
+    int cx = (int) face.getCenterX();
+    int cy = (int) face.getCenterY();
+    int x = clampX(cx - w / 2, w);
+    boolean leftHalf = cx < MARGIN + PANEL / 2;
+    int outX = leftHalf ? face.x - FACE_GAP - w : face.x + face.width + FACE_GAP;
+    int inX = leftHalf ? face.x + face.width + FACE_GAP : face.x - FACE_GAP - w;
+    List<Rectangle> options =
+        List.of(
+            new Rectangle(x, clampY(face.y - FACE_GAP - h, h, panelTop), w, h),
+            new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
+            new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
+            new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h));
+    Rectangle best = options.get(0);
+    long bestCover = Long.MAX_VALUE;
+    for (Rectangle o : options) {
+      long cover = covered(o, faces) * 2 + covered(o, taken) * 3;
+      if (cover == 0) {
+        return o;
+      }
+      if (cover < bestCover) {
+        best = o;
+        bestCover = cover;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * 컷 밖 화자의 말풍선 자리. 화자 쪽 위 모서리, 반대쪽 위, 화자 쪽 아래, 반대쪽 아래 순서로 보고 얼굴과 앞 말풍선을 가리지 않는 첫 자리를 쓴다. 모두 가리면 가장
+   * 적게 가리는 자리다.
+   */
+  static Rectangle offscreen(
+      Staging.Side side, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
+    int left = MARGIN + 16;
+    int right = MARGIN + PANEL - 16 - w;
+    int up = panelTop + 16;
+    int down = panelTop + PANEL - 16 - h;
+    boolean rightFirst = side == Staging.Side.RIGHT;
+    int near = rightFirst ? right : left;
+    int far = rightFirst ? left : right;
+    List<Rectangle> options =
+        List.of(
+            new Rectangle(near, up, w, h),
+            new Rectangle(far, up, w, h),
+            new Rectangle(near, down, w, h),
+            new Rectangle(far, down, w, h));
+    Rectangle best = options.get(0);
+    long bestCover = Long.MAX_VALUE;
+    for (Rectangle o : options) {
+      long cover = covered(o, faces) * 2 + covered(o, taken) * 3;
+      if (cover == 0) {
+        return o;
+      }
+      if (cover < bestCover) {
+        best = o;
+        bestCover = cover;
+      }
+    }
+    return best;
+  }
+
+  private static long covered(Rectangle r, List<Rectangle> others) {
+    long sum = 0;
+    for (Rectangle o : others) {
+      Rectangle cut = r.intersection(o);
+      if (!cut.isEmpty()) {
+        sum += (long) cut.width * cut.height;
+      }
+    }
+    return sum;
+  }
+
+  private static int clampX(int x, int w) {
+    return Math.max(MARGIN + 16, Math.min(MARGIN + PANEL - 16 - w, x));
+  }
+
+  private static int clampY(int y, int h, int panelTop) {
+    return Math.max(panelTop + 16, Math.min(panelTop + PANEL - 16 - h, y));
+  }
+
+  /** 말풍선에서 얼굴로 가는 꼬리. 말풍선 가장자리 가운데쯤에서 나와 얼굴 가장자리 조금 앞에서 끝난다. 말풍선이 얼굴에 붙어 있어 꼬리 둘 틈이 없으면 null. */
+  static Path2D tailTo(Rectangle box, Rectangle face) {
+    double fx = face.getCenterX();
+    double fy = face.getCenterY();
+    double fr = face.width / 2.0;
+    // 얼굴 가운데에서 가장 가까운 말풍선 테두리 점
+    double px = Math.max(box.x, Math.min(box.x + box.width, fx));
+    double py = Math.max(box.y, Math.min(box.y + box.height, fy));
+    boolean horizontal = px > box.x && px < box.x + box.width;
+    double dx = fx - px;
+    double dy = fy - py;
+    double dist = Math.hypot(dx, dy);
+    double reach = Math.min(dist - fr * 0.8, TAIL * 1.6);
+    if (dist == 0 || reach < 14) {
+      return null;
+    }
+    double tipX = px + dx / dist * reach;
+    double tipY = py + dy / dist * reach;
+    Path2D tail = new Path2D.Float();
+    if (horizontal) {
+      // 위·아래 변에서 나온다. 밑변은 모서리 둥근 곳을 피한다
+      double base =
+          Math.max(box.x + 28, Math.min(box.x + box.width - 28 - TAIL_BASE, px - TAIL_BASE / 2.0));
+      double edge = py == box.y ? box.y + 2 : box.y + box.height - 2;
+      tail.moveTo(base, edge);
+      tail.lineTo(tipX, tipY);
+      tail.lineTo(base + TAIL_BASE, edge);
+    } else {
+      double base =
+          Math.max(box.y + 20, Math.min(box.y + box.height - 20 - TAIL_BASE, py - TAIL_BASE / 2.0));
+      double edge = px == box.x ? box.x + 2 : box.x + box.width - 2;
+      tail.moveTo(edge, base);
+      tail.lineTo(tipX, tipY);
+      tail.lineTo(edge, base + TAIL_BASE);
+    }
+    tail.closePath();
+    return tail;
   }
 
   /** 말풍선 왼쪽 x. 왼쪽 화자는 왼쪽, 오른쪽 화자는 오른쪽, 가운데 화자는 가운데, 모르면 위는 왼쪽·아래는 오른쪽. */

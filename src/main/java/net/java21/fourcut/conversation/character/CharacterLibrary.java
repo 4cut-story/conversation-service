@@ -13,6 +13,7 @@ import java.util.Set;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
+import net.java21.fourcut.conversation.support.PublicId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -115,6 +116,8 @@ public class CharacterLibrary {
       if (l != null
           && !used.contains(l.character().publicId())
           && LookHead.of(w.look()).acceptsKnown(head(l))
+          && LookHead.fitsOutfit(w.look(), l.look())
+          && agesWithDb(l)
           && hasReference(l)) {
         used.add(l.character().publicId());
         found.put(w.key(), ref(l, 0));
@@ -154,6 +157,8 @@ public class CharacterLibrary {
         Optional<CharacterLook> l = looks.findByPublicId(n.publicId());
         if (l.isPresent()
             && (strict ? wanted.acceptsKnown(head(l.get())) : wanted.accepts(head(l.get())))
+            && LookHead.fitsOutfit(look, l.get().look())
+            && agesWithDb(l.get())
             && !used.contains(l.get().character().publicId())
             && hasReference(l.get())) {
           used.add(l.get().character().publicId());
@@ -167,6 +172,23 @@ public class CharacterLibrary {
   /** 모습 문구의 첫 마디에 없는 성별·나이는 캐릭터 DB 값으로 채운다. */
   private static LookHead head(CharacterLook l) {
     return LookHead.of(l.look()).orDb(l.character().gender(), l.character().ageGroup());
+  }
+
+  /** 모습 문구의 아이·어른이 DB 나이대와 어긋나는 모습은 쓰지 않는다(그림책 모습을 다시 그리기 전까지). */
+  private static boolean agesWithDb(CharacterLook l) {
+    return LookHead.agesWithDb(l.look(), l.character().ageGroup());
+  }
+
+  /**
+   * 모습의 참조 그림(PNG). 말풍선 자리를 확인할 때 그림을 읽는 모델에 인물 참조로 보여 준다. 모습이 없거나 그림이 아직 없으면 비어 있다.
+   *
+   * @param lookId 모습 공개 ID
+   */
+  public Optional<byte[]> referenceImage(String lookId) {
+    if (lookId == null || !PublicId.isValid(lookId)) {
+      return Optional.empty();
+    }
+    return looks.findByPublicId(lookId).flatMap(l -> storage.get(l.referenceImageKey()));
   }
 
   private boolean hasReference(CharacterLook l) {
@@ -185,7 +207,7 @@ public class CharacterLibrary {
     return new CharacterRef(
         l.publicId(),
         l.character().name(),
-        LookHead.withNoun(l.look(), l.character().gender(), l.character().ageGroup()),
+        LookHead.withAge(l.look(), l.character().gender(), l.character().ageGroup()),
         l.character().scale(),
         l.referenceImageKey(),
         ready,
@@ -302,6 +324,27 @@ public class CharacterLibrary {
       embedDescription(l);
     }
     return l;
+  }
+
+  /**
+   * GPU PC가 새로 그린 참조 그림과 함께 모습 문구를 바꾼다. 클러스터 밖의 GPU PC는 내부 캐릭터 API를 부를 수 없어 워커 경로로 받는다. before가 지금
+   * 문구와 다르면 다른 사람이 먼저 바꾼 것이라 거절한다. 이미 새 문구면 업로드 주소만 다시 준다(다시 시도해도 안전하다).
+   */
+  @Transactional
+  Registered relook(String lookId, String before, String look) {
+    CharacterLook l = looks.findByPublicId(lookId).orElseThrow(ApiException::notFound);
+    String next = look.strip();
+    if (!next.equals(l.look())) {
+      if (before != null && !before.strip().equals(l.look())) {
+        throw new ApiException(ErrorCode.CONFLICT, "모습 문구가 이미 바뀌었어요.");
+      }
+      l.describe(next, l.description());
+      l.referenceChanged();
+      if (CharacterLook.NEUTRAL.equals(l.expression())) {
+        embedDescription(l);
+      }
+    }
+    return new Registered(view(l.character(), 0, null), lookView(l), uploadUrl(l));
   }
 
   /** 참조 그림을 새로 올릴 주소. 예전 embedding은 버린다. */

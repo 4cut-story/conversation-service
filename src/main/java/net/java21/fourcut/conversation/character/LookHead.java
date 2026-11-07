@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.character;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -144,6 +145,20 @@ record LookHead(String animal, String gender, String age) {
   }
 
   /**
+   * 모습 문구의 아이·어른이 캐릭터 DB 나이대와 맞는지. 그림책 모습은 DB 나이와 상관없이 모두 "little girl/boy"로 만들어져, 어른 캐릭터의 아이 모습이
+   * 엄마·아빠 자리에 붙어 엄마·아빠가 아이로 그려졌고(시험 8회 지우개 만화), 아이 자리(딸)에는 어른 캐릭터가 붙었다. 한쪽이라도 모르면 맞는 것으로 본다.
+   *
+   * @param dbAge CHILD, YOUNG, MIDDLE, OLD (없으면 null)
+   */
+  static boolean agesWithDb(String look, String dbAge) {
+    String age = of(look).age();
+    if (age == null || dbAge == null) {
+      return true;
+    }
+    return "CHILD".equals(age) == "CHILD".equals(dbAge);
+  }
+
+  /**
    * 캐릭터 DB의 성별·나이대로 비어 있는 값을 채운다. DB 모습 문구가 "blonde hair, blue overalls"처럼 성별·나이 없이 시작하면 무엇과도 맞아서
    * 할아버지 자리에 금발 소녀가 붙었다.
    *
@@ -191,6 +206,113 @@ record LookHead(String animal, String gender, String age) {
           default -> f ? "woman" : "man";
         };
     return l.isEmpty() ? noun : noun + ", " + l;
+  }
+
+  /**
+   * 첫 마디에 나이가 없으면("man in hanbok", "swordsman", "bear") 캐릭터 DB 나이대를 넣는다. 그림체별 모습을 만들 때 나이가 빠져 조선·무협
+   * 노인과 무협 아이가 젊은 어른으로, 동물 컨셉 할머니가 아기 동물처럼 그려졌다. 첫 마디가 이미 나이를 말하면 참조 그림도 그 나이라 그대로 둔다.
+   */
+  static String withAge(String look, String dbGender, String dbAge) {
+    String l = withNoun(look, dbGender, dbAge);
+    LookHead h = of(l);
+    if (dbAge == null || (h.age != null && !"ADULT".equals(h.age))) {
+      return l;
+    }
+    String[] parts = l.split(",", 2);
+    String head = parts[0].strip();
+    String rest = parts.length > 1 ? "," + parts[1] : "";
+    String lower = head.toLowerCase(Locale.ROOT);
+    String out;
+    if (h.animal != null) {
+      out =
+          switch (dbAge) {
+            case "OLD" -> "old " + head;
+            case "CHILD" -> "little " + head;
+            default -> head;
+          };
+    } else if (lower.startsWith("swordsman") || lower.startsWith("swordswoman")) {
+      out = adjective(dbAge) + head;
+    } else {
+      String g = h.gender != null ? h.gender : "FEMALE".equals(dbGender) ? "F" : null;
+      if (g == null && !"MALE".equals(dbGender)) {
+        return l;
+      }
+      boolean f = "F".equals(g);
+      int in = lower.indexOf(" in ");
+      out = noun(f, dbAge) + (in >= 0 ? head.substring(in) : "");
+    }
+    return out + rest;
+  }
+
+  private static String adjective(String age) {
+    return switch (age) {
+      case "CHILD" -> "little ";
+      case "YOUNG" -> "young ";
+      case "MIDDLE" -> "middle-aged ";
+      case "OLD" -> "old ";
+      default -> "";
+    };
+  }
+
+  private static String noun(boolean f, String age) {
+    return switch (age) {
+      case "CHILD" -> f ? "girl" : "boy";
+      case "YOUNG" -> f ? "young woman" : "young man";
+      case "MIDDLE" -> f ? "middle-aged woman" : "middle-aged man";
+      case "OLD" -> f ? "old woman" : "old man";
+      default -> f ? "woman" : "man";
+    };
+  }
+
+  /** 직업 옷·소품. 콘티가 말하지 않았는데 붙으면 장면과 어긋난다. */
+  private static final List<String> COSTUMES =
+      List.of(
+          "doctor coat",
+          "firefighter coat",
+          "fire helmet",
+          "trench coat",
+          "fedora",
+          "police uniform",
+          "police cap",
+          "postal uniform",
+          "waitress uniform",
+          "chef jacket",
+          "chef hat",
+          "work coverall",
+          "space suit",
+          "space helmet",
+          "florist apron",
+          "painter apron",
+          "barista apron",
+          "shop apron",
+          "sports jersey",
+          "armor",
+          "monk robe",
+          "doublet",
+          "medieval gown",
+          "hooded cloak");
+
+  /**
+   * 캐릭터 모습이 콘티 인물에 어울리는지. 캐릭터 DB 일상 모습의 절반(1,013명 중 480명)이 경찰복·의사 가운·우주복 같은 직업 옷이다. 콘티가 그 옷을 말하지
+   * 않았으면 그 모습은 쓰지 않는다. 집에서 저녁 먹는 아빠가 우주복을, 할머니 집 손녀가 우체부 옷을 입고 나왔다. 콘티가 같은 낱말(uniform, apron, coat
+   * 등)을 쓰면 받는다.
+   */
+  static boolean fitsOutfit(String wantedLook, String characterLook) {
+    if (characterLook == null) {
+      return true;
+    }
+    String c = characterLook.toLowerCase(Locale.ROOT);
+    String w = wantedLook == null ? "" : wantedLook.toLowerCase(Locale.ROOT);
+    Set<String> wanted =
+        Arrays.stream(w.split("[^\\p{L}\\p{N}-]+"))
+            .filter(x -> !x.isEmpty())
+            .collect(Collectors.toSet());
+    for (String costume : COSTUMES) {
+      if (c.contains(costume) && Arrays.stream(costume.split(" ")).noneMatch(wanted::contains)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */
