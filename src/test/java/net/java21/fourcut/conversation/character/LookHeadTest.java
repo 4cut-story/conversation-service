@@ -108,6 +108,25 @@ class LookHeadTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 콘티가 인물에 붙인 소품은 캐릭터 모습에 없어도 그림 외모에 남긴다")
+  void drawLookKeepsProps() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old man, gray robe, long beard", "old swordsman, gray robe, brass telescope"))
+        .isEqualTo("old man, gray robe, long beard, brass telescope");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "bear, white shirt, orange overalls", "bear, orange scarf, red camera"))
+        .isEqualTo("bear, white shirt, orange overalls, red camera");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "curly brown hair, navy hoodie", "boy, wooden sword, navy hoodie"))
+        .isEqualTo("boy, curly brown hair, navy hoodie, wooden sword");
+    assertThat(CharacterLibrary.drawLook("young man, gat", "young man, black gat, blue jeogori"))
+        .isEqualTo("young man, gat");
+  }
+
+  @Test
   @DisplayName("REQ-018: 성별 없이 시작하는 캐릭터 외모에는 DB 성별·나이대 명사를 붙인다")
   void withNoun() {
     assertThat(LookHead.withNoun("curly brown hair, white hoodie", "MALE", "CHILD"))

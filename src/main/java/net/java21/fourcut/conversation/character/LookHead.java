@@ -351,6 +351,87 @@ record LookHead(String animal, String gender, String age) {
     return true;
   }
 
+  /** 머리·얼굴·옷을 말하는 낱말. 이런 마디는 캐릭터 모습(참조 그림)을 따른다. */
+  private static final Set<String> APPEARANCE =
+      Set.of(
+          "hair",
+          "bob",
+          "ponytail",
+          "bun",
+          "buns",
+          "perm",
+          "braid",
+          "braided",
+          "braids",
+          "beard",
+          "mustache",
+          "glasses",
+          "topknot",
+          "gat",
+          "bald",
+          "curly",
+          "shirt",
+          "t-shirt",
+          "hoodie",
+          "coat",
+          "raincoat",
+          "jacket",
+          "apron",
+          "sweater",
+          "cardigan",
+          "dress",
+          "robe",
+          "jeogori",
+          "chima",
+          "hanbok",
+          "hat",
+          "cap",
+          "scarf",
+          "uniform",
+          "overalls",
+          "vest",
+          "suit",
+          "blouse",
+          "skirt",
+          "jeans",
+          "pants",
+          "pajamas",
+          "headband",
+          "beanie",
+          "sweatshirt",
+          "gown",
+          "kimono",
+          "hood",
+          "sneakers",
+          "boots",
+          "tie",
+          "ribbon",
+          "collar",
+          "polo",
+          "parka",
+          "cloak",
+          "sash");
+
+  /**
+   * 콘티 외모에서 머리·옷이 아닌 마디(소품: "brass telescope", "wooden sword"). 첫 마디(나이·성별)는 빼고, 캐릭터 모습에 이미 있는 마디도
+   * 뺀다. 없으면 빈 문자열.
+   */
+  static String props(String scriptLook, String characterLook) {
+    if (scriptLook == null) {
+      return "";
+    }
+    String c = characterLook == null ? "" : characterLook.toLowerCase(Locale.ROOT);
+    String[] parts = scriptLook.split(",");
+    return Arrays.stream(parts, 1, parts.length)
+        .map(String::strip)
+        .filter(p -> !p.isEmpty() && !c.contains(p.toLowerCase(Locale.ROOT)))
+        .filter(
+            p ->
+                Arrays.stream(p.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}-]+"))
+                    .noneMatch(APPEARANCE::contains))
+        .collect(Collectors.joining(", "));
+  }
+
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */
   boolean accepts(LookHead other) {
     if (animal != null || other.animal != null) {
