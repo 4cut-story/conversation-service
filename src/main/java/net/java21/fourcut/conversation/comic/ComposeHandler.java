@@ -20,7 +20,7 @@ import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
 
-/** COMPOSE: 컷 4장에 말풍선을 그려 세로 4컷 한 장과 썸네일을 만들고, content-service 만화함에 등록한다. 서버에서 실행한다. */
+/** COMPOSE: 컷(4~10장)에 말풍선을 그려 세로 만화 한 장과 썸네일을 만들고, content-service 만화함에 등록한다. 서버에서 실행한다. */
 @Component
 class ComposeHandler implements StepHandler {
 
@@ -61,7 +61,7 @@ class ComposeHandler implements StepHandler {
     ComicScript script = scenarios.script(id);
     boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
     List<BufferedImage> panels = new ArrayList<>();
-    for (int i = 1; i <= DrawHandler.PANELS; i++) {
+    for (int i = 1; i <= script.panels().size(); i++) {
       String key = WorkKeys.panel(id, i);
       byte[] bytes = storage.get(key).orElseThrow(() -> new IllegalStateException(key + " 그림이 없다"));
       BufferedImage panel = read(bytes);

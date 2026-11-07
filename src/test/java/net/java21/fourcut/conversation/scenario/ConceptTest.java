@@ -41,4 +41,16 @@ class ConceptTest {
     assertThat(Concept.JOSEON.voice()).contains("하오체");
     assertThat(Prompts.SCRIPT_SCHEMA).contains("\"quote\"");
   }
+
+  @Test
+  @DisplayName("FR-005: 콘티 지시는 컷 수를 4~10컷 중 이야기에 맞게 정하게 하고, 스키마도 4~10개를 받는다")
+  void panelCountInPrompt() {
+    String system = Prompts.scriptSystem(Concept.DAILY);
+    assertThat(system)
+        .contains("4~10컷")
+        .contains("기본은 4컷")
+        .contains("늘리는 경우")
+        .contains("4컷으로 두는 경우");
+    assertThat(Prompts.SCRIPT_SCHEMA).contains("\"minItems\":4,\"maxItems\":10");
+  }
 }
