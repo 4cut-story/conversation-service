@@ -84,6 +84,21 @@ class CharacterLibraryTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 조선·무협 아이 인물에는 캐릭터를 붙이지 않는다(참조 그림의 아이가 어른으로 그려져 있다)")
+  void noChildRefsInJoseonWuxia() {
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
+    for (String concept : List.of("WUXIA", "JOSEON")) {
+      assertThat(
+              library.match(
+                  List.of(new CharacterLibrary.Wanted("A", null, "little swordsman, blue robe")),
+                  concept))
+          .isEmpty();
+    }
+    verify(embedder, never()).embed(anyString());
+    assertThat(CharacterLibrary.adultRefsOnly("DAILY")).isFalse();
+  }
+
+  @Test
   @DisplayName("REQ-018: 이름이 같아도 외모 첫 마디의 성별·나이가 다르면 이름으로 쓰지 않는다")
   void byNameNeedsHead() {
     when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of(haneul));

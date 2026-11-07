@@ -63,7 +63,8 @@ public class CharacterLibrary {
 
   /**
    * 그림에 쓸 외모 문구. 캐릭터의 외모 문구로 그리되, 성별이 빠져 있으면("curly brown hair, navy hoodie") 콘티 외모의 첫 마디("boy")를
-   * 앞에 붙인다. 성별이 없으면 두 명 컷에서 옆 사람의 성별이 번져 남자아이가 여자로 그려졌다.
+   * 앞에 붙인다. 성별이 없으면 두 명 컷에서 옆 사람의 성별이 번져 남자아이가 여자로 그려졌다. 콘티가 인물에 붙인 소품("brass telescope", "paper
+   * lantern")은 캐릭터 모습에 없어도 뒤에 붙인다. 캐릭터 모습만 쓰면 이야기의 핵심 물건인 망원경이 한 컷도 나오지 않았다(회차 12 mystery-08).
    *
    * @param characterLook 캐릭터 DB 모습 문구
    * @param scriptLook 콘티 외모 문구
@@ -76,10 +77,12 @@ public class CharacterLibrary {
     LookHead own = LookHead.of(look);
     String head = scriptLook.split(",", 2)[0].strip();
     LookHead wanted = LookHead.of(head);
-    if (own.animal() != null || own.gender() != null || wanted.gender() == null) {
-      return look;
+    String props = LookHead.props(scriptLook, look);
+    String drawn = look;
+    if (own.animal() == null && own.gender() == null && wanted.gender() != null) {
+      drawn = look.isEmpty() ? head : head + ", " + look;
     }
-    return look.isEmpty() ? head : head + ", " + look;
+    return props.isEmpty() ? drawn : drawn + ", " + props;
   }
 
   /** 인원 세기에 쓰는 사람 말("young man" 등). 동물이거나 성별을 모르면 null. */
@@ -115,6 +118,11 @@ public class CharacterLibrary {
     }
     List<Wanted> rest = new ArrayList<>();
     for (Wanted w : wanted) {
+      if (adultRefsOnly(c) && "CHILD".equals(LookHead.of(w.look()).age())) {
+        // 조선·무협 모습의 참조 그림은 아이 캐릭터도 어른으로 그려져 있다. 참조 그림을 붙이면 어린 소협이 어른으로 그려져서(회차 10~12
+        // mystery-08) 아이는 캐릭터 없이 글로만 그린다
+        continue;
+      }
       CharacterLook l = w.name() == null ? null : byName.get(w.name().strip());
       // 이름이 같아도 외모 첫 마디(성별·나이)가 어긋나면 쓰지 않는다. 콘티가 할머니에게 "유진" 같은 흔한 가명을 붙이면
       // 같은 이름의 젊은 캐릭터가 붙었다(funny-03)
@@ -139,6 +147,11 @@ public class CharacterLibrary {
       log.info("콘티 인물에 캐릭터를 맞췄다: {}", found);
     }
     return found;
+  }
+
+  /** 참조 그림의 아이가 어른으로 그려진 그림체. */
+  static boolean adultRefsOnly(String concept) {
+    return "WUXIA".equals(concept) || "JOSEON".equals(concept);
   }
 
   private Optional<CharacterRef> nearest(String look, String concept, Set<String> used) {
