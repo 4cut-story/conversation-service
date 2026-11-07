@@ -261,6 +261,9 @@ class DrawPromptTest {
             net.java21.fourcut.conversation.character.CharacterLibrary.personWord(
                 "rabbit, red scarf"))
         .isNull();
+  }
+
+  @Test
   @DisplayName("FR-006: 배경의 밤·새벽·별 같은 빛 조각은 그림체 바로 뒤에 두고, 어두운 때는 낮 하늘을 뺀다")
   void nightLight() {
     var night =
