@@ -216,20 +216,9 @@ public class ComicComposer {
             new Rectangle(x, clampY(face.y - FACE_GAP - h, h, panelTop), w, h),
             new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
             new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
-            new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h));
-    Rectangle best = options.get(0);
-    long bestCover = Long.MAX_VALUE;
-    for (Rectangle o : options) {
-      long cover = covered(o, faces) * 2 + covered(o, taken) * 3;
-      if (cover == 0) {
-        return o;
-      }
-      if (cover < bestCover) {
-        best = o;
-        bestCover = cover;
-      }
-    }
-    return best;
+            new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h),
+            belowLast(x, w, h, panelTop, taken));
+    return pick(options, faces, taken);
   }
 
   /**
@@ -251,10 +240,28 @@ public class ComicComposer {
             new Rectangle(far, up, w, h),
             new Rectangle(near, down, w, h),
             new Rectangle(far, down, w, h));
+    return pick(options, faces, taken);
+  }
+
+  /** 앞 말풍선 바로 아래 자리 (앞 말풍선이 없으면 컷 위). */
+  private static Rectangle belowLast(int x, int w, int h, int panelTop, List<Rectangle> taken) {
+    int y = taken.isEmpty() ? panelTop + 16 : taken.getLast().y + taken.getLast().height + 12;
+    return new Rectangle(x, clampY(y, h, panelTop), w, h);
+  }
+
+  /**
+   * 자리 후보 중 얼굴과 앞 말풍선을 가리지 않고 앞 말풍선 다음에 읽히는 첫 자리. 말풍선은 위에서 아래로, 같은 줄이면 왼쪽에서 오른쪽으로 읽으므로 앞 말풍선보다 위에
+   * 두면 대사 순서가 거꾸로 읽힌다(9회차 키오스크 1·4·5컷). 모두 걸리면 가장 덜 걸리는 자리다.
+   */
+  private static Rectangle pick(
+      List<Rectangle> options, List<Rectangle> faces, List<Rectangle> taken) {
     Rectangle best = options.get(0);
     long bestCover = Long.MAX_VALUE;
     for (Rectangle o : options) {
       long cover = covered(o, faces) * 2 + covered(o, taken) * 3;
+      if (!taken.isEmpty() && !readsAfter(o, taken.getLast())) {
+        cover += (long) PANEL * PANEL;
+      }
       if (cover == 0) {
         return o;
       }
@@ -264,6 +271,13 @@ public class ComicComposer {
       }
     }
     return best;
+  }
+
+  /** 앞 말풍선 다음에 읽히는 자리인지: 더 아래이거나, 거의 같은 높이에서 오른쪽. */
+  static boolean readsAfter(Rectangle next, Rectangle previous) {
+    int row = 24;
+    return next.y >= previous.y + row
+        || Math.abs(next.y - previous.y) < row && next.x >= previous.x + previous.width / 2;
   }
 
   private static long covered(Rectangle r, List<Rectangle> others) {

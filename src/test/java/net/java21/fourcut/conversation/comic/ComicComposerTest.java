@@ -220,4 +220,17 @@ class ComicComposerTest {
     assertThat(left.x).isLessThan(right.x);
     assertThat(left.y).isEqualTo(right.y);
   }
+
+  @Test
+  @DisplayName("FR-007: 뒤 대사의 말풍선은 앞 말풍선보다 위에 두지 않아 위에서 아래로 대사 순서대로 읽힌다")
+  void readingOrder() {
+    int top = 100;
+    var first = ComicComposer.face(new PanelPlacement.Head(0.3, 0.55, 0.15), top);
+    var second = ComicComposer.face(new PanelPlacement.Head(0.7, 0.25, 0.15), top);
+    List<java.awt.Rectangle> faces = List.of(first, second);
+    var a = ComicComposer.place(first, 260, 90, top, faces, List.of());
+    var b = ComicComposer.place(second, 260, 90, top, faces, List.of(a));
+    assertThat(ComicComposer.readsAfter(b, a)).isTrue();
+    assertThat(b.intersects(a)).isFalse();
+  }
 }
