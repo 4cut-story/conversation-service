@@ -126,7 +126,8 @@ public enum Concept {
       "조선시대 사람들",
       "korean traditional genre painting, joseon era village, ink lines with soft color wash,"
           + " hanji paper texture",
-      "modern clothes, car, building, smartphone, computer",
+      "modern clothes, car, building, smartphone, computer, chinese characters, calligraphy,"
+          + " red seal stamp, japanese, kimono",
       "people in hanbok",
       "a villager",
       """
@@ -150,7 +151,8 @@ public enum Concept {
       "무협",
       "wuxia martial arts comic, dynamic ink brush lines, flowing robes, misty mountains,"
           + " dramatic lighting",
-      "modern clothes, car, building, smartphone, computer, gun",
+      "modern clothes, car, building, smartphone, computer, gun, chinese characters, calligraphy,"
+          + " red seal stamp",
       "martial artists",
       "a wandering swordsman",
       """

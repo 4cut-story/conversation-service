@@ -442,10 +442,40 @@ class DrawHandler implements StepHandler {
         script.concept());
   }
 
-  private static final Pattern CHILD_HEAD =
-      Pattern.compile("(?:little |young )?(?:girl|boy)|child|kid");
+  private static final Pattern CHILD_HEAD = Pattern.compile("\\b(?:girl|boy|child|kid)\\b");
+
+  /** 무협의 아이("little swordsman"). 그림체가 무림 고수를 그리게 해 아이가 어른으로 그려졌다(회차 10 mystery-08). */
+  private static final Pattern LITTLE_SWORD =
+      Pattern.compile("(?i)^little (swordsman|swordswoman)(?=,|$)");
 
   private static final Pattern BARE_ADULT = Pattern.compile("(?i)^(woman|man)(?=,|$)");
+
+  /**
+   * 무협 아이 외모 "little swordsman"을 "little boy swordsman, child"로 바꾼다. 아이 낱말이 없으면 무협 그림체가 어른 무림 고수를
+   * 그렸다.
+   */
+  static ComicScript kids(ComicScript script) {
+    List<ComicScript.Character> out =
+        script.characters().stream()
+            .map(
+                c -> {
+                  if (c.look() == null) {
+                    return c;
+                  }
+                  String look = c.look().strip();
+                  Matcher m = LITTLE_SWORD.matcher(look);
+                  if (!m.find()) {
+                    return c;
+                  }
+                  String kid =
+                      m.group(1).equalsIgnoreCase("swordswoman")
+                          ? "little girl swordswoman, child"
+                          : "little boy swordsman, child";
+                  return c.withLook(kid + look.substring(m.end()));
+                })
+            .toList();
+    return out.equals(script.characters()) ? script : script.withCharacters(out);
+  }
 
   /**
    * 아이가 나오는 만화에서 나이 없이 "woman", "man"으로 시작하는 어른은 "tall adult woman"으로 그린다. 그림책 그림체("children's
@@ -456,6 +486,7 @@ class DrawHandler implements StepHandler {
     if (script.characters() == null) {
       return script;
     }
+    script = kids(script);
     boolean child =
         script.characters().stream()
             .anyMatch(
@@ -467,7 +498,7 @@ class DrawHandler implements StepHandler {
                                     .split(",", 2)[0]
                                     .strip()
                                     .toLowerCase(java.util.Locale.ROOT))
-                            .matches());
+                            .find());
     if (!child) {
       return script;
     }
