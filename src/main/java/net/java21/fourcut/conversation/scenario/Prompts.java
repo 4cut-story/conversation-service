@@ -162,7 +162,7 @@ final class Prompts {
         예: "{A} drops ice cream cone on ground, {B} gasps, park",
         "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
       - setting: 그 컷의 배경을 그림 모델용 영어 10단어 이내로 자세히 쓴다. 장소와, 이야기에 맞는 눈에 보이는 배경
-        물건 2~3개(예: "burger shop, ordering kiosk with menu screen, trays of burgers", "city bus aisle,
+        물건 2~3개. 장소 바로 뒤에는 그 컷에 보여야 할 핵심 물건을 먼저 쓴다(예: "burger shop, ordering kiosk with menu screen, trays of burgers", "city bus aisle,
         hanging straps, rainy window"). 장소가 같은 컷은 같은 장소 낱말로 시작한다. 인물과 표정은 쓰지 않는다.
         밤·새벽·저녁이거나 비·눈이 오면 그 때와 하늘을 꼭 넣고, 대사에 나오는 별·달·노을도 눈에 보이게 쓴다(예: "temple
         courtyard, night, dark sky full of stars, paper lanterns").
