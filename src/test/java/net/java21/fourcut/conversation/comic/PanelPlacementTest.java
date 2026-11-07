@@ -176,4 +176,49 @@ class PanelPlacementTest {
     assertThat(spots.stages()).isEqualTo(planned);
     assertThat(spots.heads()).hasSize(4).allMatch(Map::isEmpty);
   }
+
+  private static byte[] pngBytes() throws java.io.IOException {
+    var out = new java.io.ByteArrayOutputStream();
+    javax.imageio.ImageIO.write(img(), "png", out);
+    return out.toByteArray();
+  }
+
+  @Test
+  @DisplayName("FR-007: 인물 참조 그림을 컷보다 먼저 보여 주고, 읽지 못하는 참조는 뺀다")
+  @SuppressWarnings("unchecked")
+  void references() throws Exception {
+    ComicScript s = script();
+    List<Map<String, Side>> planned = Staging.panels(s);
+    when(llm.available()).thenReturn(true);
+    when(llm.see(anyString(), anyString(), anyString(), anyList())).thenReturn(Optional.empty());
+    placement.locate(s, images(), planned, Map.of("A", pngBytes(), "B", new byte[] {1, 2}));
+    ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<List<byte[]>> sent = ArgumentCaptor.forClass(List.class);
+    verify(llm).see(anyString(), prompt.capture(), anyString(), sent.capture());
+    // 참조 1장(A) + 확인할 컷 3장(1·2·3컷)
+    assertThat(sent.getValue()).hasSize(4);
+    assertThat(prompt.getValue()).startsWith("처음 1장은 인물 참조 그림이다.").contains("참조 1: A (민나)");
+    assertThat(PanelPlacement.refPrompt(s, Map.of())).isEmpty();
+  }
+
+  @Test
+  @DisplayName("FR-007: 한 얼굴을 두 사람에게 준 답은 두 사람 다 얼굴을 빼고 그 얼굴만 피할 자리로 남긴다")
+  void sameFace() {
+    var one = new PanelPlacement.Head(0.5, 0.4, 0.3);
+    var near = new PanelPlacement.Head(0.55, 0.42, 0.3);
+    var far = new PanelPlacement.Head(0.2, 0.4, 0.2);
+    assertThat(PanelPlacement.distinct(Map.of("A", one, "B", near)))
+        .containsOnlyKeys(PanelPlacement.UNKNOWN);
+    assertThat(PanelPlacement.distinct(Map.of("A", one, "B", far))).containsOnlyKeys("A", "B");
+    ComicScript s = script();
+    when(llm.available()).thenReturn(true);
+    when(llm.see(anyString(), anyString(), anyString(), anyList()))
+        .thenReturn(
+            Optional.of(
+                "{\"panels\":[{\"panel\":1,\"people\":["
+                    + "{\"speaker\":\"A\",\"side\":\"center\",\"x\":50,\"y\":40,\"size\":30},"
+                    + "{\"speaker\":\"B\",\"side\":\"center\",\"x\":52,\"y\":40,\"size\":30}]}]}"));
+    PanelPlacement.Spots spots = placement.locate(s, images(), Staging.panels(s));
+    assertThat(spots.heads().get(0)).containsOnlyKeys(PanelPlacement.UNKNOWN);
+  }
 }
