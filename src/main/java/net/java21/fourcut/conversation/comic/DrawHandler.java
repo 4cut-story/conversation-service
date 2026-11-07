@@ -72,7 +72,7 @@ class DrawHandler implements StepHandler {
       // 다시 그릴 때는 이 이름으로 같은 캐릭터를 찾는다
       scenarios.saveScript(id, named);
     }
-    ComicScript script = withLooks(named, cast);
+    ComicScript script = adults(withLooks(named, cast));
     List<Map<String, Staging.Side>> stages = Staging.panels(script);
     long seed = Math.floorMod(seedOf(written), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
@@ -218,7 +218,7 @@ class DrawHandler implements StepHandler {
       Pattern.compile("rabbit|deer|fox|bear|cat|dog|squirrel|panda");
 
   private static final Pattern PERSON =
-      Pattern.compile("(?:(young|old|little) )?(woman|man|girl|boy)");
+      Pattern.compile("(?:(young|old|little|tall adult) )?(woman|man|girl|boy)");
 
   /**
    * 사람 컨셉에서 인물 모두의 외모 첫 마디가 나이·성별이면 "two people" 대신 그 사람들로 센다("two young women", "a young woman and
@@ -380,6 +380,64 @@ class DrawHandler implements StepHandler {
         script.reviewed(),
         script.nameWarnings(),
         script.concept());
+  }
+
+  private static final Pattern CHILD_HEAD =
+      Pattern.compile("(?:little |young )?(?:girl|boy)|child|kid");
+
+  private static final Pattern BARE_ADULT = Pattern.compile("(?i)^(woman|man)(?=,|$)");
+
+  /**
+   * 아이가 나오는 만화에서 나이 없이 "woman", "man"으로 시작하는 어른은 "tall adult woman"으로 그린다. 그림책 그림체("children's
+   * picture book, simple shapes")와 아이 참조 그림이 함께 들어가면 엄마·아빠까지 아이 얼굴·키로 그려졌다(시험 8회 햄스터 만화). 나이가 적힌
+   * 어른("old woman", "young man")은 그대로 둔다.
+   */
+  static ComicScript adults(ComicScript script) {
+    if (script.characters() == null) {
+      return script;
+    }
+    boolean child =
+        script.characters().stream()
+            .anyMatch(
+                c ->
+                    c.look() != null
+                        && CHILD_HEAD
+                            .matcher(
+                                c.look()
+                                    .split(",", 2)[0]
+                                    .strip()
+                                    .toLowerCase(java.util.Locale.ROOT))
+                            .matches());
+    if (!child) {
+      return script;
+    }
+    List<ComicScript.Character> grown =
+        script.characters().stream()
+            .map(
+                c -> {
+                  if (c.look() == null) {
+                    return c;
+                  }
+                  String look = c.look().strip();
+                  Matcher m = BARE_ADULT.matcher(look);
+                  if (!m.find()) {
+                    return c;
+                  }
+                  return c.withLook(
+                      "tall adult "
+                          + m.group(1).toLowerCase(java.util.Locale.ROOT)
+                          + look.substring(m.end()));
+                })
+            .toList();
+    return grown.equals(script.characters())
+        ? script
+        : new ComicScript(
+            script.title(),
+            grown,
+            script.panels(),
+            script.reviewed(),
+            script.nameWarnings(),
+            script.concept());
   }
 
   /**
