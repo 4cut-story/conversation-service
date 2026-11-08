@@ -97,6 +97,8 @@ comic:
   ip-early-steps: ${COMIC_IP_EARLY_STEPS:3}
   ip-late-boost: ${COMIC_IP_LATE_BOOST:0.0}
   panel-seed-step: ${COMIC_PANEL_SEED_STEP:0}
+  # 제작 정보가 없는 예전 만화를 서버가 뜰 때 채운다 (운영 프로필은 켬)
+  production-backfill: ${COMIC_PRODUCTION_BACKFILL:false}
 
 # 캐릭터 DB (REQ-018). 콘티 인물을 이름이나 설명 임베딩(pgvector, BGE-M3 1024차원)으로 찾아 IP-Adapter 참조로 그린다
 characters:

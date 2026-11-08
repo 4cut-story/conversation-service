@@ -87,6 +87,15 @@ public class GpuJob extends BaseEntity {
   @Column(nullable = false)
   private boolean manual;
 
+  /** 워커가 보낸 모델 정보, 서버에서 처리한 LLM이면 답한 모델 (JSON 객체). 예전 작업은 null. */
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "model_info", columnDefinition = "json")
+  private String modelInfo;
+
+  /** 워커가 잰 실행 시간. 예전 작업이나 서버에서 처리한 작업은 null. */
+  @Column(name = "duration_ms")
+  private Long durationMs;
+
   @Column(name = "error_code", length = 50)
   private String errorCode;
 
@@ -210,6 +219,32 @@ public class GpuJob extends BaseEntity {
     if (leaseCount > 0) {
       leaseCount--;
     }
+  }
+
+  public String getModelInfo() {
+    return modelInfo;
+  }
+
+  public Long getDurationMs() {
+    return durationMs;
+  }
+
+  public Instant getEnqueuedAt() {
+    return enqueuedAt;
+  }
+
+  public Instant getStartedAt() {
+    return startedAt;
+  }
+
+  public Instant getFinishedAt() {
+    return finishedAt;
+  }
+
+  /** 모델 정보와 워커가 잰 실행 시간을 남긴다. */
+  void report(String modelInfo, Long durationMs) {
+    this.modelInfo = modelInfo;
+    this.durationMs = durationMs;
   }
 
   void succeed(String resultKey, Instant now) {

@@ -18,6 +18,7 @@ import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.pipeline.ConversationInfo;
 import net.java21.fourcut.conversation.pipeline.DirectLlm;
+import net.java21.fourcut.conversation.pipeline.Production;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepOutcome;
@@ -47,7 +48,8 @@ class ComposeManualTest {
           content,
           new PanelPlacement(llm, json),
           characters,
-          json);
+          json,
+          mock(Production.class));
   private final StepContext context =
       new StepContext(
           new ConversationInfo(1L, ID, "u", "ko", 1, null, null, true), Step.COMPOSE, 1, null);

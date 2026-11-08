@@ -112,6 +112,11 @@ class GpuJobService {
       return false;
     }
     JsonNode result = request.result() == null ? json.createObjectNode() : request.result();
+    if (request.modelInfo() != null && request.modelInfo().isObject()) {
+      job.report(json.writeValueAsString(request.modelInfo()), request.durationMs());
+    } else {
+      job.report(null, request.durationMs());
+    }
     return succeed(job, result, now);
   }
 
@@ -171,6 +176,13 @@ class GpuJobService {
     storage.put(
         key, json.writeValueAsString(result).getBytes(StandardCharsets.UTF_8), "application/json");
     job.succeed(key, now);
+    if (job.getModelInfo() == null && result.path("model").isString()) {
+      // 서버에서 처리한 LLM(Claude·Gemini·수동)은 답한 모델을 남긴다
+      job.report(
+          json.writeValueAsString(
+              json.createObjectNode().put("model", result.path("model").asString())),
+          job.getDurationMs());
+    }
     pipeline.jobSucceeded(job, result);
     return true;
   }
