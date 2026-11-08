@@ -46,4 +46,6 @@ interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
 
   List<GpuJob> findByConversationIdAndStepAndState(
       Long conversationId, Step step, GpuJob.State state);
+
+  List<GpuJob> findByConversationIdAndStateOrderByIdAsc(Long conversationId, GpuJob.State state);
 }

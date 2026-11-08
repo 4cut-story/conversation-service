@@ -102,6 +102,10 @@ public class PipelineStep extends BaseEntity {
     return startedAt;
   }
 
+  public Instant getFinishedAt() {
+    return finishedAt;
+  }
+
   void jobEnqueued(Long jobId) {
     this.runtimeJobId = jobId.toString();
   }

@@ -14,6 +14,7 @@ import java.util.Optional;
 import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.pipeline.JobType;
+import net.java21.fourcut.conversation.pipeline.Production;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -24,6 +25,8 @@ import net.java21.fourcut.conversation.scenario.Dialect;
 import net.java21.fourcut.conversation.scenario.ScenarioStore;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -32,6 +35,8 @@ import tools.jackson.databind.node.ObjectNode;
 /** COMPOSE: 컷(4~10장)에 말풍선을 그려 세로 만화 한 장과 썸네일을 만들고, content-service 만화함에 등록한다. 서버에서 실행한다. */
 @Component
 class ComposeHandler implements StepHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(ComposeHandler.class);
 
   private static final String PNG = "image/png";
 
@@ -42,6 +47,7 @@ class ComposeHandler implements StepHandler {
   private final PanelPlacement placement;
   private final CharacterLibrary characters;
   private final JsonMapper json;
+  private final Production production;
 
   ComposeHandler(
       ScenarioStore scenarios,
@@ -50,8 +56,10 @@ class ComposeHandler implements StepHandler {
       ContentClient content,
       PanelPlacement placement,
       CharacterLibrary characters,
-      JsonMapper json) {
+      JsonMapper json,
+      Production production) {
     this.json = json;
+    this.production = production;
     this.scenarios = scenarios;
     this.storage = storage;
     this.composer = composer;
@@ -122,8 +130,19 @@ class ComposeHandler implements StepHandler {
                 script.nameWarnings() == null ? List.of() : script.nameWarnings(),
                 cast(script),
                 Concept.of(script.concept()).name(),
-                Dialect.of(context.conversation().dialect()).name()));
+                Dialect.of(context.conversation().dialect()).name(),
+                production(context.conversation().id())));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /** 지금까지의 제작 정보. 못 만들어도 만화 등록은 한다. */
+  private JsonNode production(Long conversationId) {
+    try {
+      return production.of(conversationId, false).map(Production.Built::production).orElse(null);
+    } catch (RuntimeException e) {
+      log.warn("제작 정보를 만들지 못했다: conversation={}", conversationId, e);
+      return null;
+    }
   }
 
   /** 수동 처리 대화의 말풍선 자리 답을 둔 곳. */

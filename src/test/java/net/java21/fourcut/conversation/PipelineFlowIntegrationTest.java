@@ -58,6 +58,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -602,6 +603,17 @@ class PipelineFlowIntegrationTest {
     assertThat(registered.getValue().concept()).isNotBlank();
     assertThat(registered.getValue().dialect()).isEqualTo("NONE");
     assertThat(registered.getValue().ownerId()).isEqualTo(owner);
+    // FR-006: 제작 정보에 단계별 걸린 시간과 워커가 보낸 모델 정보가 들어간다
+    JsonNode production = registered.getValue().production();
+    assertThat(production.path("version").asInt()).isEqualTo(1);
+    assertThat(production.has("totalMs")).isTrue();
+    JsonNode transcribed = production.path("steps").get(0);
+    assertThat(transcribed.path("step").asString()).isEqualTo("TRANSCRIBE");
+    assertThat(transcribed.path("jobs").get(0).path("info").path("whisper").asString())
+        .isEqualTo("large-v3");
+    assertThat(transcribed.path("jobs").get(0).path("runMs").asLong()).isEqualTo(52000);
+    assertThat(production.findValues("step").stream().map(JsonNode::asString))
+        .contains("DRAW", "COMPOSE");
     byte[] full = storage.get(WorkKeys.comicFull(conversationId)).orElseThrow();
     BufferedImage composed = ImageIO.read(new java.io.ByteArrayInputStream(full));
     assertThat(composed.getWidth()).isEqualTo(800);

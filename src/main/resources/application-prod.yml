@@ -5,3 +5,6 @@ logging:
   structured:
     format:
       console: ecs
+
+comic:
+  production-backfill: ${COMIC_PRODUCTION_BACKFILL:true}
