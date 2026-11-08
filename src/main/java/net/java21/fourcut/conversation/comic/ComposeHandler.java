@@ -82,14 +82,7 @@ class ComposeHandler implements StepHandler {
   public StepOutcome runLocal(StepContext context) {
     String id = context.conversation().publicId();
     ComicScript script = scenarios.script(id);
-    boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
-    List<BufferedImage> panels = new ArrayList<>();
-    for (int i = 1; i <= script.panels().size(); i++) {
-      String key = WorkKeys.panel(id, i);
-      byte[] bytes = storage.get(key).orElseThrow(() -> new IllegalStateException(key + " 그림이 없다"));
-      BufferedImage panel = read(bytes);
-      panels.add(gray ? gray(panel) : panel);
-    }
+    List<BufferedImage> panels = panels(id, script);
     // 그림 모델이 정해 준 좌우를 어기면 말풍선이 다른 인물을 가리키므로, 그린 그림에서 자리와 얼굴 위치를 확인해 맞춘다
     List<Map<String, Staging.Side>> planned = Staging.panels(script);
     PanelPlacement.Spots spots;
@@ -111,6 +104,7 @@ class ComposeHandler implements StepHandler {
     } else {
       spots = placement.locate(script, panels, planned, references(script));
     }
+    Map<String, String> portraits = portraits(id, script, panels, spots.heads());
     ComicComposer.Result result = composer.compose(script, panels, spots.stages(), spots.heads());
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);
@@ -128,11 +122,52 @@ class ComposeHandler implements StepHandler {
                 thumb,
                 language,
                 script.nameWarnings() == null ? List.of() : script.nameWarnings(),
-                cast(script),
+                cast(script, portraits),
                 Concept.of(script.concept()).name(),
                 Dialect.of(context.conversation().dialect()).name(),
                 production(context.conversation().id())));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /** 컷 그림들. 흑백 신문 만화는 흑백으로 바꾼다. 컷 그림이 없으면 IllegalStateException. */
+  List<BufferedImage> panels(String id, ComicScript script) {
+    boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
+    List<BufferedImage> panels = new ArrayList<>();
+    for (int i = 1; i <= script.panels().size(); i++) {
+      String key = WorkKeys.panel(id, i);
+      byte[] bytes = storage.get(key).orElseThrow(() -> new IllegalStateException(key + " 그림이 없다"));
+      BufferedImage panel = read(bytes);
+      panels.add(gray ? gray(panel) : panel);
+    }
+    return panels;
+  }
+
+  /**
+   * 캐릭터를 못 찾은 인물의 얼굴 그림을 컷에서 잘라 저장한다. 실패해도 만화 등록은 한다(그 인물은 소개에 그림 없이 나온다).
+   *
+   * @return 화자 → 얼굴 그림 객체 키
+   */
+  Map<String, String> portraits(
+      String id,
+      ComicScript script,
+      List<BufferedImage> panels,
+      List<Map<String, PanelPlacement.Head>> heads) {
+    Map<String, String> keys = new LinkedHashMap<>();
+    try {
+      Map<String, byte[]> cropped = CastPortraits.crop(script, panels, heads);
+      List<ComicScript.Character> people = script.characters();
+      for (int i = 0; i < people.size(); i++) {
+        byte[] png = cropped.get(people.get(i).speaker());
+        if (png != null) {
+          String key = WorkKeys.castPortrait(id, i);
+          storage.put(key, png, PNG);
+          keys.put(people.get(i).speaker(), key);
+        }
+      }
+    } catch (RuntimeException e) {
+      log.warn("등장인물 얼굴 그림을 만들지 못했다: conversation={} ({})", id, e.toString());
+    }
+    return keys;
   }
 
   /** 지금까지의 제작 정보. 못 만들어도 만화 등록은 한다. */
@@ -190,11 +225,26 @@ class ComposeHandler implements StepHandler {
 
   /** 만화 아래 등장인물 소개: 호칭, 캐릭터 이름, 캐릭터 모습. */
   static List<ContentClient.CastMember> cast(ComicScript script) {
+    return cast(script, Map.of());
+  }
+
+  /**
+   * 만화 아래 등장인물 소개: 호칭, 캐릭터 이름, 캐릭터 모습, 캐릭터를 못 찾은 인물의 얼굴 그림.
+   *
+   * @param portraits 화자 → 얼굴 그림 객체 키
+   */
+  static List<ContentClient.CastMember> cast(ComicScript script, Map<String, String> portraits) {
     if (script.characters() == null) {
       return List.of();
     }
     return script.characters().stream()
-        .map(c -> new ContentClient.CastMember(c.callName(), c.displayName(), c.lookId()))
+        .map(
+            c ->
+                new ContentClient.CastMember(
+                    c.callName(),
+                    c.displayName(),
+                    c.lookId(),
+                    c.lookId() == null ? portraits.get(c.speaker()) : null))
         .toList();
   }
 
