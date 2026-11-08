@@ -52,7 +52,7 @@ class ProductionBackfill {
           sent++;
         }
       } catch (HttpClientErrorException.NotFound e) {
-        // 지운 만화
+        log.debug("지운 만화라 건너뜀: conversation={}", id);
       } catch (RuntimeException e) {
         log.warn("제작 정보 채우기 실패: conversation={} ({})", id, e.getMessage());
       }
