@@ -81,6 +81,32 @@ class ComposeManualTest {
     verify(llm, never()).see(any(), any(), any(), any(), any());
   }
 
+  @Test
+  @DisplayName("REQ-018: 캐릭터를 못 찾은 인물은 컷에서 자른 얼굴 그림을 저장하고 등장인물 소개에 키를 넘긴다")
+  void portraits() throws Exception {
+    when(content.register(any())).thenReturn(new ContentClient.Registered("comic1"));
+    scenarios.saveScript(ID, script());
+    for (int i = 1; i <= 4; i++) {
+      storage.put(WorkKeys.panel(ID, i), png(), "image/png");
+    }
+    storage.put(
+        ComposeHandler.placementAnswer(ID),
+        """
+        {"panels":[{"panel":1,"people":[{"speaker":"A","side":"left","x":30,"y":30,"size":20},
+        {"speaker":"B","side":"absent"}]}]}"""
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8),
+        "application/json");
+
+    assertThat(handler.runLocal(context)).isInstanceOf(StepOutcome.Completed.class);
+
+    var sent = org.mockito.ArgumentCaptor.forClass(ContentClient.RegisterComic.class);
+    verify(content).register(sent.capture());
+    assertThat(sent.getValue().cast())
+        .extracting(ContentClient.CastMember::portraitKey)
+        .containsExactly(WorkKeys.castPortrait(ID, 0), null);
+    assertThat(storage.exists(WorkKeys.castPortrait(ID, 0))).isTrue();
+  }
+
   private static ComicScript script() {
     List<ComicScript.Character> cast =
         List.of(

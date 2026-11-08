@@ -146,8 +146,8 @@ class ComicComposerTest {
             java.util.List.of());
     assertThat(ComposeHandler.cast(s))
         .containsExactly(
-            new ContentClient.CastMember("할머니", "하늘", "look1"),
-            new ContentClient.CastMember("도윤", "도윤", null));
+            new ContentClient.CastMember("할머니", "하늘", "look1", null),
+            new ContentClient.CastMember("도윤", "도윤", null, null));
   }
 
   @Test

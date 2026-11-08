@@ -38,8 +38,9 @@ public interface ContentClient {
    * @param role 만화 속 호칭 (할머니, 손녀…)
    * @param name 캐릭터 이름 (캐릭터를 못 찾았으면 가명)
    * @param lookId 캐릭터 모습 공개 ID. 못 찾았으면 null
+   * @param portraitKey 캐릭터를 못 찾은 인물의 얼굴 그림 객체 키 (만화 컷에서 잘라 낸 것). 없으면 null
    */
-  record CastMember(String role, String name, String lookId) {}
+  record CastMember(String role, String name, String lookId, String portraitKey) {}
 
   /** 등록 결과. */
   record Registered(String comicId) {}
@@ -50,4 +51,8 @@ public interface ContentClient {
   /** 대화로 찾은 만화에 제작 정보를 채운다. 이미 있으면 그대로 둔다. 만화가 없으면 404. */
   @PutExchange("/internal/comics/by-conversation/{conversationId}/production")
   void production(@PathVariable String conversationId, @RequestBody JsonNode production);
+
+  /** 대화로 찾은 만화의 등장인물 소개를 바꾼다 (예전 만화에 얼굴 그림을 채울 때). 만화가 없으면 404. */
+  @PutExchange("/internal/comics/by-conversation/{conversationId}/cast")
+  void cast(@PathVariable String conversationId, @RequestBody List<CastMember> cast);
 }

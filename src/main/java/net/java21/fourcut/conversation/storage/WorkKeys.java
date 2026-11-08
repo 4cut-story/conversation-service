@@ -58,4 +58,9 @@ public final class WorkKeys {
   public static String comicThumb(String conversationId) {
     return "comics/" + conversationId + "/thumb.png";
   }
+
+  /** 캐릭터 DB에 없는 등장인물의 얼굴 그림 (만화 컷에서 잘라 낸 것). index는 콘티 인물 순서(0부터). */
+  public static String castPortrait(String conversationId, int index) {
+    return "comics/" + conversationId + "/cast-" + index + ".png";
+  }
 }
