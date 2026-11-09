@@ -603,6 +603,11 @@ class PipelineFlowIntegrationTest {
     assertThat(registered.getValue().concept()).isNotBlank();
     assertThat(registered.getValue().dialect()).isEqualTo("NONE");
     assertThat(registered.getValue().ownerId()).isEqualTo(owner);
+    // 라이브 모드 재생 정보(003-live-mode FR-018): 컷마다 말풍선을 넣은 그림과 live.json을 남긴다
+    JsonNode live = registered.getValue().live();
+    assertThat(live.path("version").asInt()).isEqualTo(1);
+    assertThat(live.path("panels")).isNotEmpty();
+    assertThat(live.path("panels").get(0).path("image").asString()).isEqualTo("panels/1.png");
     // FR-006: 제작 정보에 단계별 걸린 시간과 워커가 보낸 모델 정보가 들어간다
     JsonNode production = registered.getValue().production();
     assertThat(production.path("version").asInt()).isEqualTo(1);

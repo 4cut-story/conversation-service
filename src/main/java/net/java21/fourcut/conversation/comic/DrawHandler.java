@@ -104,6 +104,12 @@ class DrawHandler implements StepHandler {
       if (two != null) {
         image.set("edit", two.edit());
       }
+      ObjectNode motion =
+          properties.twoPass() ? motion(style, id, i, script.panels().get(i)) : null;
+      if (motion != null) {
+        // 라이브 모드 두 번째 그림. 첫 그림 프롬프트는 그대로 두고, 워커가 완성 그림을 입력으로 배경만 바꿔 그린다
+        image.set("motion", motion);
+      }
       ArrayNode refs = references(stage, cast, othersInScene(script, panel));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast, properties.panelSeedStep()));
       image.put("width", properties.imageSize());
@@ -771,6 +777,32 @@ class DrawHandler implements StepHandler {
         script.reviewed(),
         script.nameWarnings(),
         script.concept());
+  }
+
+  /**
+   * 라이브 모드 움직임 컷의 두 번째 그림 요청({type, prompt, uploadPutKey}). 움직임이 없는 컷은 null. 참조 그림을 그대로 받는 그림 모델(2단
+   * 그리기를 켠 모델)에서만 부른다.
+   */
+  ObjectNode motion(String style, String conversationId, int index, ComicScript.Panel panel) {
+    return panel
+        .liveMotion()
+        .map(
+            m -> {
+              ObjectNode node = json.createObjectNode();
+              node.put("type", m.code());
+              node.put("prompt", motionPrompt(style, m));
+              node.put("uploadPutKey", WorkKeys.panelB(conversationId, index + 1));
+              return node;
+            })
+        .orElse(null);
+  }
+
+  /** 두 번째 그림 프롬프트: 인물·구도는 그대로, 배경의 그 부분만 바꾼다. */
+  static String motionPrompt(String style, net.java21.fourcut.conversation.scenario.Motion m) {
+    return style
+        + ", edit this picture: keep the characters, the faces, the poses, the clothes, the"
+        + " objects, the composition and the drawing style exactly the same, and only "
+        + m.change();
   }
 
   /** 2단 그리기: 1차로 그릴 컷과 2차 edit({prompt, references}). */

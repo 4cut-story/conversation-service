@@ -49,7 +49,8 @@ class ComposeManualTest {
           new PanelPlacement(llm, json),
           characters,
           json,
-          mock(Production.class));
+          mock(Production.class),
+          mock(net.java21.fourcut.conversation.sound.SoundMatcher.class));
   private final StepContext context =
       new StepContext(
           new ConversationInfo(1L, ID, "u", "ko", 1, null, null, true), Step.COMPOSE, 1, null);

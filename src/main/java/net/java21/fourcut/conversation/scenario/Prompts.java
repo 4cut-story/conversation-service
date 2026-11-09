@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.21";
+  static final String VERSION = "2026-11-09.22";
 
   private Prompts() {}
 
@@ -288,6 +288,22 @@ final class Prompts {
         (예: "민수야" → B가 도윤이면 "도윤아"), text는 role 호칭으로, 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기
         전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
+      - sound: 라이브 모드에서 그 컷에 틀 배경 소리 장면을 한국어 한 줄(30자 이내)로 쓴다. 장소와 거기서 들리는 소리를
+        쓴다(예: "밤 바닷가, 잔잔한 파도와 풀벌레", "비 오는 골목, 빗소리", "붐비는 카페, 사람들 웅성거림"). 인물 이름과
+        대사는 쓰지 않는다. 같은 장소가 이어지면 같은 문장을 쓴다.
+      - motion: 라이브 모드에서 그 컷 배경만 살짝 움직일지 고른다. 아래 여섯 가지 중 하나 또는 "none"이다. 그 배경이 그
+        컷 setting에 실제로 쓰여 있고, 바뀌는 것이 배경뿐이고 인물·물건·구도는 그대로일 때만 고른다. 한 편에 많아야
+        1~2컷이고, 나머지 컷은 모두 "none"이다. 확실하지 않으면 "none".
+        · twinkle: 밤하늘 별빛·작은 불빛이 반짝인다(setting에 stars, fairy lights).
+        · rain: 야외에 빗줄기가 내린다(setting에 rain). 실내 컷은 안 된다.
+        · snow: 야외에 눈이 내린다(setting에 snow). 실내 컷은 안 된다.
+        · flicker: 촛불·등불·네온·모닥불이 깜빡인다(setting에 candle, lantern, neon, campfire).
+        · shimmer: 바다·호수·강 물결이 반짝인다(setting에 sea, lake, river).
+        · petals: 꽃잎·낙엽이 흩날린다(setting에 petals, blossoms, falling leaves).
+        좋은 예: 별이 가득한 밤하늘 아래 벤치에 앉은 컷 → twinkle. 비 오는 거리에 선 컷 → rain. 생일 케이크 촛불 앞 컷 →
+        flicker. 벚꽃길을 걷는 컷 → petals.
+        나쁜 예: 인물이 손을 흔든다 → none(인물 동작). 밤인데 setting에 별이 없다 → none. 창밖에 비가 오는 방 안 → none
+        (실내). 놀라서 펄쩍 뛴다 → none. 모든 컷에 twinkle → 한두 컷만 남기고 none.
 
       title은 20자 이내로 이 장면의 핵심을 살려 짓고(예: "사라진 아이스크림의 범인", "할머니의 비밀 레시피") 실명과 가명을
       넣지 않는다(인물은 role 호칭으로). title과 persona도 맞춤법·띄어쓰기를 지킨다. 대사·제목·persona는 대화와 같은 언어로
@@ -307,13 +323,15 @@ final class Prompts {
        "places":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"object","required":["key","draw"],
         "properties":{"key":{"type":"string"},"draw":{"type":"string"}}}},
        "panels":{"type":"array","minItems":4,"maxItems":10,"items":{"type":"object",
-        "required":["role","shot","action","place","setting","faces","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
+        "required":["role","shot","action","place","setting","faces","lines","sound","motion"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
          "action":{"type":"string"},"place":{"type":"string"},"setting":{"type":"string"},
          "faces":{"type":"array","items":{"type":"object","required":["speaker","face","lookAt"],
           "properties":{"speaker":{"type":"string"},"face":{"type":"string"},"lookAt":{"type":"string"}}}},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
           "required":["speaker","quote","text"],"properties":{"speaker":{"type":"string"},
-           "quote":{"type":"string"},"text":{"type":"string"}}}}}}},
+           "quote":{"type":"string"},"text":{"type":"string"}}}},
+         "sound":{"type":"string"},
+         "motion":{"type":"string","enum":["none","twinkle","rain","snow","flicker","shimmer","petals"]}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;
 }

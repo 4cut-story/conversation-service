@@ -23,6 +23,7 @@ import net.java21.fourcut.conversation.scenario.ComicScript;
 import net.java21.fourcut.conversation.scenario.Concept;
 import net.java21.fourcut.conversation.scenario.Dialect;
 import net.java21.fourcut.conversation.scenario.ScenarioStore;
+import net.java21.fourcut.conversation.sound.SoundMatcher;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.slf4j.Logger;
@@ -48,6 +49,7 @@ class ComposeHandler implements StepHandler {
   private final CharacterLibrary characters;
   private final JsonMapper json;
   private final Production production;
+  private final SoundMatcher sounds;
 
   ComposeHandler(
       ScenarioStore scenarios,
@@ -57,7 +59,9 @@ class ComposeHandler implements StepHandler {
       PanelPlacement placement,
       CharacterLibrary characters,
       JsonMapper json,
-      Production production) {
+      Production production,
+      SoundMatcher sounds) {
+    this.sounds = sounds;
     this.json = json;
     this.production = production;
     this.scenarios = scenarios;
@@ -110,6 +114,7 @@ class ComposeHandler implements StepHandler {
     String thumb = WorkKeys.comicThumb(id);
     storage.put(full, result.full(), PNG);
     storage.put(thumb, result.thumb(), PNG);
+    ObjectNode live = live(id, script, panels, spots);
     String language =
         context.conversation().language() == null ? "ko" : context.conversation().language();
     ContentClient.Registered registered =
@@ -125,8 +130,78 @@ class ComposeHandler implements StepHandler {
                 cast(script, portraits),
                 Concept.of(script.concept()).name(),
                 Dialect.of(context.conversation().dialect()).name(),
-                production(context.conversation().id())));
+                production(context.conversation().id()),
+                live));
     return new StepOutcome.Completed(full, registered.comicId());
+  }
+
+  /**
+   * 라이브 모드(docs specs/003-live-mode): 컷마다 말풍선을 넣은 그림과, 움직임 컷의 두 번째 그림(같은 말풍선 자리)을 만화 폴더에 저장하고, 컷별
+   * 배경음을 골라 재생 정보(live.json)를 만든다. 두 번째 그림이 없거나 첫 그림과 어긋나면 그 컷은 한 장이다. 실패하면 null(만화 등록은 라이브 없이 한다).
+   */
+  ObjectNode live(
+      String id, ComicScript script, List<BufferedImage> panels, PanelPlacement.Spots spots) {
+    try {
+      boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
+      List<Boolean> moving = new ArrayList<>();
+      for (int i = 0; i < panels.size(); i++) {
+        Map<String, Staging.Side> stage = at(spots.stages(), i);
+        Map<String, PanelPlacement.Head> heads = at(spots.heads(), i);
+        storage.put(
+            WorkKeys.livePanel(id, i + 1, false),
+            composer.livePanel(script, i, panels.get(i), stage, heads),
+            PNG);
+        boolean move = false;
+        if (script.panels().get(i).liveMotion().isPresent()) {
+          Optional<byte[]> second = storage.get(WorkKeys.panelB(id, i + 1));
+          if (second.isPresent()) {
+            BufferedImage b = read(second.get());
+            b = gray ? gray(b) : b;
+            move = LiveFrames.aligned(panels.get(i), b, heads);
+            if (move) {
+              storage.put(
+                  WorkKeys.livePanel(id, i + 1, true),
+                  composer.livePanel(script, i, b, stage, heads),
+                  PNG);
+            } else {
+              log.info("두 그림이 어긋나 움직임을 뺀다: conversation={} panel={}", id, i + 1);
+            }
+          }
+        }
+        moving.add(move);
+      }
+      ObjectNode live = LivePlayback.build(json, script, sounds.match(queries(script)), moving);
+      storage.put(
+          WorkKeys.liveJson(id),
+          json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
+          "application/json");
+      return live;
+    } catch (RuntimeException e) {
+      log.warn("라이브 모드 정보를 만들지 못했다: conversation={} ({})", id, e.toString());
+      return null;
+    }
+  }
+
+  /** 컷별 배경음 질의: 소리 장면, 배경 문구의 첫 마디(장소), 대사. */
+  static List<SoundMatcher.Query> queries(ComicScript script) {
+    return script.panels().stream()
+        .map(
+            p ->
+                new SoundMatcher.Query(
+                    p.sound(),
+                    p.setting() == null ? null : p.setting().split(",", 2)[0].strip(),
+                    p.lines() == null
+                        ? null
+                        : String.join(
+                            " ",
+                            p.lines().stream()
+                                .map(l -> l.text() == null ? "" : l.text())
+                                .toList())))
+        .toList();
+  }
+
+  private static <T> Map<String, T> at(List<Map<String, T>> list, int i) {
+    return list != null && i < list.size() ? list.get(i) : Map.of();
   }
 
   /** 컷 그림들. 흑백 신문 만화는 흑백으로 바꾼다. 컷 그림이 없으면 IllegalStateException. */

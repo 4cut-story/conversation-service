@@ -18,6 +18,7 @@ public interface ContentClient {
    * @param dialect 대사 사투리({@code Dialect} 이름). 사투리 없음은 NONE
    * @param production 제작 정보 ({@link net.java21.fourcut.conversation.pipeline.Production}). 못 만들면
    *     null
+   * @param live 라이브 모드 재생 정보 (common contracts/live-mode.yaml LivePlayback). 못 만들면 null
    */
   record RegisterComic(
       String ownerId,
@@ -30,7 +31,8 @@ public interface ContentClient {
       List<CastMember> cast,
       String concept,
       String dialect,
-      JsonNode production) {}
+      JsonNode production,
+      JsonNode live) {}
 
   /**
    * 등장인물 한 명.

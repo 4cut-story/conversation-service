@@ -138,7 +138,8 @@ class SoundLibrary {
     return Map.of("kind", text(f.kind()), "category", text(f.category()), "mood", text(f.mood()));
   }
 
-  private List<Sound> search(Filter f, String q, int n) {
+  /** 검색어와 가까운 소리 n개. 임베딩 서버나 pgvector가 없으면 글자로 찾는다. */
+  List<Sound> search(Filter f, String q, int n) {
     Optional<String> schema = schema();
     Optional<float[]> v = schema.isPresent() ? embedder.embed(q) : Optional.empty();
     if (schema.isPresent() && v.isPresent()) {
