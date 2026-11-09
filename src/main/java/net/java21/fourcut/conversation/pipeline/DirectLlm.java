@@ -19,6 +19,8 @@ public interface DirectLlm {
 
   String PLACEMENT = "placement";
 
+  String SUMMARY = "summary";
+
   /**
    * @param task 작업 이름 ({@link #CORRECT} 등)
    * @param jsonSchema 응답 JSON 스키마

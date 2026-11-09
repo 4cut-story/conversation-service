@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
  *
  * @param nameWarnings 콘티를 만들며 가명으로 바꾼 실명 의심 단어. 올리기 전 경고에 쓴다
  * @param concept 그림 컨셉({@link Concept} 이름). 예전 콘티에는 없을 수 있다(일상 웹툰)
+ * @param summary 만화 아래에 보이는 줄거리 요약(몇 문장, 인물은 호칭). 예전 콘티에는 없다
  */
 public record ComicScript(
     String title,
@@ -26,7 +27,21 @@ public record ComicScript(
     List<Panel> panels,
     Boolean reviewed,
     List<String> nameWarnings,
-    String concept) {
+    String concept,
+    String summary) {
+
+  /** 줄거리 요약 최대 길이. content-service summary 컬럼(1000자)보다 짧게 둔다. */
+  public static final int MAX_SUMMARY = 600;
+
+  public ComicScript(
+      String title,
+      List<Character> characters,
+      List<Panel> panels,
+      Boolean reviewed,
+      List<String> nameWarnings,
+      String concept) {
+    this(title, characters, panels, reviewed, nameWarnings, concept, null);
+  }
 
   public ComicScript(
       String title,
@@ -39,7 +54,7 @@ public record ComicScript(
 
   /** 컨셉을 정한 콘티. */
   public ComicScript withConcept(Concept c) {
-    return new ComicScript(title, characters, panels, reviewed, nameWarnings, c.name());
+    return new ComicScript(title, characters, panels, reviewed, nameWarnings, c.name(), summary);
   }
 
   /**
@@ -167,7 +182,7 @@ public record ComicScript(
     }
     return out.equals(panels)
         ? this
-        : new ComicScript(title, characters, out, reviewed, nameWarnings, concept);
+        : new ComicScript(title, characters, out, reviewed, nameWarnings, concept, summary);
   }
 
   /**
@@ -232,7 +247,7 @@ public record ComicScript(
 
   /** 등장인물만 바꾼 콘티. */
   public ComicScript withCharacters(List<Character> cast) {
-    return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
+    return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept, summary);
   }
 
   /** 화자 표시 → 말풍선 앞에 붙는 호칭(호칭이 없는 예전 콘티는 이름). */
@@ -246,9 +261,9 @@ public record ComicScript(
   static final int MAX_ROLE_CHARS = 8;
 
   /**
-   * 대사·제목에서 인물을 이름 대신 호칭(role)으로 부른다. 이름은 만화 아래 등장인물 소개에만 쓴다. 호칭은 다듬고, 겹치면 뒤 인물에 번호를 붙인다("친구",
-   * "친구2"). 대사(text)와 제목 속 이름은 호칭으로 바꾸고 조사를 맞춘다("하늘아" → "할머니", "하늘이가" → "손녀가"). 원문(quote)은 대조용이라
-   * 그대로 둔다. 호칭이 없는 인물은 그대로다.
+   * 대사·제목·줄거리 요약에서 인물을 이름 대신 호칭(role)으로 부른다. 이름은 만화 아래 등장인물 소개에만 쓴다. 호칭은 다듬고, 겹치면 뒤 인물에 번호를
+   * 붙인다("친구", "친구2"). 대사(text)와 제목 속 이름은 호칭으로 바꾸고 조사를 맞춘다("하늘아" → "할머니", "하늘이가" → "손녀가").
+   * 원문(quote)은 대조용이라 그대로 둔다. 호칭이 없는 인물은 그대로다.
    */
   public ComicScript withRoleCalls() {
     if (characters == null) {
@@ -276,12 +291,42 @@ public record ComicScript(
             ? panels
             : mapLines(l -> new Line(l.speaker(), f.apply(l.text()), l.quote()));
     String called = calls.isEmpty() ? title : f.apply(title);
+    String story = calls.isEmpty() || summary == null ? summary : f.apply(summary);
     if (cast.equals(characters)
         && fixed.equals(panels)
-        && java.util.Objects.equals(called, title)) {
+        && java.util.Objects.equals(called, title)
+        && java.util.Objects.equals(story, summary)) {
       return this;
     }
-    return new ComicScript(called, cast, fixed, reviewed, nameWarnings, concept);
+    return new ComicScript(called, cast, fixed, reviewed, nameWarnings, concept, story);
+  }
+
+  /**
+   * 줄거리 요약을 다듬는다: 앞뒤 공백과 줄바꿈을 정리하고, 화자 표시·자리표({A})를 지우고, {@link #MAX_SUMMARY}자를 넘으면 그 안의 마지막 문장까지
+   * 자른다. 비면 null(요약 없이 만화를 만든다).
+   */
+  public ComicScript withCleanSummary() {
+    String clean = cleanSummary(summary);
+    return java.util.Objects.equals(clean, summary)
+        ? this
+        : new ComicScript(title, characters, panels, reviewed, nameWarnings, concept, clean);
+  }
+
+  static String cleanSummary(String text) {
+    if (text == null) {
+      return null;
+    }
+    String t =
+        text.replaceAll("\\{[^{}]*}", "")
+            .replaceAll("(?m)^\\s*[A-Z]\\s*:\\s*", "")
+            .replaceAll("\\s+", " ")
+            .strip();
+    if (t.length() > MAX_SUMMARY) {
+      String head = t.substring(0, MAX_SUMMARY);
+      int end = head.lastIndexOf('.');
+      t = end > MAX_SUMMARY / 2 ? head.substring(0, end + 1) : head.strip();
+    }
+    return t.isEmpty() ? null : t;
   }
 
   /** 호칭을 다듬는다. 비었거나 길거나, 화자 표시("A")나 영문 한 글자라 호칭이 아니면 null(이름으로 부른다). */
@@ -469,7 +514,14 @@ public record ComicScript(
                 })
             .toList();
     List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
-    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
+    return new ComicScript(
+        replaceAll(title, rename),
+        cast,
+        fixed,
+        reviewed,
+        nameWarnings,
+        concept,
+        replaceAll(summary, rename));
   }
 
   /**
@@ -501,7 +553,14 @@ public record ComicScript(
                         : c)
             .toList();
     List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
-    return new ComicScript(replaceAll(title, rename), cast, fixed, reviewed, nameWarnings, concept);
+    return new ComicScript(
+        replaceAll(title, rename),
+        cast,
+        fixed,
+        reviewed,
+        nameWarnings,
+        concept,
+        replaceAll(summary, rename));
   }
 
   /**
@@ -521,7 +580,8 @@ public record ComicScript(
     }
     ComicScript out = replaced(rename);
     List<Panel> fixed = out.mapLines(l -> l.mapped(ComicScript::stripJson));
-    return new ComicScript(out.title, characters, fixed, reviewed, nameWarnings, concept);
+    return new ComicScript(
+        out.title, characters, fixed, reviewed, nameWarnings, concept, stripJson(out.summary));
   }
 
   /** 모든 대사의 원문을 f로 바꾼다(원문 대조). 원문(quote)이 없는 대사는 대사 자체를 바꾼다. */
@@ -536,7 +596,8 @@ public record ComicScript(
                     : new Line(l.speaker(), l.text(), f.apply(l.quote()))),
         reviewed,
         nameWarnings,
-        concept);
+        concept,
+        summary);
   }
 
   /** 컨셉 말투로 다듬은 대사가 비었거나 말풍선 길이(maxChars)를 넘으면 원문으로 되돌린다. 다듬기에 실패해도 말풍선이 비거나 넘치지 않게 한다. */
@@ -554,7 +615,8 @@ public record ComicScript(
             }),
         reviewed,
         nameWarnings,
-        concept);
+        concept,
+        summary);
   }
 
   /** 원문(quote, 없으면 대사)이 keep을 통과한 대사만 남긴다(장면 밖 대화에서 가져온 대사를 버린다). */
@@ -570,7 +632,7 @@ public record ComicScript(
                                 ? null
                                 : p.lines().stream().filter(l -> keep.test(l.source())).toList()))
                 .toList();
-    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept, summary);
   }
 
   /**
@@ -604,7 +666,7 @@ public record ComicScript(
     }
     return fixed.equals(panels)
         ? this
-        : new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+        : new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept, summary);
   }
 
   /** 원문이 등장인물에 없는 화자의 말인 대사들의 화자(정렬). 없으면 빈 목록. */
@@ -663,7 +725,7 @@ public record ComicScript(
                                             || said.add(l.text().replaceAll("\\s+", "")))
                                 .toList()))
             .toList();
-    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept);
+    return new ComicScript(title, characters, fixed, reviewed, nameWarnings, concept, summary);
   }
 
   /**
@@ -705,7 +767,7 @@ public record ComicScript(
         out.set(i, withSpeakersInScene(p.withLines(List.of(filled))));
       }
     }
-    return new ComicScript(title, characters, out, reviewed, nameWarnings, concept);
+    return new ComicScript(title, characters, out, reviewed, nameWarnings, concept, summary);
   }
 
   /** (from, to) 사이의 아직 안 쓴 말 중 가장 이른 것(앞 컷 바로 다음 순간). 맞장구가 아닌 말을 먼저 고른다. */
@@ -800,7 +862,7 @@ public record ComicScript(
       String rest = comma < 0 ? "" : look.substring(comma);
       cast.add(c.withLook(animal + rest));
     }
-    return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept);
+    return new ComicScript(title, cast, panels, reviewed, nameWarnings, concept, summary);
   }
 
   /**
@@ -839,7 +901,13 @@ public record ComicScript(
     }
     UnaryOperator<String> f = t -> CastNames.rename(t, rename);
     return new ComicScript(
-        f.apply(title), cast, mapLines(l -> l.mapped(f)), reviewed, nameWarnings, concept);
+        f.apply(title),
+        cast,
+        mapLines(l -> l.mapped(f)),
+        reviewed,
+        nameWarnings,
+        concept,
+        summary == null ? null : f.apply(summary));
   }
 
   /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
@@ -849,7 +917,13 @@ public record ComicScript(
     }
     List<Panel> fixed = mapLines(l -> l.mapped(t -> replaceAll(t, rename)));
     return new ComicScript(
-        replaceAll(title, rename), characters, fixed, reviewed, nameWarnings, concept);
+        replaceAll(title, rename),
+        characters,
+        fixed,
+        reviewed,
+        nameWarnings,
+        concept,
+        replaceAll(summary, rename));
   }
 
   /** 모든 컷의 대사를 f로 바꾼 새 컷 목록. 컷이 없으면 빈 목록(검증에서 컷 수 위반이 된다). */
@@ -896,7 +970,8 @@ public record ComicScript(
         fixed.stream().map(ComicScript::withSpeakersInScene).toList(),
         reviewed,
         nameWarnings,
-        concept);
+        concept,
+        summary);
   }
 
   /** 대사 앞에 LLM이 붙인 화자 표시("A: ", "{B}：")를 뗀다. */
@@ -925,6 +1000,6 @@ public record ComicScript(
 
   ComicScript reviewedWith(List<String> warnings) {
     return new ComicScript(
-        title, characters, panels, true, warnings == null ? List.of() : warnings, concept);
+        title, characters, panels, true, warnings == null ? List.of() : warnings, concept, summary);
   }
 }

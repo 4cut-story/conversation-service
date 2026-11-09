@@ -606,4 +606,52 @@ class ComicScriptTest {
     org.assertj.core.api.Assertions.assertThat(ComicScript.pseudonym("민준")).isFalse();
     org.assertj.core.api.Assertions.assertThat(ComicScript.pseudonym(null)).isFalse();
   }
+
+  @Test
+  @DisplayName("FR-006: 줄거리 요약도 이름 대신 호칭으로 부르고, 이름 바꾸기·실명 지우기·다른 단계를 거쳐도 남는다")
+  void summaryCarried() {
+    ComicScript s =
+        new ComicScript(
+            "하늘의 비밀 레시피",
+            family(),
+            List.of(
+                new ComicScript.Panel(
+                    "기",
+                    "wide",
+                    "{A} cooks",
+                    List.of(new ComicScript.Line("B", "하늘아, 뭐 해?", null)))),
+            true,
+            List.of("지현이"),
+            null,
+            "하늘이가 도윤이를 위해 요리를 하고 지현이가 맛을 본다.");
+    ComicScript called = s.withRoleCalls();
+    assertThat(called.summary()).isEqualTo("할머니가 손녀를 위해 요리를 하고 지현이가 맛을 본다.");
+    ComicScript scrubbed = called.scrubbed(w -> w.startsWith("지현"));
+    assertThat(scrubbed.summary()).isEqualTo("할머니가 손녀를 위해 요리를 하고 친구가 맛을 본다.");
+    ComicScript later =
+        scrubbed
+            .withConcept(Concept.DAILY)
+            .reviewedWith(List.of())
+            .withCharacterNames(java.util.Map.of("A", "해담"))
+            .withCleanSummary();
+    assertThat(later.summary()).isEqualTo(scrubbed.summary());
+    assertThat(later.concept()).isEqualTo("DAILY");
+    assertThat(new ComicScript("t", cast(), panels(), true, List.of()).summary()).isNull();
+  }
+
+  @Test
+  @DisplayName("FR-006: 줄거리 요약의 자리표·화자 표시·줄바꿈을 지우고, 너무 길면 문장 끝에서 자른다")
+  void cleanSummary() {
+    assertThat(ComicScript.cleanSummary(null)).isNull();
+    assertThat(ComicScript.cleanSummary("  \n ")).isNull();
+    assertThat(ComicScript.cleanSummary("A: {A}손녀가\n  빵을 찾는다.")).isEqualTo("손녀가 빵을 찾는다.");
+    String sentence = "손녀가 할머니에게 빵의 행방을 묻는다. ";
+    String longText = sentence.repeat(40);
+    String cut = ComicScript.cleanSummary(longText);
+    assertThat(cut).hasSizeLessThanOrEqualTo(ComicScript.MAX_SUMMARY).endsWith("묻는다.");
+    String noStop = "가".repeat(ComicScript.MAX_SUMMARY + 50);
+    assertThat(ComicScript.cleanSummary(noStop)).hasSize(ComicScript.MAX_SUMMARY);
+    ComicScript same = script(cast(), panels());
+    assertThat(same.withCleanSummary()).isSameAs(same);
+  }
 }
