@@ -80,16 +80,16 @@ public class SoundMatcher {
       String q = text(event);
       if (!q.isEmpty()) {
         try {
-          List<SoundLibrary.Sound> found = effectFinder.apply(q, 1);
+          List<SoundLibrary.Sound> found = effectFinder.apply(q, EFFECT_CANDIDATES);
           if (found.isEmpty()) {
             for (String word : words(q)) {
-              found = effectFinder.apply(word, 1);
+              found = effectFinder.apply(word, EFFECT_CANDIDATES);
               if (!found.isEmpty()) {
                 break;
               }
             }
           }
-          chosen = found.isEmpty() ? null : found.get(0);
+          chosen = found.isEmpty() ? null : headFirst(q, found);
         } catch (RuntimeException e) {
           log.warn("컷 효과음을 고르지 못했다: {}", e.toString());
         }
@@ -98,6 +98,35 @@ public class SoundMatcher {
     }
     return out;
   }
+
+  /**
+   * 가까운 효과음 후보 중 사건 소리의 중심 낱말이 제목에 있는 소리를 고른다. 한국어 이름은 끝 낱말이 중심이라("휴대폰 알람 소리"는 알람) 끝 낱말을 2점, 나머지
+   * 낱말을 1점으로 센다. "휴대폰 알람 소리"가 "휴대폰 진동"보다 "전자 알람시계"로 가게 한다. 점수가 같으면 가까운 순서.
+   */
+  static SoundLibrary.Sound headFirst(String event, List<SoundLibrary.Sound> found) {
+    List<String> words = words(event).stream().filter(w -> !GENERIC.contains(w)).toList();
+    SoundLibrary.Sound best = found.get(0);
+    int bestScore = -1;
+    for (SoundLibrary.Sound s : found) {
+      String title = text(s.title());
+      int score = 0;
+      for (int i = 0; i < words.size(); i++) {
+        if (title.contains(words.get(i))) {
+          score += i == words.size() - 1 ? 2 : 1;
+        }
+      }
+      if (score > bestScore) {
+        best = s;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  /** 효과음 후보 수. */
+  static final int EFFECT_CANDIDATES = 5;
+
+  private static final List<String> GENERIC = List.of("소리", "효과음", "울리는", "나는");
 
   /** 컷마다 고른 소리(같은 순서·개수). 고르지 못한 컷은 빈 값. */
   public List<Optional<Picked>> match(List<Query> panels) {
