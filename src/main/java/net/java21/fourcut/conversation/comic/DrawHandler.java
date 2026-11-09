@@ -205,21 +205,54 @@ class DrawHandler implements StepHandler {
         people >= 2
             ? count + lineup
             : looks.size() == 1 ? looks.values().iterator().next() + ", " : "";
-    return style
-        + light(panel)
-        + ", "
-        + lead
-        + QUALITY
-        + ", "
-        + SINGLE
-        + ", "
-        + frame(legacy ? 0 : people)
-        + ", "
-        + shot
-        + keyObject(panel)
-        + scene
-        + detail
-        + cast;
+    return once(
+        style
+            + light(panel)
+            + ", "
+            + lead
+            + QUALITY
+            + ", "
+            + SINGLE
+            + ", "
+            + frame(legacy ? 0 : people)
+            + ", "
+            + shot
+            + keyObject(panel)
+            + scene
+            + detail
+            + cast);
+  }
+
+  /**
+   * 쉼표로 나뉜 말 가운데 앞에 이미 나온 말을 뺀다. 장소·빛이 두세 번씩 들어가 있었고, 그림 모델은 같은 말을 두 번 읽으면 그것을 두 번 그린다(회차 29 콘티 19판
+   * mystery-02 세탁기 둘, funny-15 토끼 둘).
+   */
+  static String once(String prompt) {
+    // 괄호 안(한 인물의 외모)은 한 덩어리로 본다
+    List<String> parts = new java.util.ArrayList<>();
+    int depth = 0;
+    int start = 0;
+    for (int i = 0; i < prompt.length(); i++) {
+      char c = prompt.charAt(i);
+      if (c == '(') {
+        depth++;
+      } else if (c == ')') {
+        depth = Math.max(0, depth - 1);
+      } else if (c == ',' && depth == 0) {
+        parts.add(prompt.substring(start, i));
+        start = i + 1;
+      }
+    }
+    parts.add(prompt.substring(start));
+    java.util.Set<String> seen = new java.util.HashSet<>();
+    StringBuilder out = new StringBuilder();
+    for (String part : parts) {
+      String key = part.strip().toLowerCase(java.util.Locale.ROOT);
+      if (key.isEmpty() || seen.add(key)) {
+        out.append(out.isEmpty() ? "" : ",").append(part);
+      }
+    }
+    return out.toString();
   }
 
   private static final Pattern BOTH_HANDS = Pattern.compile("\\b(both|fists|hands|arms)\\b");

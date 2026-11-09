@@ -113,7 +113,7 @@ class DrawPromptTest {
                 new ComicScript.Face("C", "not in scene")));
     assertThat(DrawHandler.prompt("s", script, duo))
         .isEqualTo(
-            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, upper body only, legs out of frame, ordering kiosk, the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up, the boy laughing, burger shop, ordering kiosk, trays of burgers");
+            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, upper body only, legs out of frame, ordering kiosk, the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up, the boy laughing, trays of burgers");
     var solo =
         new ComicScript.Panel(
             "결",
@@ -409,6 +409,15 @@ class DrawPromptTest {
                 new ComicScript.Panel(
                     "전", "medium", "{A} holds both fists at the chest, park", List.of())))
         .isNull();
+  }
+
+  @Test
+  @DisplayName("FR-006: 그림 프롬프트에 앞에서 나온 말은 다시 쓰지 않는다(괄호 안 외모는 한 덩어리)")
+  void onceDropsRepeats() {
+    assertThat(
+            DrawHandler.once(
+                "s, cozy room, (girl, bob) on the left, (boy, bob) on the right, Cozy room, x"))
+        .isEqualTo("s, cozy room, (girl, bob) on the left, (boy, bob) on the right, x");
   }
 
   @Test
