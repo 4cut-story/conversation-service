@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
 /** 대화 API의 요청·응답 본문 (docs specs/001 contracts/public-api.md). */
@@ -20,6 +21,7 @@ public final class ConversationApi {
    * @param concept 만화 컨셉. AUTO이거나 없으면 장면에 맞게 고른다
    * @param dialect 말풍선 대사 사투리. NONE이거나 없으면 사투리로 바꾸지 않는다
    * @param manualLlm 테스트 전용. true면 LLM 작업(장면 고르기·콘티)을 서버가 처리하지 않고 {@code llm-jobs}로 직접 답을 넣는다
+   * @param url source가 ARTICLE일 때 읽을 기사 주소 (http, https). 서버가 본문을 읽어 바로 만들기 시작한다
    */
   public record CreateRequest(
       @NotNull Conversation.Source source,
@@ -27,7 +29,18 @@ public final class ConversationApi {
       @Pattern(regexp = "ko|en") String language,
       @Pattern(regexp = CONCEPTS) String concept,
       @Pattern(regexp = DIALECTS) String dialect,
-      Boolean manualLlm) {
+      Boolean manualLlm,
+      @Size(max = 2048) String url) {
+
+    public CreateRequest(
+        Conversation.Source source,
+        Boolean consent,
+        String language,
+        String concept,
+        String dialect,
+        Boolean manualLlm) {
+      this(source, consent, language, concept, dialect, manualLlm, null);
+    }
 
     public CreateRequest(
         Conversation.Source source,
@@ -101,6 +114,8 @@ public final class ConversationApi {
    * @param retries 지금까지 단계를 다시 시도한 횟수
    * @param id 공개 ID
    * @param comicId 완성된 만화 공개 ID (content-service 만화함)
+   * @param sourceUrl 기사로 만든 대화의 원문 주소. 녹음이면 null
+   * @param sourceTitle 기사 제목. 녹음이면 null
    */
   public record View(
       String id,
@@ -115,5 +130,7 @@ public final class ConversationApi {
       String concept,
       String dialect,
       Integer durationSec,
-      Instant createdAt) {}
+      Instant createdAt,
+      String sourceUrl,
+      String sourceTitle) {}
 }

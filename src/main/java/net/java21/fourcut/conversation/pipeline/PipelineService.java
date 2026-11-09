@@ -292,7 +292,11 @@ public class PipelineService {
     if (step.getAttempt() < maxAttempts(step.getStep())) {
       startStep(conversation, step.getStep(), step.getAttempt() + 1);
     } else {
-      observer.failed(conversation.id(), userMessage(step.getStep()));
+      observer.failed(
+          conversation.id(),
+          conversation.article() != null && step.getStep() == Step.TRANSCRIBE
+              ? ARTICLE_FAILED
+              : userMessage(step.getStep()));
     }
   }
 
@@ -354,6 +358,9 @@ public class PipelineService {
   private Instant now() {
     return clock.instant();
   }
+
+  /** 기사를 대화로 각색하지 못했을 때 사용자에게 보여 줄 문장. */
+  static final String ARTICLE_FAILED = "기사를 만화 이야기로 바꾸지 못했어요. 잠시 뒤 다시 만들어 주세요.";
 
   static String userMessage(Step step) {
     return switch (step) {

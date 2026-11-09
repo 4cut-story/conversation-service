@@ -39,6 +39,11 @@ public final class WorkKeys {
     return work(conversationId, "pre-transcript.json");
   }
 
+  /** 기사로 만들기에서 골라낸 기사 본문 (제목, 출처, 본문). */
+  public static String article(String conversationId) {
+    return work(conversationId, "article.json");
+  }
+
   public static String candidates(String conversationId) {
     return work(conversationId, "candidates.json");
   }

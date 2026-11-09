@@ -25,7 +25,7 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <pre>
  * {version: 1, totalMs, steps: [{step, ms, attempts, request?, jobs: [{worker, runMs?, waitMs?, info?}]}],
- *  preTranscribe?: {parts, runMs}}
+ *  preTranscribe?: {parts, runMs}, source?: {type: ARTICLE, url, title, site}}
  * </pre>
  *
  * <p>ms는 단계 시작부터 끝까지(대기 포함), runMs는 워커가 잰 실행 시간(없으면 임대부터 끝까지), waitMs는 대기열에서 기다린 시간이다. request는 단계가
@@ -133,6 +133,14 @@ public class Production {
       ObjectNode pre = out.putObject("preTranscribe");
       pre.put("parts", parts.size());
       pre.put("runMs", parts.stream().mapToLong(Production::runMs).sum());
+    }
+    if (conversation.article() != null) {
+      // 기사로 만든 만화는 원문 출처를 남겨 게시물에 링크로 보인다
+      ObjectNode source = out.putObject("source");
+      source.put("type", "ARTICLE");
+      source.put("url", conversation.article().url());
+      source.put("title", conversation.article().title());
+      source.put("site", conversation.article().site());
     }
     return Optional.of(new Built(conversation.publicId(), out));
   }

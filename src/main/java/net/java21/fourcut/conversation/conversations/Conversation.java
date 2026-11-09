@@ -14,10 +14,11 @@ import net.java21.fourcut.conversation.support.PublicId;
 @Table(name = "conversations")
 public class Conversation extends BaseEntity {
 
-  /** 녹음 방식. */
+  /** 대화를 얻은 방식. ARTICLE은 녹음 대신 기사 URL을 읽어 대화로 각색한다. */
   public enum Source {
     RECORDING,
-    UPLOAD
+    UPLOAD,
+    ARTICLE
   }
 
   /** 밖에 보이는 대화 ID. API 경로, MinIO 객체 키, content-service에 넘기는 값이다. */
@@ -69,6 +70,16 @@ public class Conversation extends BaseEntity {
 
   @Column(name = "elapsed_sec")
   private Integer elapsedSec;
+
+  /** 기사로 만든 대화의 원문 주소. 녹음이면 null. */
+  @Column(name = "source_url", length = 2048)
+  private String sourceUrl;
+
+  @Column(name = "source_title", length = 200)
+  private String sourceTitle;
+
+  @Column(name = "source_site", length = 100)
+  private String sourceSite;
 
   protected Conversation() {
     // JPA 전용
@@ -150,6 +161,29 @@ public class Conversation extends BaseEntity {
 
   public Integer getElapsedSec() {
     return elapsedSec;
+  }
+
+  /** 기사 원문 출처를 남긴다. */
+  void fromArticle(String url, String title, String site) {
+    this.sourceUrl = url;
+    this.sourceTitle = title;
+    this.sourceSite = site;
+  }
+
+  public String getSourceUrl() {
+    return sourceUrl;
+  }
+
+  public String getSourceTitle() {
+    return sourceTitle;
+  }
+
+  /** 기사 출처. 녹음이면 null. */
+  public net.java21.fourcut.conversation.pipeline.ConversationInfo.ArticleSource articleSource() {
+    return sourceUrl == null
+        ? null
+        : new net.java21.fourcut.conversation.pipeline.ConversationInfo.ArticleSource(
+            sourceUrl, sourceTitle, sourceSite);
   }
 
   void queue(int chunks) {

@@ -77,7 +77,8 @@ class ExtractHandler implements StepHandler {
 
   @Override
   public StepOutcome start(StepContext context) {
-    if (context.conversation().manualLlm() && properties.correctTranscript()) {
+    boolean correct = correctable(context);
+    if (context.conversation().manualLlm() && correct) {
       // 테스트 전용 수동 처리: 전사 교정도 묶음마다 대기열 작업으로 두고 답을 받아 이어 간다
       Transcript original = transcripts.loadOriginal(context.conversation().publicId());
       if (!original.utterances().isEmpty()) {
@@ -85,7 +86,7 @@ class ExtractHandler implements StepHandler {
       }
     }
     // 테스트 전용 수동 처리 대화는 외부 API를 부르지 않고 구간마다 대기열 작업으로 둔다
-    if ((properties.correctTranscript() || properties.parallelExtract())
+    if ((correct || properties.parallelExtract())
         && direct.available()
         && !context.conversation().manualLlm()) {
       // 외부 LLM 호출은 시간이 걸리므로 트랜잭션 밖(runLocal)에서 한다
@@ -97,7 +98,7 @@ class ExtractHandler implements StepHandler {
   @Override
   public StepOutcome runLocal(StepContext context) {
     String id = context.conversation().publicId();
-    Transcript transcript = properties.correctTranscript() ? corrected(id) : transcripts.load(id);
+    Transcript transcript = correctable(context) ? corrected(id) : transcripts.load(id);
     if (properties.parallelExtract()) {
       StepOutcome done = allWindows(context, transcript);
       if (done != null) {
@@ -105,6 +106,11 @@ class ExtractHandler implements StepHandler {
       }
     }
     return firstWindow(context, transcript);
+  }
+
+  /** 전사를 교정할지. 기사를 각색한 대화는 LLM이 쓴 글이라 고칠 것이 없다. */
+  private boolean correctable(StepContext context) {
+    return properties.correctTranscript() && context.conversation().article() == null;
   }
 
   private Transcript corrected(String id) {
