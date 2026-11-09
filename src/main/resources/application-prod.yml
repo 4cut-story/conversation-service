@@ -10,3 +10,4 @@ comic:
   production-backfill: ${COMIC_PRODUCTION_BACKFILL:true}
   cast-portrait-backfill: ${COMIC_CAST_PORTRAIT_BACKFILL:true}
   summary-backfill: ${COMIC_SUMMARY_BACKFILL:true}
+  live-backfill: ${COMIC_LIVE_BACKFILL:true}

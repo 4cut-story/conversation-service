@@ -224,6 +224,20 @@ public record ComicScript(
   }
 
   /**
+   * 화면 효과를 쓰기 전에 만든 콘티(효과 없음)도 모든 컷에 효과를 채운다: 효과가 없는 컷을 빈 목록으로 보고 {@link #withAmbientLimits()}로 배경에
+   * 맞는 효과나 은은한 빛을 넣는다. 예전 만화의 재생 정보를 다시 만들 때 쓴다.
+   */
+  public ComicScript withAmbientFilled() {
+    if (panels == null) {
+      return this;
+    }
+    List<Panel> out =
+        panels.stream().map(p -> p.ambient() == null ? p.withAmbient(List.of()) : p).toList();
+    return new ComicScript(title, characters, out, reviewed, nameWarnings, concept, summary)
+        .withAmbientLimits();
+  }
+
+  /**
    * 라이브 모드 움직임을 거른다: 목록 밖 값, 그 배경 낱말이 컷 장면·배경에 없는 값, 실내 비·눈은 지우고, 한 만화에 {@link
    * Motion#MAX_PER_COMIC}컷까지만(앞에서부터) 남긴다. 남긴 값은 소문자 코드로 맞춘다. 예전 콘티(움직임 없음)는 그대로다.
    */

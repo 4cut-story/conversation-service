@@ -63,6 +63,10 @@ public interface ContentClient {
   @PutExchange("/internal/comics/by-conversation/{conversationId}/summary")
   void summary(@PathVariable String conversationId, @RequestBody Summary summary);
 
+  /** 대화로 찾은 만화의 라이브 재생 정보를 바꾼다 (예전 만화에 새 화면 효과·배경음을 채울 때). 만화가 없으면 404. */
+  @PutExchange("/internal/comics/by-conversation/{conversationId}/live")
+  void live(@PathVariable String conversationId, @RequestBody JsonNode live);
+
   /** 대화로 찾은 만화의 등장인물 소개를 바꾼다 (예전 만화에 얼굴 그림을 채울 때). 만화가 없으면 404. */
   @PutExchange("/internal/comics/by-conversation/{conversationId}/cast")
   void cast(@PathVariable String conversationId, @RequestBody List<CastMember> cast);
