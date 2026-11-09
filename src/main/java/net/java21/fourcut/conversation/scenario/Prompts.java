@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.7";
+  static final String VERSION = "2026-11-09.8";
 
   private Prompts() {}
 
@@ -135,6 +135,8 @@ final class Prompts {
       - shoes: 신발을 그림용 영어 3단어 이내로 색과 함께 쓴다(예: "white sneakers", "black cloth shoes"). 맨발이면 "bare feet".
       - 동물 인물이 둘 이상이면 종·털색·몸집이 한눈에 다르게 고른다(회색 토끼와 회색 고양이처럼 비슷하면 한 인물로 섞여
         그려진다). 동물 look에는 털색을 쓴다(예: "brown bear", "white rabbit").
+      - look의 옷은 몸통을 덮는 윗옷(셔츠, 스웨터, 조끼, 도포, 저고리) 하나를 색과 함께 꼭 쓴다. 모자·목도리·안경·수염만
+        쓰면 컷마다 윗옷이 바뀌어 그려진다.
       - look·bottom·shoes는 이 인물이 모든 컷에서 입는 한 벌이다. 컷마다 옷을 바꾸지 않는다. 가운·제복·승복 같은 직업 옷은
         이야기에 그 일을 하는 장면이 나올 때만 쓴다.
 
@@ -229,6 +231,8 @@ final class Prompts {
         window", 야외 비 "heavy rain falling on the street"). 대사나 장면에 나오는 별·달·노을·눈·비는 꼭 쓴다.
         체스말·구슬·동전처럼 작은 조각은 그것이 놓이는 자리(판 위, 그릇 안)와 함께만 쓰고, 바닥에 흩어진 모습("scattered
         stones")으로 쓰지 않는다. props에 있는 물건을 setting에 다시 쓰지 않는다.
+        setting의 배경 물건은 손에 들 수 없는 큰 것(가구, 나무, 기계, 건물)만 쓴다. 컵·그릇·찜기처럼 손에 드는 물건이
+        배경에 있으면 action의 물건과 함께 쥐어져 손이 셋으로 그려진다. 컷에 나오지 않는 인물은 setting에 쓰지 않는다.
         실내 컷(place가 방·부엌·가게·현관처럼 지붕 아래인 컷)의 setting에는 rain·snow·raindrops 낱말을 아예 쓰지 않는다.
         이 낱말이 있으면 방 안에 빗줄기가 그려진다. 비 오는 날 실내는 "dim gray light from the window"처럼 빛으로만 쓴다. 이야기 안에서 시간이
         흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.

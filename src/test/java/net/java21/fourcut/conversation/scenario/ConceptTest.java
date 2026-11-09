@@ -66,7 +66,7 @@ class ConceptTest {
     for (Concept c : Concept.values()) {
       assertThat(Prompts.scriptSystem(c))
           .contains("- bottom:")
-          .contains("{목검}")
+          .contains("{연}")
           .contains("- action:");
     }
   }
