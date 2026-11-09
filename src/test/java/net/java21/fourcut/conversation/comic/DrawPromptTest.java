@@ -20,12 +20,12 @@ class DrawPromptTest {
           List.of());
 
   @Test
-  @DisplayName("FR-006: 그림체 → 인물 외모 → 품질·한 순간·인물 수 → 구도 → 장면 순이고 장면의 {A}는 짧은 이름으로 바뀐다")
+  @DisplayName("FR-006: 구도 → 인물 외모 → 한 순간·인물 수 → 장면 → 빛 → 그림체·품질 순이고 장면의 {A}는 짧은 이름으로 바뀐다")
   void placeholders() {
     var panel = new ComicScript.Panel("전", "close-up", "{A} drops ice cream, park", List.of());
     assertThat(DrawHandler.prompt("simple cartoon", script, panel))
         .isEqualTo(
-            "simple cartoon, girl, bob hair, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly one character, alone in the frame, drawn only once, same outfit and same props in every panel, tight close-up portrait, the face and shoulders filling the frame, girl drops ice cream, park");
+            "tight close-up portrait, the face and shoulders filling the frame, girl, bob hair, one full-frame illustration of a single moment, exactly one character, alone in the frame, drawn only once, same outfit and same props in every panel, girl drops ice cream, park, simple cartoon, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -82,7 +82,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("기", null, "two friends at a table", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, same outfit and same props in every panel, two friends at a table; girl, bob hair; boy, glasses");
+            "one full-frame illustration of a single moment, same outfit and same props in every panel, two friends at a table; girl, bob hair; boy, glasses, s, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -94,7 +94,7 @@ class DrawPromptTest {
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium waist-up portrait, camera framed closely on the upper body, the boy looks at the girl, a friend waits, cafe");
+            "medium waist-up portrait, camera framed closely on the upper body, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, the boy looks at the girl, a friend waits, cafe, s, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -113,7 +113,7 @@ class DrawPromptTest {
                 new ComicScript.Face("C", "not in scene")));
     assertThat(DrawHandler.prompt("s", script, duo))
         .isEqualTo(
-            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium waist-up portrait, camera framed closely on the upper body, ordering kiosk, the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up, the boy laughing, trays of burgers");
+            "medium waist-up portrait, camera framed closely on the upper body, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, ordering kiosk, the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up, the boy laughing, trays of burgers, s, high quality illustration, crisp clean lineart, well-drawn faces");
     var solo =
         new ComicScript.Panel(
             "결",
@@ -124,7 +124,7 @@ class DrawPromptTest {
             List.of(new ComicScript.Face("A", "teary smile")));
     assertThat(DrawHandler.prompt("s", script, solo))
         .isEqualTo(
-            "s, girl, bob hair, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly one character, alone in the frame, drawn only once, same outfit and same props in every panel, tight close-up portrait, the face and shoulders filling the frame, girl eats a burger, teary smile");
+            "tight close-up portrait, the face and shoulders filling the frame, girl, bob hair, one full-frame illustration of a single moment, exactly one character, alone in the frame, drawn only once, same outfit and same props in every panel, girl eats a burger, teary smile, s, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -137,7 +137,7 @@ class DrawPromptTest {
                 script.withConcept(net.java21.fourcut.conversation.scenario.Concept.ANIMALS),
                 panel))
         .isEqualTo(
-            "bugs, two animal characters, no humans, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, wide shot, the girl and the boy talk, another animal waits, cafe");
+            "wide shot, two animal characters, no humans, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, the girl and the boy talk, another animal waits, cafe, bugs, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -166,7 +166,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("승", "medium", "{B} hugs {A}, {B} smiles", List.of());
     assertThat(DrawHandler.prompt("s", twins, panel))
         .isEqualTo(
-            "s, two young women, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium waist-up portrait, camera framed closely on the upper body, the young woman on the right hugs the young woman on the left, the young woman on the right smiles");
+            "medium waist-up portrait, camera framed closely on the upper body, two young women, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail) on the right, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, the young woman on the right hugs the young woman on the left, the young woman on the right smiles, s, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -185,7 +185,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("전", "wide", "{C} scolds {B} and {A}", List.of());
     assertThat(DrawHandler.prompt("s", trio, panel))
         .isEqualTo(
-            "s, a girl, an old man and a boy, side by side, both fully visible, (girl) on the left, (old man) in the middle, (boy) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly three characters, each drawn only once, same outfit and same props in every panel, wide shot, the old man scolds the boy and the girl");
+            "wide shot, a girl, an old man and a boy, side by side, both fully visible, (girl) on the left, (old man) in the middle, (boy) on the right, one full-frame illustration of a single moment, exactly three characters, each drawn only once, same outfit and same props in every panel, the old man scolds the boy and the girl, s, high quality illustration, crisp clean lineart, well-drawn faces");
   }
 
   @Test
@@ -517,8 +517,8 @@ class DrawPromptTest {
             "temple courtyard, night, dark sky full of stars, paper lanterns",
             List.of());
     assertThat(DrawHandler.prompt("ink", script, night))
-        .startsWith(
-            "ink, night, dark sky full of stars, paper lanterns, dark night lighting, girl, bob hair, high quality");
+        .endsWith(
+            "temple courtyard, night, dark sky full of stars, paper lanterns, dark night lighting, ink, high quality illustration, crisp clean lineart, well-drawn faces");
     assertThat(DrawHandler.dayNegative(night)).contains("daylight");
     var day =
         new ComicScript.Panel(
@@ -532,7 +532,7 @@ class DrawPromptTest {
   }
 
   @Test
-  @DisplayName("FR-006: 배경의 첫 물건(핵심 물건)은 구도 바로 뒤에 둔다")
+  @DisplayName("FR-006: 배경의 첫 물건(핵심 물건)은 장면 문장 바로 앞에 둔다")
   void keyObjectFirst() {
     var kiosk =
         new ComicScript.Panel(
@@ -545,7 +545,7 @@ class DrawPromptTest {
     assertThat(DrawHandler.keyObject(kiosk)).isEqualTo("ordering kiosk with menu screen, ");
     assertThat(DrawHandler.prompt("ink", script, kiosk))
         .contains(
-            "tight close-up portrait, the face and shoulders filling the frame, ordering kiosk with menu screen, ");
+            "same props in every panel, ordering kiosk with menu screen, girl taps the kiosk screen");
     var night =
         new ComicScript.Panel(
             "전", "wide", "{A} looks up", List.of(), "village hill, night, lit cabin", List.of());

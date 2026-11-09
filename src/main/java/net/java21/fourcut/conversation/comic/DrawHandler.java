@@ -205,22 +205,22 @@ class DrawHandler implements StepHandler {
         people >= 2
             ? count + lineup
             : looks.size() == 1 ? looks.values().iterator().next() + ", " : "";
+    // 순서는 FLUX.2 [klein] 프롬프트 가이드대로 구도 → 인물 → 동작 → 표정·배경 → 빛 → 그림체다(콘티 20c판). 구도가 품질 말 뒤에 있어
+    // medium 컷이 온몸으로 그려졌다.
     return once(
-        style
-            + light(panel)
-            + ", "
+        shot
             + lead
-            + QUALITY
-            + ", "
-            + SINGLE
-            + ", "
             + frame(legacy ? 0 : people)
             + ", "
-            + shot
             + keyObject(panel)
             + scene
             + detail
-            + cast);
+            + cast
+            + light(panel)
+            + ", "
+            + style
+            + ", "
+            + QUALITY);
   }
 
   /**
