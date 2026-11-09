@@ -996,6 +996,8 @@ class DrawHandler implements StepHandler {
 
   private static final String SCREEN = ", screen showing ";
 
+  private static final String BY_ITS = " by its ";
+
   /** 가슴 앞에 드는 말 하나: 동작 시작·끝 자리, 물건, 쥐는 곳("by its handle"), 화면 내용. */
   record Held(int start, int end, String object, String grip, String state) {}
 
@@ -1023,6 +1025,13 @@ class DrawHandler implements StepHandler {
       object = object.substring(0, by);
     }
     int end = chest + AT_CHEST.length();
+    // "holds {양말} at the chest by its toe"처럼 쥐는 곳이 뒤에 오면 빈손 문구 뒤에 "by its toe"가 남았다(시험 30회)
+    if (grip.isEmpty() && scene.startsWith(BY_ITS, end)) {
+      int next = scene.indexOf(',', end + BY_ITS.length());
+      int stop = next < 0 ? scene.length() : next;
+      grip = scene.substring(end, stop);
+      end = stop;
+    }
     String state = "";
     if (scene.startsWith(SCREEN, end)) {
       int next = scene.indexOf(',', end + SCREEN.length());
