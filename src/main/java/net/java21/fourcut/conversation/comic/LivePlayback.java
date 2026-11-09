@@ -105,6 +105,22 @@ final class LivePlayback {
       List<Boolean> wide,
       List<Boolean> third,
       List<Boolean> depth) {
+    return build(json, script, sounds, effects, moving, wide, third, depth, List.of());
+  }
+
+  /**
+   * @param fourth 움직이는 컷별 네 번째 그림(-d)도 쓰는지(FR-049). 세 번째 그림이 있을 때만 쓴다
+   */
+  static ObjectNode build(
+      JsonMapper json,
+      ComicScript script,
+      List<Optional<SoundMatcher.Picked>> sounds,
+      List<Optional<SoundMatcher.Picked>> effects,
+      List<Boolean> moving,
+      List<Boolean> wide,
+      List<Boolean> third,
+      List<Boolean> depth,
+      List<Boolean> fourth) {
     ObjectNode root = json.createObjectNode();
     root.put("version", VERSION);
     ArrayNode panels = root.putArray("panels");
@@ -154,6 +170,9 @@ final class LivePlayback {
                 .add(WorkKeys.livePanelPath(n, 1));
         if (i < third.size() && Boolean.TRUE.equals(third.get(i))) {
           frames.add(WorkKeys.livePanelPath(n, 2));
+          if (i < fourth.size() && Boolean.TRUE.equals(fourth.get(i))) {
+            frames.add(WorkKeys.livePanelPath(n, 3));
+          }
         }
         m.put("intervalMs", motion.get().intervalMs());
         m.put("easing", "ease-in-out");

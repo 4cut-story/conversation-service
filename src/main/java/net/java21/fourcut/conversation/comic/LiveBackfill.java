@@ -111,6 +111,7 @@ class LiveBackfill {
     List<Boolean> wide = new ArrayList<>();
     List<Boolean> third = new ArrayList<>();
     List<Boolean> depth = new ArrayList<>();
+    List<Boolean> fourth = new ArrayList<>();
     for (JsonNode p : panels) {
       depth.add(p.path("depth").isString());
       JsonNode motion = p.path("motion");
@@ -118,6 +119,7 @@ class LiveBackfill {
       moving.add(moves);
       wide.add("16:9".equals(p.path("aspect").asString("")));
       third.add(moves && motion.path("frames").size() >= 3);
+      fourth.add(moves && motion.path("frames").size() >= 4);
     }
     return LivePlayback.build(
         json,
@@ -127,7 +129,8 @@ class LiveBackfill {
         moving,
         wide,
         third,
-        depth);
+        depth,
+        fourth);
   }
 
   private void mark(String id) {

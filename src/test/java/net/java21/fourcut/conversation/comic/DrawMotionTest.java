@@ -49,6 +49,22 @@ class DrawMotionTest {
   }
 
   @Test
+  @DisplayName("FR-049: 움직임 컷은 세 번째 그림 뒤에 네 번째 그림(-d)도 요청한다")
+  void fourthFrame() {
+    var panel =
+        new ComicScript.Panel(
+            "기", "wide", "{A} sits", List.of(), "rainy street, rain", List.of(), "비", "rain");
+
+    var last = handler.motion("simple cartoon", "c1", 1, panel).path("next").path("next");
+
+    assertThat(last.path("uploadPutKey").asString()).isEqualTo("pipeline-work/c1/panel-2-d.png");
+    assertThat(last.path("prompt").asString()).endsWith(Motion.RAIN.last());
+    for (Motion m : Motion.values()) {
+      assertThat(m.last()).isNotBlank().isNotEqualTo(m.next()).isNotEqualTo(m.change());
+    }
+  }
+
+  @Test
   @DisplayName("FR-017: 움직임이 없는 컷은 두 번째 그림을 요청하지 않는다(첫 그림 요청은 그대로)")
   void noMotion() {
     var plain = new ComicScript.Panel("기", "wide", "{A} sits", List.of());

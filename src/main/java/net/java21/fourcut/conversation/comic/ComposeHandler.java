@@ -148,6 +148,7 @@ class ComposeHandler implements StepHandler {
       List<Boolean> moving = new ArrayList<>();
       List<Boolean> wide = new ArrayList<>();
       List<Boolean> third = new ArrayList<>();
+      List<Boolean> fourth = new ArrayList<>();
       List<Boolean> depth = new ArrayList<>();
       for (int i = 0; i < panels.size(); i++) {
         Optional<BufferedImage> w = wide(id, i + 1, gray);
@@ -156,7 +157,9 @@ class ComposeHandler implements StepHandler {
         if (w.isPresent()) {
           boolean move = wideMotion(id, i, script, w.get(), gray, 1);
           moving.add(move);
-          third.add(move && wideMotion(id, i, script, w.get(), gray, 2));
+          boolean c = move && wideMotion(id, i, script, w.get(), gray, 2);
+          third.add(c);
+          fourth.add(c && wideMotion(id, i, script, w.get(), gray, 3));
           continue;
         }
         Map<String, Staging.Side> stage = at(spots.stages(), i);
@@ -186,6 +189,7 @@ class ComposeHandler implements StepHandler {
         }
         moving.add(move);
         third.add(false);
+        fourth.add(false);
       }
       ObjectNode live =
           LivePlayback.build(
@@ -196,7 +200,8 @@ class ComposeHandler implements StepHandler {
               moving,
               wide,
               third,
-              depth);
+              depth,
+              fourth);
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -248,8 +253,7 @@ class ComposeHandler implements StepHandler {
     if (script.panels().get(i).liveMotion().isEmpty()) {
       return false;
     }
-    Optional<byte[]> second =
-        storage.get(frame == 2 ? WorkKeys.panelC(id, i + 1) : WorkKeys.panelB(id, i + 1));
+    Optional<byte[]> second = storage.get(WorkKeys.panelFrame(id, i + 1, frame));
     if (second.isEmpty()) {
       return false;
     }
