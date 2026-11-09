@@ -796,8 +796,8 @@ class DrawHandler implements StepHandler {
   }
 
   /**
-   * 라이브 모드 움직임 컷의 두 번째 그림 요청({type, prompt, uploadPutKey}). 움직임이 없는 컷은 null. 참조 그림을 그대로 받는 그림 모델(2단
-   * 그리기를 켠 모델)에서만 부른다.
+   * 라이브 모드 움직임 컷의 두 번째 그림 요청({type, prompt, uploadPutKey, next: {prompt, uploadPutKey}}). next는 세
+   * 번째 그림이다. 움직임이 없는 컷은 null. 참조 그림을 그대로 받는 그림 모델(2단 그리기를 켠 모델)에서만 부른다.
    */
   ObjectNode motion(String style, String conversationId, int index, ComicScript.Panel panel) {
     return panel
@@ -808,6 +808,10 @@ class DrawHandler implements StepHandler {
               node.put("type", m.code());
               node.put("prompt", motionPrompt(style, m));
               node.put("uploadPutKey", WorkKeys.panelB(conversationId, index + 1));
+              // 세 번째 그림(FR-044): 같은 바탕에서 다르게 바꾼 한 장. 예전 워커는 이 필드를 모르고 두 장만 그린다
+              ObjectNode next = node.putObject("next");
+              next.put("prompt", motionPrompt(style, m.next()));
+              next.put("uploadPutKey", WorkKeys.panelC(conversationId, index + 1));
               return node;
             })
         .orElse(null);
@@ -892,10 +896,15 @@ class DrawHandler implements StepHandler {
 
   /** 두 번째 그림 프롬프트: 인물·구도는 그대로, 배경의 그 부분만 바꾼다. */
   static String motionPrompt(String style, net.java21.fourcut.conversation.scenario.Motion m) {
+    return motionPrompt(style, m.change());
+  }
+
+  /** 움직임 edit 프롬프트. change는 바꿀 것 한 문장. */
+  static String motionPrompt(String style, String change) {
     return style
         + ", edit this picture: keep the characters, the faces, the poses, the clothes, the"
         + " objects, the composition and the drawing style exactly the same, and only "
-        + m.change();
+        + change;
   }
 
   /** 2단 그리기: 1차로 그릴 컷과 2차 edit({prompt, references}). */

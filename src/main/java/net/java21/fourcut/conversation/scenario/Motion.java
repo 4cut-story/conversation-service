@@ -17,39 +17,51 @@ public enum Motion {
       false,
       700,
       "make the stars and small lights in the background sparkle brighter, with small"
-          + " star-shaped glints"),
+          + " star-shaped glints",
+      "make a different set of stars and small lights in the background sparkle brightly, and"
+          + " the other stars a little dimmer"),
   /** 빗줄기. 야외만. */
   RAIN(
       "rain|raining|rainy|raindrops",
       true,
       250,
       "redraw only the falling rain streaks in slightly different places, the same amount of"
-          + " rain"),
+          + " rain",
+      "redraw only the falling rain streaks in other different places, the same amount of rain,"
+          + " with small splashes on the ground"),
   /** 내리는 눈. 야외만. */
   SNOW(
       "snow|snowing|snowy|snowflakes",
       true,
       600,
-      "redraw only the falling snowflakes in slightly different places, the same amount of snow"),
+      "redraw only the falling snowflakes in slightly different places, the same amount of snow",
+      "redraw only the falling snowflakes in other different places, a little lower, the same"
+          + " amount of snow"),
   /** 촛불·등불·네온 깜빡임. */
   FLICKER(
       "candle|candles|candlelight|lantern|lanterns|neon|campfire|fireplace|torch|bonfire",
       false,
       350,
       "make the flame and lamp light glow brighter and warmer, with a soft halo of light around"
-          + " it"),
+          + " it",
+      "make the flame and lamp light a little dimmer and more orange, the flames leaning"
+          + " slightly to one side"),
   /** 물결 반짝임. */
   SHIMMER(
       "sea|ocean|lake|river|pond|water|waves|beach",
       false,
       800,
-      "add bright sparkling highlights on the water surface"),
+      "add bright sparkling highlights on the water surface",
+      "add bright sparkling highlights on other places of the water surface, along the"
+          + " ripples"),
   /** 떨어지는 꽃잎·낙엽. */
   PETALS(
       "petals|blossom|blossoms|cherry blossom|leaves|autumn leaves|falling leaves",
       false,
       700,
-      "redraw only the falling petals and leaves in the air in slightly different places");
+      "redraw only the falling petals and leaves in the air in slightly different places",
+      "redraw only the falling petals and leaves in the air in other different places, a few of"
+          + " them closer to the ground");
 
   /** 한 만화에 움직이는 컷 최대 수. 움직이는 컷마다 GPU 그림이 한 장 더 든다. */
   public static final int MAX_PER_COMIC = 2;
@@ -64,12 +76,14 @@ public enum Motion {
   private final boolean outdoorOnly;
   private final int intervalMs;
   private final String change;
+  private final String next;
 
-  Motion(String background, boolean outdoorOnly, int intervalMs, String change) {
+  Motion(String background, boolean outdoorOnly, int intervalMs, String change, String next) {
     this.background = Pattern.compile("\\b(" + background + ")\\b");
     this.outdoorOnly = outdoorOnly;
     this.intervalMs = intervalMs;
     this.change = change;
+    this.next = next;
   }
 
   /** 재생 정보와 LLM 출력에 쓰는 이름(소문자). */
@@ -85,6 +99,11 @@ public enum Motion {
   /** 두 번째 그림에서 바꿀 것 (edit 프롬프트 끝). */
   public String change() {
     return change;
+  }
+
+  /** 세 번째 그림에서 바꿀 것. 두 번째 그림과 다른 자리·다른 세기라 세 장을 차례로 보여 주면 더 움직여 보인다 (FR-044). */
+  public String next() {
+    return next;
   }
 
   /** LLM이 쓴 값. 목록에 없거나 none·빈 값이면 비었다. */

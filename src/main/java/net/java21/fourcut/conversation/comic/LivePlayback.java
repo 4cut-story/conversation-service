@@ -76,6 +76,20 @@ final class LivePlayback {
       List<Optional<SoundMatcher.Picked>> effects,
       List<Boolean> moving,
       List<Boolean> wide) {
+    return build(json, script, sounds, effects, moving, wide, List.of());
+  }
+
+  /**
+   * @param third 움직이는 컷별 세 번째 그림(-c)도 쓰는지(그려졌고 어긋나지 않았는지, FR-044)
+   */
+  static ObjectNode build(
+      JsonMapper json,
+      ComicScript script,
+      List<Optional<SoundMatcher.Picked>> sounds,
+      List<Optional<SoundMatcher.Picked>> effects,
+      List<Boolean> moving,
+      List<Boolean> wide,
+      List<Boolean> third) {
     ObjectNode root = json.createObjectNode();
     root.put("version", VERSION);
     ArrayNode panels = root.putArray("panels");
@@ -116,9 +130,13 @@ final class LivePlayback {
       if (motion.isPresent() && i < moving.size() && Boolean.TRUE.equals(moving.get(i))) {
         ObjectNode m = panel.putObject("motion");
         m.put("type", motion.get().code());
-        m.putArray("frames")
-            .add(WorkKeys.livePanelPath(n, false))
-            .add(WorkKeys.livePanelPath(n, true));
+        ArrayNode frames =
+            m.putArray("frames")
+                .add(WorkKeys.livePanelPath(n, 0))
+                .add(WorkKeys.livePanelPath(n, 1));
+        if (i < third.size() && Boolean.TRUE.equals(third.get(i))) {
+          frames.add(WorkKeys.livePanelPath(n, 2));
+        }
         m.put("intervalMs", motion.get().intervalMs());
         m.put("easing", "ease-in-out");
       } else {

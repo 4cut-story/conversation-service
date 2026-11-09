@@ -147,11 +147,14 @@ class ComposeHandler implements StepHandler {
       boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
       List<Boolean> moving = new ArrayList<>();
       List<Boolean> wide = new ArrayList<>();
+      List<Boolean> third = new ArrayList<>();
       for (int i = 0; i < panels.size(); i++) {
         Optional<BufferedImage> w = wide(id, i + 1, gray);
         wide.add(w.isPresent());
         if (w.isPresent()) {
-          moving.add(wideMotion(id, i, script, w.get(), gray));
+          boolean move = wideMotion(id, i, script, w.get(), gray, 1);
+          moving.add(move);
+          third.add(move && wideMotion(id, i, script, w.get(), gray, 2));
           continue;
         }
         Map<String, Staging.Side> stage = at(spots.stages(), i);
@@ -180,6 +183,7 @@ class ComposeHandler implements StepHandler {
           }
         }
         moving.add(move);
+        third.add(false);
       }
       ObjectNode live =
           LivePlayback.build(
@@ -188,7 +192,8 @@ class ComposeHandler implements StepHandler {
               sounds.match(queries(script), DrawHandler.seedOf(script)),
               sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
               moving,
-              wide);
+              wide,
+              third);
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -217,13 +222,16 @@ class ComposeHandler implements StepHandler {
     return Optional.of(image);
   }
 
-  /** 넓은 그림 컷의 두 번째 그림(넓은 그림 바탕, FR-034). 같은 크기이고 어긋나지 않았을 때만 저장한다. */
+  /**
+   * 넓은 그림 컷의 두 번째(frame 1)·세 번째(frame 2) 그림(넓은 그림 바탕, FR-034·044). 같은 크기이고 첫 그림과 어긋나지 않았을 때만 저장한다.
+   */
   private boolean wideMotion(
-      String id, int i, ComicScript script, BufferedImage first, boolean gray) {
+      String id, int i, ComicScript script, BufferedImage first, boolean gray, int frame) {
     if (script.panels().get(i).liveMotion().isEmpty()) {
       return false;
     }
-    Optional<byte[]> second = storage.get(WorkKeys.panelB(id, i + 1));
+    Optional<byte[]> second =
+        storage.get(frame == 2 ? WorkKeys.panelC(id, i + 1) : WorkKeys.panelB(id, i + 1));
     if (second.isEmpty()) {
       return false;
     }
@@ -233,10 +241,10 @@ class ComposeHandler implements StepHandler {
     }
     b = gray ? gray(b) : b;
     if (!LiveFrames.aligned(first, b, Map.of())) {
-      log.info("두 그림이 어긋나 움직임을 뺀다: conversation={} panel={}", id, i + 1);
+      log.info("두 그림이 어긋나 그 장을 뺀다: conversation={} panel={} frame={}", id, i + 1, frame);
       return false;
     }
-    storage.put(WorkKeys.livePanel(id, i + 1, true), png(b), PNG);
+    storage.put(WorkKeys.livePanel(id, i + 1, frame), png(b), PNG);
     return true;
   }
 
