@@ -70,6 +70,8 @@ class DrawMotionTest {
     assertThat(live.path("width").asInt()).isEqualTo(1024);
     assertThat(live.path("height").asInt()).isEqualTo(576);
     assertThat(live.path("uploadPutKey").asString()).isEqualTo("pipeline-work/c1/panel-2-w.png");
+    assertThat(live.path("depthUploadPutKey").asString())
+        .isEqualTo("pipeline-work/c1/panel-2-depth.png");
     assertThat(live.path("prompt").asString())
         .contains("wide 16:9 cinematic shot", "keep the same characters", "night park, stars")
         .contains("no text", "no speech bubbles", "no panel borders")

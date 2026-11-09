@@ -824,7 +824,8 @@ class DrawHandler implements StepHandler {
   static final int LIVE_HEIGHT = 576;
 
   /**
-   * 라이브 모드 넓은 그림 요청({prompt, width, height, uploadPutKey}) (docs specs/003-live-mode FR-030~032).
+   * 라이브 모드 넓은 그림 요청({prompt, width, height, uploadPutKey, depthUploadPutKey}) (docs
+   * specs/003-live-mode FR-030~032). 워커는 넓은 그림에서 깊이 지도도 만들어 depthUploadPutKey에 올린다(FR-048).
    */
   ObjectNode live(String style, String conversationId, int index, ComicScript.Panel panel) {
     ObjectNode node = json.createObjectNode();
@@ -832,6 +833,7 @@ class DrawHandler implements StepHandler {
     node.put("width", LIVE_WIDTH);
     node.put("height", LIVE_HEIGHT);
     node.put("uploadPutKey", WorkKeys.panelWide(conversationId, index + 1));
+    node.put("depthUploadPutKey", WorkKeys.panelDepth(conversationId, index + 1));
     return node;
   }
 

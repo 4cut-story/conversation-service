@@ -56,7 +56,7 @@ class LiveBackfillTest {
                   "night park, starry sky",
                   List.of(),
                   "밤 공원, 풀벌레",
-                  null),
+                  "twinkle"),
               new ComicScript.Panel("결", "wide", "{A} smiles", List.of())),
           true,
           List.of());
@@ -64,7 +64,7 @@ class LiveBackfillTest {
   private static final String OLD_LIVE =
       """
       {"version":1,"panels":[
-       {"index":1,"aspect":"16:9","motion":{"type":"twinkle","frames":["a","b","c"]},"ambient":[]},
+       {"index":1,"aspect":"16:9","depth":"panels/1-depth.png","motion":{"type":"twinkle","frames":["a","b","c"]},"ambient":[]},
        {"index":2,"aspect":"1:1","motion":null,"ambient":[]}]}
       """;
 
@@ -91,6 +91,8 @@ class LiveBackfillTest {
     verify(content).live(eq("a"), sent.capture());
     JsonNode panels = sent.getValue().path("panels");
     assertThat(panels.get(0).path("aspect").asString()).isEqualTo("16:9");
+    assertThat(panels.get(0).path("depth").asString()).isEqualTo("panels/1-depth.png");
+    assertThat(panels.get(0).path("motion").path("frames").size()).isEqualTo(3);
     assertThat(panels.get(0).path("ambient").get(0).asString()).isEqualTo("twinkle");
     assertThat(panels.get(1).path("ambient").get(0).asString()).isEqualTo("glow");
     assertThat(panels.get(1).path("motion").isNull()).isTrue();

@@ -90,6 +90,21 @@ final class LivePlayback {
       List<Boolean> moving,
       List<Boolean> wide,
       List<Boolean> third) {
+    return build(json, script, sounds, effects, moving, wide, third, List.of());
+  }
+
+  /**
+   * @param depth 넓은 그림 컷별 깊이 지도가 있는지(FR-048). 있으면 화면이 2.5D 패럴랙스로 움직인다
+   */
+  static ObjectNode build(
+      JsonMapper json,
+      ComicScript script,
+      List<Optional<SoundMatcher.Picked>> sounds,
+      List<Optional<SoundMatcher.Picked>> effects,
+      List<Boolean> moving,
+      List<Boolean> wide,
+      List<Boolean> third,
+      List<Boolean> depth) {
     ObjectNode root = json.createObjectNode();
     root.put("version", VERSION);
     ArrayNode panels = root.putArray("panels");
@@ -105,6 +120,9 @@ final class LivePlayback {
       if (i < wide.size() && Boolean.TRUE.equals(wide.get(i))) {
         panel.put("aspect", "16:9");
         captions(panel.putArray("captions"), p, script.callNames(), duration);
+        if (i < depth.size() && Boolean.TRUE.equals(depth.get(i))) {
+          panel.put("depth", WorkKeys.liveDepthPath(n));
+        }
       } else {
         panel.put("aspect", "1:1");
       }
