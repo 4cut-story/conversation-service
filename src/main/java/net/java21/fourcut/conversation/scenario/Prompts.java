@@ -165,6 +165,8 @@ final class Prompts {
         모양과 색으로 쓴다(예: "blank wooden shop sign", "phone with glowing green screen"). 병풍·족자·액자·칠판·화면처럼
         글씨나 그림이 들어가기 쉬운 면은 "plain"을 붙여 무늬 없이 쓰고, 화면에 보여야 할 것은 글자 대신 그림 하나로 쓴다
         (예: "screen showing a big burger picture").
+        팻말·표지판은 받침과 붙은 모양까지 쓰고, 팻말이 가리키는 것을 그림 하나로 보이게 쓴다(예: "small blank wooden board nailed
+        to one stake, a painted red tomato on it, next to {토마토} plants"). 받침이 없으면 판이 떠 있게 그려진다.
       - 들고 다니는 물건이 나오는 컷인데 action이 그 물건을 쓰지 않으면, 쥔 모습을 action 끝에 짧게 붙인다(예: "holding
         {등불} by its handle at her side", "{가방} on his shoulder"). 쥔 모습이 없으면 팔을 쭉 뻗어 매달거나 엉뚱하게 든다.
       - 인물마다 들고 다니는 물건은 하나까지만 두고, 이야기에 꼭 필요할 때만 look에 넣는다. 길쭉한 물건(칼, 검, 지팡이, 막대,
