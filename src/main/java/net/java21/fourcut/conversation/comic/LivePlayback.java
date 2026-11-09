@@ -27,7 +27,6 @@ final class LivePlayback {
   /** 소리 크기 비율(marco): 바탕 배경음(장소 소리·배경음악) 60%, 효과음 100%. 바탕 소리가 대사·효과음을 덮지 않게 한다. */
   static final double VOLUME = 0.6;
 
-  static final double MUSIC_VOLUME = 0.6;
   static final int FADE_MS = 800;
 
   /** 사건 효과음은 배경음 위에 한 번, 조금 크게 바로 튼다. */
@@ -98,8 +97,8 @@ final class LivePlayback {
       panel.put("camera", CAMERAS.get(i % CAMERAS.size()));
       Optional<SoundMatcher.Picked> sound = i < sounds.size() ? sounds.get(i) : Optional.empty();
       if (sound.isPresent()) {
-        double volume = sound.get().music() ? MUSIC_VOLUME : VOLUME;
-        panel.set("sound", sound(json, sound.get(), volume, FADE_MS, true));
+        // 장소 소리와 배경음악은 같은 바탕 배경음이라 크기가 같다
+        panel.set("sound", sound(json, sound.get(), VOLUME, FADE_MS, true));
       } else {
         panel.putNull("sound");
       }
