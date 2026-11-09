@@ -70,6 +70,18 @@ public class CharacterLibrary {
    * @param scriptLook 콘티 외모 문구
    */
   public static String drawLook(String characterLook, String scriptLook) {
+    return drawLook(characterLook, scriptLook, true);
+  }
+
+  /**
+   * {@link #drawLook(String, String)}와 같되, 참조 그림이 없는 캐릭터({@code hasImage} false)는 모습에 없는 신발을 콘티에서
+   * 붙인다.
+   *
+   * @param characterLook 캐릭터 DB 모습 문구
+   * @param scriptLook 콘티 외모 문구
+   * @param hasImage 참조 그림이 있는지
+   */
+  public static String drawLook(String characterLook, String scriptLook, boolean hasImage) {
     String look = characterLook == null ? "" : characterLook.strip();
     if (scriptLook == null || scriptLook.isBlank()) {
       return look;
@@ -77,7 +89,7 @@ public class CharacterLibrary {
     LookHead own = LookHead.of(look);
     String head = scriptLook.split(",", 2)[0].strip();
     LookHead wanted = LookHead.of(head);
-    String props = LookHead.props(scriptLook, look);
+    String props = LookHead.props(scriptLook, look, hasImage);
     String drawn = look;
     if (own.animal() == null && own.gender() == null && wanted.gender() != null) {
       drawn = look.isEmpty() ? head : head + ", " + look;

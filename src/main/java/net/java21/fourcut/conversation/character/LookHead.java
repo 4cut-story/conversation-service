@@ -356,6 +356,17 @@ public record LookHead(String animal, String gender, String age) {
       Set.of(
           "hair",
           "bob",
+          "pigtails",
+          "pigtail",
+          "twintails",
+          "bangs",
+          "afro",
+          "mohawk",
+          "updo",
+          "goatee",
+          "freckles",
+          "buzz",
+          "shaved",
           "ponytail",
           "bun",
           "buns",
@@ -412,24 +423,137 @@ public record LookHead(String animal, String gender, String age) {
           "cloak",
           "sash");
 
+  /** 윗옷 낱말. */
+  private static final Set<String> TOP =
+      Set.of(
+          "shirt",
+          "t-shirt",
+          "sweater",
+          "hoodie",
+          "jacket",
+          "coat",
+          "cardigan",
+          "robe",
+          "jeogori",
+          "blouse",
+          "vest",
+          "dopo",
+          "sweatshirt",
+          "polo",
+          "parka",
+          "uniform",
+          "apron",
+          "top");
+
+  /** 아래옷 낱말. */
+  private static final Set<String> BOTTOM =
+      Set.of("pants", "jeans", "skirt", "chima", "trousers", "shorts", "leggings");
+
+  /** 아래까지 덮는 한 벌 옷. 이런 옷이 있으면 콘티의 아래옷을 붙이지 않는다(멜빵바지 위에 청바지). */
+  private static final Set<String> ONE_PIECE =
+      Set.of("overalls", "dress", "gown", "jumpsuit", "kimono", "pajamas");
+
+  /** 신발 낱말. */
+  private static final Set<String> SHOES =
+      Set.of(
+          "sneakers",
+          "boots",
+          "shoes",
+          "sandals",
+          "slippers",
+          "flip-flops",
+          "loafers",
+          "heels",
+          "barefoot",
+          "feet");
+
   /**
    * 콘티 외모에서 머리·옷이 아닌 마디(소품: "brass telescope", "wooden sword"). 첫 마디(나이·성별)는 빼고, 캐릭터 모습에 이미 있는 마디도
-   * 뺀다. 없으면 빈 문자열.
+   * 뺀다. 아래옷("blue jeans") 마디는 캐릭터 모습에 아래옷이 없을 때만 붙이고, 신발 마디는 캐릭터 모습이 없을 때만 붙인다. 모습 문구에 아래옷·신발이 없으면
+   * 컷마다 바지 색이 바뀌었다(회차 29). 없으면 빈 문자열.
    */
   static String props(String scriptLook, String characterLook) {
+    return props(scriptLook, characterLook, true);
+  }
+
+  /**
+   * {@link #props(String, String)}와 같되, 참조 그림이 없는 인물({@code hasImage} false)은 캐릭터 모습에 없는 신발을 콘티에서
+   * 붙인다. 캐릭터 모습에 윗옷이 없으면 콘티의 윗옷 마디도 붙인다. 윗옷이 없는 모습("old man, white beard, straw hat")은 컷마다 윗옷이
+   * 바뀌었다(회차 29 콘티 7판 family-09).
+   */
+  static String props(String scriptLook, String characterLook, boolean hasImage) {
     if (scriptLook == null) {
       return "";
     }
     String c = characterLook == null ? "" : characterLook.toLowerCase(Locale.ROOT);
+    Set<String> own = Set.copyOf(Arrays.asList(words(c)));
+    boolean hasBottom = own.stream().anyMatch(w -> BOTTOM.contains(w) || ONE_PIECE.contains(w));
+    // 참조 그림이 있는 인물은 신발을 그림이 정하게 둔다. 콘티 신발 글과 참조 그림 신발이 달라 컷마다 신발이 바뀌었다(회차 29 콘티 5판).
+    boolean hasShoes = (hasImage && !c.isBlank()) || own.stream().anyMatch(SHOES::contains);
+    boolean hasTop = own.stream().anyMatch(w -> TOP.contains(w) || ONE_PIECE.contains(w));
     String[] parts = scriptLook.split(",");
     return Arrays.stream(parts, 1, parts.length)
         .map(String::strip)
         .filter(p -> !p.isEmpty() && !c.contains(p.toLowerCase(Locale.ROOT)))
+        .filter(p -> fits(words(p.toLowerCase(Locale.ROOT)), hasBottom, hasShoes, hasTop))
+        // 성별·나이 마디("little girl")는 붙이지 않는다. 캐릭터 모습과 성별이 다른 콘티 마디가 붙어 한 컷에 남녀 아이가 둘
+        // 그려졌다(회차 29 콘티 14판 mystery-08).
         .filter(
-            p ->
-                Arrays.stream(p.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}-]+"))
-                    .noneMatch(APPEARANCE::contains))
+            p -> Arrays.stream(words(p.toLowerCase(Locale.ROOT))).noneMatch(PERSON_WORDS::contains))
         .collect(Collectors.joining(", "));
+  }
+
+  /**
+   * 구도에 보이지 않는 마디를 뺀 외모. medium(허리 위)은 신발 마디를, close-up(가슴 위)은 아래옷 마디도 뺀다. 외모 글에 신발·바지가 있으면
+   * close-up을 시켜도 온몸이 그려졌다(회차 29 구조화 콘티 판). 첫 마디(나이·성별)는 늘 남긴다.
+   */
+  public static String framed(String look, String shot) {
+    if (look == null || !("medium".equals(shot) || "close-up".equals(shot))) {
+      return look;
+    }
+    boolean close = "close-up".equals(shot);
+    String[] parts = look.split(",");
+    StringBuilder out = new StringBuilder(parts[0].strip());
+    for (int i = 1; i < parts.length; i++) {
+      String p = parts[i].strip();
+      List<String> w = Arrays.asList(words(p.toLowerCase(Locale.ROOT)));
+      boolean shoes = w.stream().anyMatch(SHOES::contains);
+      boolean bottom = w.stream().anyMatch(BOTTOM::contains);
+      if (!p.isEmpty() && !shoes && !(close && bottom)) {
+        out.append(", ").append(p);
+      }
+    }
+    return out.toString();
+  }
+
+  private static final Set<String> PERSON_WORDS =
+      java.util.stream.Stream.of(FEMALE, MALE, Set.of("child", "kid", "children"))
+          .flatMap(Set::stream)
+          .collect(Collectors.toUnmodifiableSet());
+
+  private static String[] words(String text) {
+    return text.split("[^\\p{L}\\p{N}-]+");
+  }
+
+  /** 머리·옷 낱말이 없거나, 캐릭터 모습에 없는 아래옷·신발만 말하는 마디. */
+  private static boolean fits(String[] words, boolean hasBottom, boolean hasShoes, boolean hasTop) {
+    if (!hasTop
+        && Arrays.stream(words).anyMatch(TOP::contains)
+        && Arrays.stream(words).allMatch(w -> TOP.contains(w) || !APPEARANCE.contains(w))) {
+      return true;
+    }
+    boolean bottom = Arrays.stream(words).anyMatch(BOTTOM::contains);
+    boolean shoes = Arrays.stream(words).anyMatch(SHOES::contains);
+    boolean other =
+        Arrays.stream(words)
+            .anyMatch(w -> APPEARANCE.contains(w) && !BOTTOM.contains(w) && !SHOES.contains(w));
+    if (other || (bottom && shoes)) {
+      return false;
+    }
+    if (bottom) {
+      return !hasBottom;
+    }
+    return !shoes || !hasShoes;
   }
 
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */

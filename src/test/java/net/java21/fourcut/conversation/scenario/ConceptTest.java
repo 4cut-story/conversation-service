@@ -53,4 +53,21 @@ class ConceptTest {
         .contains("4컷으로 두는 경우");
     assertThat(Prompts.SCRIPT_SCHEMA).contains("\"minItems\":4,\"maxItems\":10");
   }
+
+  @Test
+  @DisplayName("FR-006: 콘티 응답 틀은 인물 아래옷·신발 칸과 소품 정의 칸을 받고, 지시는 소품을 자리표로 쓰게 한다")
+  void structuredLooksAndProps() {
+    assertThat(Prompts.SCRIPT_SCHEMA)
+        .contains("\"bottom\"")
+        .contains("\"shoes\"")
+        .contains("\"props\"")
+        .contains("\"places\"")
+        .contains("\"lookAt\"");
+    for (Concept c : Concept.values()) {
+      assertThat(Prompts.scriptSystem(c))
+          .contains("- bottom:")
+          .contains("{연}")
+          .contains("- action:");
+    }
+  }
 }

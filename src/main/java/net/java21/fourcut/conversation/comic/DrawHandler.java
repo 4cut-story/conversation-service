@@ -78,25 +78,33 @@ class DrawHandler implements StepHandler {
     long seed = Math.floorMod(seedOf(written), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
+    String style = style(script, properties);
     for (int i = 0; i < script.panels().size(); i++) {
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      image.put(
-          "prompt",
-          prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
+      ComicScript.Panel panel = script.panels().get(i);
+      Map<String, Staging.Side> stage = stages.get(i);
+      TwoPass two = properties.twoPass() ? twoPass(style, script, panel, cast) : null;
+      if (two != null) {
+        // 1차는 빈손 자세나 앞사람만 그린다. 2차(edit)가 그 그림에 물건이나 뒷사람을 더한다
+        panel = two.first();
+        stage = Staging.panel(script, panel);
+      }
+      image.put("prompt", prompt(style, script, panel, stage));
       image.put(
           "negativePrompt", negative(script, properties) + dayNegative(script.panels().get(i)));
-      ArrayNode regions =
-          regions(style(script, properties), script, script.panels().get(i), stages.get(i));
+      ArrayNode regions = regions(style, script, panel, stage);
       if (!regions.isEmpty()) {
         image.set("regions", regions);
       }
-      ArrayNode checks = checks(script, script.panels().get(i), stages.get(i));
+      ArrayNode checks = checks(script, panel, stage);
       if (!checks.isEmpty()) {
         image.set("checks", checks);
       }
-      ArrayNode refs =
-          references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
+      if (two != null) {
+        image.set("edit", two.edit());
+      }
+      ArrayNode refs = references(stage, cast, othersInScene(script, panel));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast, properties.panelSeedStep()));
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
@@ -147,6 +155,7 @@ class DrawHandler implements StepHandler {
 
   static String prompt(
       String style, ComicScript script, ComicScript.Panel panel, Map<String, Staging.Side> stage) {
+    panel = dry(panel);
     Concept concept = Concept.of(script.concept());
     String scene = panel.scene().strip();
     boolean legacy = !scene.contains("{");
@@ -162,6 +171,10 @@ class DrawHandler implements StepHandler {
         looks.put(c.speaker(), c.look().strip());
       }
     }
+    // 두 명 이상인 close-up은 한 사람 얼굴만 크게 그려 나머지가 빠지고 두 외모가 한 사람에 섞였다(mystery-02 3컷 등).
+    // 여럿이 나오는 컷은 medium으로 그린다.
+    String kind = people >= 2 && "close-up".equals(panel.shot()) ? "medium" : panel.shot();
+    looks.replaceAll((k, v) -> LookHead.framed(v, kind));
     String lineup = "";
     Map<String, String> names = new java.util.HashMap<>();
     if (people >= 2 && stage.size() >= 2) {
@@ -175,12 +188,19 @@ class DrawHandler implements StepHandler {
         scene = scene.replace("{" + e.getKey() + "}", e.getValue().split(",")[0].strip());
       }
     }
+    if (people == 1) {
+      scene = scene + carried(looks.values().iterator().next(), scene);
+    }
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
-    // 두 명 이상인 close-up은 한 사람 얼굴만 크게 그려 나머지가 빠지고 두 외모가 한 사람에 섞였다(mystery-02 3컷 등).
-    // 여럿이 나오는 컷은 medium으로 그린다.
-    String kind = people >= 2 && "close-up".equals(panel.shot()) ? "medium" : panel.shot();
-    String shot = kind == null ? "" : kind.replace('-', ' ') + " shot, ";
+    scene = standFirst(scene);
+    String shot =
+        kind == null
+            ? ""
+            : ("wide".equals(kind) && people == 1
+                    ? WIDE_ONE
+                    : SHOTS.getOrDefault(kind, kind.replace('-', ' ') + " shot"))
+                + ", ";
     String who = people >= 2 && stage.size() >= 2 ? who(stage, looks, concept) : null;
     String count =
         people >= 2
@@ -188,7 +208,9 @@ class DrawHandler implements StepHandler {
                     ? who
                     : COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd())
                 + ", "
-                + SIDE_BY_SIDE
+                + (panel.scene() != null && panel.scene().contains("foreground")
+                    ? DEPTH
+                    : SIDE_BY_SIDE)
                 + ", "
             : "";
     // 인물 외모(옷·머리)를 그림체 바로 뒤에 둔다. 뒤쪽에 두면 앞 77토큰 묶음보다 약하게 읽혀 같은 인물의 옷·머리가 컷마다 바뀌었다(회차 21·22).
@@ -197,21 +219,149 @@ class DrawHandler implements StepHandler {
         people >= 2
             ? count + lineup
             : looks.size() == 1 ? looks.values().iterator().next() + ", " : "";
-    return style
-        + light(panel)
-        + ", "
-        + lead
-        + QUALITY
-        + ", "
-        + SINGLE
-        + ", "
-        + frame(legacy ? 0 : people)
-        + ", "
-        + shot
-        + keyObject(panel)
-        + scene
-        + detail
-        + cast;
+    return once(
+        style
+            + light(panel)
+            + ", "
+            + lead
+            + QUALITY
+            + ", "
+            + SINGLE
+            + ", "
+            + frame(legacy ? 0 : people)
+            + ", "
+            + shot
+            + keyObject(panel)
+            + scene
+            + detail
+            + cast
+            + onlyOne(scene));
+  }
+
+  private static final Pattern SINGLE_PROP =
+      Pattern.compile("\\b(?:a single|one lone|single) ([a-z][a-z -]*?)(?= with | on |,|$)");
+
+  /**
+   * 동작에 "a single X"로 나온 물건은 끝에 "only one X in the whole picture"를 붙인다. 같은 물건을 둘 그렸다(회차 29 콘티 22판
+   * funny-03 3컷 키오스크 둘, mystery-08 5컷 망원경 둘). 물건 이름은 머리 낱말 하나만 쓴다.
+   */
+  static String onlyOne(String scene) {
+    Matcher m = SINGLE_PROP.matcher(scene);
+    if (!m.find()) {
+      return "";
+    }
+    String head = m.group(1).strip();
+    String noun = head.substring(head.lastIndexOf(' ') + 1);
+    String only = ", only one " + noun + " in the whole picture";
+    Stand on = standsOn(scene, m.end());
+    if (on != null) {
+      // 받침 위 물건을 손에도 하나 더 쥐여 그렸다(회차 29 콘티 23판 mystery-08 5컷 삼각대 망원경 + 손에 든 망원경)
+      return only
+          + ", the "
+          + noun
+          + " stands on its "
+          + on.support()
+          + ", nothing held in the hands";
+    }
+    return only;
+  }
+
+  /**
+   * 받침 위에 선 하나뿐인 물건("peering into the eyepiece of single brass telescope ... on tripod")은 물건을 장면 맨
+   * 앞에 먼저 세우고 동작에서는 "it"으로 받는다. 동작 안에 물건이 들어 있으면 물건을 둘 그리거나(23판) 물건 앞과 뒤에 같은 인물을 둘 그렸다(회차 29 콘티 24판
+   * mystery-08 5컷).
+   */
+  static String standFirst(String scene) {
+    Matcher m = SINGLE_PROP.matcher(scene);
+    if (!m.find()) {
+      return scene;
+    }
+    Stand on = standsOn(scene, m.end());
+    if (on == null) {
+      return scene;
+    }
+    int end = on.end();
+    String object = "a single " + scene.substring(m.start(1), end).strip();
+    String rest =
+        (scene.substring(0, m.start()) + "it" + scene.substring(end))
+            .replaceAll("\\bthe ([a-z]+) of it\\b", "its $1");
+    return object + " stands in the picture, " + rest.replaceAll("\\s{2,}", " ").strip();
+  }
+
+  private static final Pattern SUPPORT =
+      Pattern.compile(" on (?:a |an |the |its )?(tripod|stand|table|desk|counter|shelf|easel)\\b");
+
+  /** 물건 이름 뒤 받침 말(" with one eyepiece on tripod")의 끝과 받침 이름. 쉼표 앞까지만 본다. 없으면 null. */
+  record Stand(int end, String support) {}
+
+  static Stand standsOn(String scene, int from) {
+    int comma = scene.indexOf(',', from);
+    String segment = scene.substring(from, comma < 0 ? scene.length() : comma);
+    Matcher on = SUPPORT.matcher(segment);
+    if (!on.find() || (on.start() > 0 && !segment.startsWith(" with "))) {
+      return null;
+    }
+    return new Stand(from + on.end(), on.group(1));
+  }
+
+  /**
+   * 쉼표로 나뉜 말 가운데 앞에 이미 나온 말을 뺀다. 장소·빛이 두세 번씩 들어가 있었고, 그림 모델은 같은 말을 두 번 읽으면 그것을 두 번 그린다(회차 29 콘티 19판
+   * mystery-02 세탁기 둘, funny-15 토끼 둘).
+   */
+  static String once(String prompt) {
+    // 괄호 안(한 인물의 외모)은 한 덩어리로 본다
+    List<String> parts = new ArrayList<>();
+    int depth = 0;
+    int start = 0;
+    for (int i = 0; i < prompt.length(); i++) {
+      char c = prompt.charAt(i);
+      if (c == '(') {
+        depth++;
+      } else if (c == ')') {
+        depth = Math.max(0, depth - 1);
+      } else if (c == ',' && depth == 0) {
+        parts.add(prompt.substring(start, i));
+        start = i + 1;
+      }
+    }
+    parts.add(prompt.substring(start));
+    Set<String> seen = new HashSet<>();
+    StringBuilder out = new StringBuilder();
+    for (String part : parts) {
+      String key = part.strip().toLowerCase(java.util.Locale.ROOT);
+      if (key.isEmpty() || seen.add(key)) {
+        out.append(out.isEmpty() ? "" : ",").append(part);
+      }
+    }
+    return out.toString();
+  }
+
+  private static final Pattern BOTH_HANDS = Pattern.compile("\\b(both|fists|hands|arms)\\b");
+
+  private static final Pattern CARRIED =
+      Pattern.compile(
+          "\\b(sword|lantern|fan|staff|cane|umbrella|bag|backpack|book|basket|spear|bow|stick)\\b");
+
+  /**
+   * 외모에 든 들고 다니는 물건을 장면이 쓰지 않으면 쥔 모습을 붙인다(", holding paper lantern at the side"). 쥔 모습이 없으면 그 물건을
+   * 벽에 걸어 두고 다른 인물의 칼을 쥐었다(회차 29 콘티 14판 mystery-08 4컷). 콘티 LLM은 캐릭터 DB 외모를 보지 못해 action에 쓸 수 없다.
+   */
+  static String carried(String look, String scene) {
+    String lower = scene.toLowerCase(java.util.Locale.ROOT);
+    StringBuilder out = new StringBuilder();
+    // 두 손을 쓰는 동작에 쥔 모습을 더하면 팔이 셋으로 그려진다
+    if (BOTH_HANDS.matcher(lower).find()) {
+      return "";
+    }
+    String[] parts = look.split(",");
+    for (int i = 1; i < parts.length; i++) {
+      String part = parts[i].strip();
+      Matcher m = CARRIED.matcher(part.toLowerCase(java.util.Locale.ROOT));
+      if (m.find() && !lower.contains(m.group(1))) {
+        out.append(", holding ").append(part).append(" at the side");
+      }
+    }
+    return out.toString();
   }
 
   /**
@@ -331,12 +481,35 @@ class DrawHandler implements StepHandler {
   /** 어둡게 그려야 하는 때. */
   static final Pattern DARK =
       Pattern.compile(
-          "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dark|starry|stars?|moonlit)\\b");
+          "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dark(?![ -](?:gray|grey))|starry|stars?|moonlit)\\b");
 
-  /**
+  /*
    * 배경에서 빛·날씨를 말하는 조각을 그림체 바로 뒤에 둔다. 배경은 프롬프트 끝에 붙어 힘이 약해, 새벽 3시 별 보는 장면이 낮처럼 밝게 그려지고 별이 빠졌다(시험 8회
    * 템플스테이 만화). 밤·새벽이면 "dark night lighting"도 붙인다.
    */
+  /** 창밖으로 비를 보는 실내 배경. */
+  private static final Pattern IN_WINDOW = Pattern.compile("(?i)\\bin the window\\b");
+
+  private static final Pattern RAIN_WORD = Pattern.compile("(?i)\\brain(?:y|ing|drops?)?\\b\\s*");
+
+  /**
+   * 창밖으로 하늘을 보는 실내 컷의 배경에서 비 낱말을 뺀다. 콘티가 "rainy morning, dark gray sky in the window"처럼 쓰면 방 안에
+   * 빗줄기가 그려졌다(회차 29 콘티 16판 solo-01 1·2·5컷).
+   */
+  static ComicScript.Panel dry(ComicScript.Panel panel) {
+    String s = panel.setting();
+    if (s == null || !IN_WINDOW.matcher(s).find() || !RAIN_WORD.matcher(s).find()) {
+      return panel;
+    }
+    String dried =
+        java.util.Arrays.stream(s.split(","))
+            .map(t -> RAIN_WORD.matcher(t).replaceAll("").strip())
+            .filter(t -> !t.isEmpty())
+            .collect(java.util.stream.Collectors.joining(", "));
+    return new ComicScript.Panel(
+        panel.role(), panel.shot(), panel.scene(), panel.lines(), dried, panel.faces());
+  }
+
   static String light(ComicScript.Panel panel) {
     String s = panel.setting();
     if (s == null || s.isBlank()) {
@@ -386,7 +559,11 @@ class DrawHandler implements StepHandler {
         most = shared;
       }
     }
-    return best == null ? "" : best + ", ";
+    // 얼굴 컷에 장면과 상관없는 배경 물건을 앞세우면 그 물건이 몸 앞을 덮었다(밭고랑에 몸통이 묻힘, 회차 29 콘티 20판 family-09 5·7컷)
+    if (best == null || most == 0 && "close-up".equals(panel.shot())) {
+      return "";
+    }
+    return best + ", ";
   }
 
   /** 문장의 낱말(소문자, 세 글자 이상). 장면과 배경 조각이 같은 물건을 말하는지 견줄 때 쓴다. */
@@ -581,7 +758,10 @@ class DrawHandler implements StepHandler {
                 c ->
                     cast.containsKey(c.speaker())
                         ? c.withLook(
-                            CharacterLibrary.drawLook(cast.get(c.speaker()).look(), c.look()))
+                            CharacterLibrary.drawLook(
+                                cast.get(c.speaker()).look(),
+                                c.look(),
+                                cast.get(c.speaker()).referenceImageKey() != null))
                         : c)
             .toList();
     return new ComicScript(
@@ -593,6 +773,371 @@ class DrawHandler implements StepHandler {
         script.concept());
   }
 
+  /** 2단 그리기: 1차로 그릴 컷과 2차 edit({prompt, references}). */
+  record TwoPass(ComicScript.Panel first, ObjectNode edit) {}
+
+  /**
+   * 컷을 2단으로 나눈다. 두 사람 컷은 앞사람을 먼저 그리고 뒷사람(참조 포함)을 더한다. 한 사람이 물건을 가슴 앞에 들거나 받침 위 물건을 들여다보는 컷은 빈손 자세를
+   * 먼저 그리고 물건 하나를 더한다. 나눌 수 없으면 null.
+   */
+  TwoPass twoPass(
+      String style, ComicScript script, ComicScript.Panel panel, Map<String, CharacterRef> cast) {
+    Split split = split(panel);
+    if (split != null) {
+      ObjectNode edit = json.createObjectNode();
+      edit.put("prompt", addPrompt(style, script, panel, split));
+      ArrayNode refs = references(Map.of(split.back(), Staging.Side.RIGHT), cast);
+      if (!refs.isEmpty()) {
+        edit.set("references", refs);
+      }
+      return new TwoPass(split.frontPanel(), edit);
+    }
+    Hold hold = hold(panel);
+    if (hold != null) {
+      ObjectNode edit = json.createObjectNode();
+      edit.put("prompt", holdPrompt(style, hold));
+      return new TwoPass(hold.emptyPanel(), edit);
+    }
+    return null;
+  }
+
+  /**
+   * 두 사람 컷을 나눠 그리는 차례. 1차는 앞사람만 그린 컷(frontPanel), 2차는 1차 그림을 입력으로 받아 뒷사람을 더한다(addPrompt). 두 사람을 한
+   * 번에 그리면 옷·얼굴이 섞이거나 동작이 뒤바뀌고 사람이 복제됐다(회차 29 콘티 18판, 심각 8편). 나눠 그리면 같은 컷 8개가 모두 제 옷·제 역할로
+   * 나왔다(conti18seq).
+   */
+  record Split(String front, String back, ComicScript.Panel frontPanel, String backClause) {}
+
+  private static final Pattern IN_FRONT = Pattern.compile("\\s+in the foreground\\b");
+
+  /** 두 사람 컷을 앞사람 컷과 뒷사람 한 마디로 나눈다. 두 사람 컷이 아니면 null. 앞사람은 장면에 먼저 나오는 사람이다. */
+  static Split split(ComicScript.Panel panel) {
+    String scene = panel.scene() == null ? "" : panel.scene().strip();
+    List<String> marks = new ArrayList<>();
+    Matcher m = MARK.matcher(scene);
+    while (m.find()) {
+      if (!marks.contains(m.group(1))) {
+        marks.add(m.group(1));
+      }
+    }
+    if (marks.size() != 2) {
+      return null;
+    }
+    String front = marks.get(0);
+    String back = marks.get(1);
+    String mark = "{" + back + "}";
+    List<String> kept = new ArrayList<>();
+    String clause = null;
+    for (String part : scene.split(",\\s*")) {
+      int at = part.indexOf(mark);
+      if (at < 0 || clause != null) {
+        kept.add(part);
+        continue;
+      }
+      String head = part.substring(0, at).strip();
+      if (head.isEmpty() || "small".equalsIgnoreCase(head)) {
+        clause = part.substring(at);
+      } else {
+        // 앞사람 동작 안에 든 뒷사람("walks toward small {B} seen from behind")은 앞 낱말과 함께 떼어 낸다.
+        Matcher cut =
+            Pattern.compile(
+                    "\\s+(?:[a-z]+\\s+)?(?:the\\s+)?(?:small\\s+)?" + Pattern.quote(mark) + ".*$")
+                .matcher(part);
+        if (cut.find()) {
+          clause = part.substring(part.indexOf(mark));
+          String rest = part.substring(0, cut.start()).strip();
+          if (!rest.isEmpty()) {
+            kept.add(rest);
+          }
+        } else {
+          kept.add(part);
+        }
+      }
+    }
+    if (clause == null) {
+      return null;
+    }
+    // 앞사람을 왼쪽에 두어 2차에 뒷사람이 들어설 빈자리를 남긴다. 앞사람이 가운데·오른쪽에 있으면 2차가 앞사람을 뒷사람으로 바꿔 그렸다(17판 두 사람 컷 9개 중
+    // 3개).
+    String frontScene =
+        IN_FRONT.matcher(String.join(", ", kept)).replaceAll("")
+            + ", on the left side of the picture, open space on the right side";
+    List<ComicScript.Face> faces =
+        panel.faces() == null
+            ? null
+            : panel.faces().stream()
+                .filter(f -> f != null && front.equals(f.speaker()))
+                .map(f -> new ComicScript.Face(f.speaker(), aside(f.face(), "looking to the side")))
+                .toList();
+    ComicScript.Panel frontPanel =
+        new ComicScript.Panel(
+            panel.role(), panel.shot(), frontScene, panel.lines(), panel.setting(), faces);
+    return new Split(front, back, frontPanel, clause);
+  }
+
+  private static String aside(String face, String with) {
+    return face == null ? null : face.replace("looking at the other person", with);
+  }
+
+  private static final Pattern BACK_WORDS =
+      Pattern.compile("(?i)\\s*\\b(?:small|far|in the background|from the background)\\b");
+
+  /** 2차 프롬프트: 1차 그림은 그대로 두고 뒷사람을 오른쪽 중간 거리에 더한다. */
+  static String addPrompt(String style, ComicScript script, ComicScript.Panel panel, Split split) {
+    ComicScript.Character who =
+        script.characters().stream()
+            .filter(c -> split.back().equals(c.speaker()))
+            .findFirst()
+            .orElseThrow();
+    String look = who.look().strip();
+    String head = look.split(",", 2)[0].strip();
+    String pose =
+        BACK_WORDS
+            .matcher(split.backClause().replace("{" + split.back() + "}", "the " + head))
+            .replaceAll("")
+            .replaceAll("\\s{2,}", " ")
+            .strip();
+    String face =
+        panel.faces() == null
+            ? ""
+            : panel.faces().stream()
+                .filter(f -> f != null && split.back().equals(f.speaker()) && f.face() != null)
+                .map(f -> ", " + aside(f.face().strip(), "looking at the first character"))
+                .findFirst()
+                .orElse("");
+    String first =
+        script.characters().stream()
+            .filter(c -> split.front().equals(c.speaker()))
+            .map(c -> c.look().strip().split(",", 2)[0].strip())
+            .findFirst()
+            .orElse("character");
+    return style
+        + ", edit this picture: keep the "
+        + first
+        + " on the left exactly as drawn, with the same face, clothes, pose and place, keep the"
+        + " objects, the background, the light and the drawing style exactly the same, and add one"
+        + " more character in the open space in the middle distance on the right side: ("
+        + look
+        + "), "
+        + pose
+        + face
+        + ", the "
+        + first
+        + " still on the left, exactly two characters, each drawn only once";
+  }
+
+  /**
+   * 물건을 가슴 앞에 드는 컷을 나눠 그리는 차례. 1차는 빈손으로 같은 자세를 그리고, 2차는 그 그림에 물건 하나만 더한다. 한 번에 그리면 휴대폰 두 대, 양말 두 짝,
+   * 머리 둘 달린 프라이팬처럼 든 물건이 겹쳐 그려졌다(회차 29 콘티 16판 심각 4편 중 3편).
+   */
+  record Hold(
+      ComicScript.Panel emptyPanel, String object, String grip, String state, String place) {
+    Hold(ComicScript.Panel emptyPanel, String object, String grip, String state) {
+      this(emptyPanel, object, grip, state, null);
+    }
+  }
+
+  /** 받침 위 물건 앞의 동작 말 꼬리("peering into the eyepiece of"). 1차 빈손 컷에서는 이 꼬리를 뗀다. */
+  private static final Pattern TAIL_WORD =
+      Pattern.compile("\\s(?:into|at|of|on|onto|toward|through|over|(?:the|its) [a-z]+ of)$");
+
+  /** 동작 말 끝의 꼬리가 시작하는 자리. 꼬리가 없으면 끝 자리. */
+  static int tailStart(String before) {
+    String rest = before.stripTrailing();
+    while (true) {
+      Matcher t = TAIL_WORD.matcher(rest);
+      if (!t.find()) {
+        return rest.length();
+      }
+      rest = rest.substring(0, t.start()).stripTrailing();
+    }
+  }
+
+  private static final Pattern HOLD_VERB =
+      Pattern.compile("\\b(?:holds up|holds out|holds|lifts) ");
+
+  private static final Pattern NOT_HELD =
+      Pattern.compile("^(?:the hands|both|fists|the (?:top|edge|side|end) of)");
+
+  private static final String AT_CHEST = " at the chest";
+
+  private static final String SCREEN = ", screen showing ";
+
+  /** 가슴 앞에 드는 말 하나: 동작 시작·끝 자리, 물건, 쥐는 곳("by its handle"), 화면 내용. */
+  record Held(int start, int end, String object, String grip, String state) {}
+
+  static Held held(String scene) {
+    Matcher v = HOLD_VERB.matcher(scene);
+    int from = -1;
+    int chest = -1;
+    while (from < 0 && v.find()) {
+      chest = scene.indexOf(AT_CHEST, v.end() + 1);
+      if (chest < 0) {
+        return null;
+      }
+      if (!NOT_HELD.matcher(scene.substring(v.end())).find()) {
+        from = v.end();
+      }
+    }
+    if (from < 0) {
+      return null;
+    }
+    String object = scene.substring(from, chest);
+    String grip = "";
+    int by = object.indexOf(" by its ", 1);
+    if (by > 0 && object.indexOf(',', by) < 0) {
+      grip = object.substring(by);
+      object = object.substring(0, by);
+    }
+    int end = chest + AT_CHEST.length();
+    String state = "";
+    if (scene.startsWith(SCREEN, end)) {
+      int next = scene.indexOf(',', end + SCREEN.length());
+      int stop = next < 0 ? scene.length() : next;
+      if (stop > end + SCREEN.length()) {
+        state = scene.substring(end, stop);
+        end = stop;
+      }
+    }
+    return new Held(v.start(), end, object, grip, state);
+  }
+
+  /** 한 사람이 물건을 가슴 앞에 드는 컷이면 빈손 컷과 물건으로 나눈다. 아니면 null. */
+  static Hold hold(ComicScript.Panel panel) {
+    String scene = panel.scene() == null ? "" : panel.scene();
+    if ("close-up".equals(panel.shot())) {
+      return null;
+    }
+    Matcher marks = MARK.matcher(scene);
+    int people = 0;
+    while (marks.find()) {
+      people++;
+    }
+    if (people != 1) {
+      return null;
+    }
+    Hold stand = stand(panel, scene);
+    if (stand != null) {
+      return stand;
+    }
+    Held m = held(scene);
+    if (m == null || m.object().contains("{")) {
+      return null;
+    }
+    // "holds {청소기} out in front at the chest"의 "out in front"는 물건 이름이 아니다
+    String object = m.object().strip().replaceFirst("\\s+(?:out in front|out|up|forward)$", "");
+    String bare = object.replaceFirst("(?i)^(?:one lone |one |a single |an? |the )", "");
+    // 시선 말에는 물건 이름의 앞부분만 있을 수 있다("looking at the round white robot vacuum"). 앞 세 낱말로 찾는다
+    String[] words = bare.split(",", 2)[0].strip().split("\\s+");
+    String head = String.join(" ", java.util.Arrays.copyOf(words, Math.min(3, words.length)));
+    String empty =
+        scene.substring(0, m.start())
+            + "holds the hands together at the chest, hands empty"
+            + scene.substring(m.end());
+    List<ComicScript.Face> faces =
+        panel.faces() == null
+            ? null
+            : panel.faces().stream()
+                .map(
+                    f ->
+                        f == null || f.face() == null
+                            ? f
+                            : new ComicScript.Face(
+                                f.speaker(),
+                                f.face()
+                                    .replaceAll(
+                                        "looking at (?:it\\b|the (?:lone )?"
+                                            + Pattern.quote(head)
+                                            + ")[^,]*",
+                                        "looking down at the hands")))
+                .toList();
+    return new Hold(
+        new ComicScript.Panel(
+            panel.role(), panel.shot(), empty, panel.lines(), panel.setting(), faces),
+        object,
+        m.grip().strip(),
+        m.state().replaceFirst("^,\\s*", ""));
+  }
+
+  /**
+   * 받침 위에 선 하나뿐인 물건을 들여다보는 컷("peering into the eyepiece of single brass telescope ... on tripod")도
+   * 나눠 그린다. 1차는 물건 없이 같은 자세를, 2차는 그 그림에 받침 위 물건 하나만 더한다. 한 번에 그리면 물건이 둘이거나(23판) 같은 인물이 둘로 그려졌다(회차
+   * 29 콘티 24·25판 mystery-08 5컷).
+   */
+  private static Hold stand(ComicScript.Panel panel, String scene) {
+    Matcher m = SINGLE_PROP.matcher(scene);
+    if (!m.find()) {
+      return null;
+    }
+    Stand on = standsOn(scene, m.end());
+    if (on == null) {
+      return null;
+    }
+    int end = on.end();
+    String before = scene.substring(0, m.start());
+    int cut = tailStart(before);
+    String verb = before.substring(cut).strip();
+    if (!verb.matches(".*\\b(?:into|through|at)\\b.*")) {
+      // 들여다보는 동작만 나눈다. 물건에 손을 얹는 동작("rests a fist on")은 한 번에 그린다
+      return null;
+    }
+    String pose = before.substring(0, cut);
+    String empty = pose.stripTrailing() + ", hands empty" + scene.substring(end);
+    String object = scene.substring(m.start(1), end).strip();
+    // 2차에 "the character peering into its eyepiece"라고 쓰면 손에 망원경을 하나 더 쥐여 줬다(25b판). 자세는 1차 그대로 두고
+    // 물건만
+    // 눈높이에 세운다
+    String place =
+        "standing on its "
+            + on.support()
+            + " right in front of the character's face, its eyepiece at the character's eye, the"
+            + " character's hands stay empty and nothing is held";
+    List<ComicScript.Face> faces =
+        panel.faces() == null
+            ? null
+            : panel.faces().stream()
+                .map(
+                    f ->
+                        f == null || f.face() == null
+                            ? f
+                            : new ComicScript.Face(
+                                f.speaker(),
+                                f.face().replaceAll("looking at it\\b[^,]*", "looking ahead")))
+                .toList();
+    return new Hold(
+        new ComicScript.Panel(
+            panel.role(), panel.shot(), empty, panel.lines(), panel.setting(), faces),
+        "a single " + object,
+        "",
+        "",
+        place);
+  }
+
+  /** 2차 프롬프트: 1차 그림은 그대로 두고 손에 물건 하나만 쥐여 준다. */
+  static String holdPrompt(String style, Hold hold) {
+    String object = hold.object();
+    String bare = object.replaceFirst("(?i)^(?:one lone |one |a single |an? |the )", "");
+    String noun = bare.split(" with ")[0].split(" on ")[0].strip();
+    noun = noun.substring(noun.lastIndexOf(' ') + 1);
+    String count =
+        object.toLowerCase(java.util.Locale.ROOT).startsWith("one lone")
+            ? "one lone "
+            : "exactly one ";
+    return style
+        + ", edit this picture: keep the character, the face, the pose, the clothes, the background and"
+        + " the drawing style exactly the same, and add "
+        + count
+        + bare
+        + (hold.state().isEmpty() ? "" : ", " + hold.state())
+        + (hold.place() != null
+            ? " " + hold.place()
+            : " in the character's hands at the chest"
+                + (hold.grip().isEmpty() ? "" : ", held " + hold.grip()))
+        + ", only one "
+        + noun
+        + " in the whole picture";
+  }
+
   private static final Pattern CHILD_HEAD = Pattern.compile("\\b(?:girl|boy|child|kid)\\b");
 
   /** 무협의 아이("little swordsman"). 그림체가 무림 고수를 그리게 해 아이가 어른으로 그려졌다(회차 10 mystery-08). */
@@ -600,6 +1145,31 @@ class DrawHandler implements StepHandler {
       Pattern.compile("(?i)^little (swordsman|swordswoman)(?=,|$)");
 
   private static final Pattern BARE_ADULT = Pattern.compile("(?i)^(woman|man)(?=,|$)");
+
+  /** 나이가 young만 적힌 어른. 큰 머리·짧은 몸의 아이 체형으로 그려졌다(회차 29 콘티 17판 solo-01 4컷, love-06 7컷). */
+  private static final Pattern YOUNG = Pattern.compile("(?i)^young (woman|man)\\b");
+
+  /** "young woman"을 "young adult woman"으로 바꾼다. */
+  static ComicScript young(ComicScript script) {
+    List<ComicScript.Character> out =
+        script.characters().stream()
+            .map(
+                c -> {
+                  if (c.look() == null) {
+                    return c;
+                  }
+                  String look = c.look().strip();
+                  Matcher m = YOUNG.matcher(look);
+                  return m.find()
+                      ? c.withLook(
+                          "young adult "
+                              + m.group(1).toLowerCase(java.util.Locale.ROOT)
+                              + look.substring(m.end()))
+                      : c;
+                })
+            .toList();
+    return out.equals(script.characters()) ? script : script.withCharacters(out);
+  }
 
   /**
    * 무협 아이 외모 "little swordsman"을 "little boy swordsman, child"로 바꾼다. 아이 낱말이 없으면 무협 그림체가 어른 무림 고수를
@@ -637,7 +1207,7 @@ class DrawHandler implements StepHandler {
     if (script.characters() == null) {
       return script;
     }
-    script = kids(script);
+    script = young(kids(script));
     boolean child =
         script.characters().stream()
             .anyMatch(
@@ -833,11 +1403,25 @@ class DrawHandler implements StepHandler {
    */
   static final String SINGLE = "one single scene";
 
-  /**
+  /*
    * 여럿이 나오는 컷의 구도 말. 두 사람이 말하는 컷에 한 사람만 그려져 말풍선 자리(왼쪽·오른쪽)와 그림이 어긋났다(그림책 '밤마다 그려진 담벼락 그림의 비밀'
    * 2·4컷). Lightning(guidance 0)은 negative를 읽지 않아 구도는 이 말로만 잡는다.
    */
+  /** 구도 말. "close up shot"만 쓰면 거의 모든 컷이 온몸 구도로 그려졌다(회차 29 구조화 콘티 판). 어디까지 보이는지를 적는다. */
+  static final Map<String, String> SHOTS =
+      Map.of(
+          "close-up",
+          "close-up shot, head and shoulders filling the frame, three-quarter view",
+          "medium",
+          "medium shot from the waist up, upper body only, legs out of frame, three-quarter view");
+
+  /** 한 사람 wide 컷. "wide shot"만 쓰면 인물이 화면 아래에 작게 그려졌다(회차 29 콘티 20판). 온몸이 화면을 크게 채우게 한다. */
+  static final String WIDE_ONE = "full-body shot, the character large in the frame";
+
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
+
+  /** 앞사람은 크게, 뒤 사람은 작게 그리는 두 사람 컷(콘티 15b판). 나란히 그리면 두 사람이 섞였다(회차 29 콘티 11~13판). */
+  static final String DEPTH = "one large in the foreground, one small far in the background";
 
   /** 콘티 내용(제목과 컷 장면)으로 정한 그림 시드. 같은 콘티면 대화 ID가 달라도 같은 시드로 그려 고정 시험 세트로 수정 전후를 비교할 수 있다. */
   static long seedOf(ComicScript script) {

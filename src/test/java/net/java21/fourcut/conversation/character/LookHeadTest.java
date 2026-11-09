@@ -123,7 +123,68 @@ class LookHeadTest {
                 "curly brown hair, navy hoodie", "boy, wooden sword, navy hoodie"))
         .isEqualTo("boy, curly brown hair, navy hoodie, wooden sword");
     assertThat(CharacterLibrary.drawLook("young man, gat", "young man, black gat, blue jeogori"))
-        .isEqualTo("young man, gat");
+        .isEqualTo("young man, gat, blue jeogori");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "young woman, blonde bob, round glasses, yellow hoodie",
+                "girl, black pigtails, yellow hoodie, blue jeans"))
+        .isEqualTo("young woman, blonde bob, round glasses, yellow hoodie, blue jeans");
+  }
+
+  @Test
+  @DisplayName("FR-006: 캐릭터 모습에 윗옷이 없으면 콘티 윗옷을 붙이고, 참조 그림이 없으면 콘티 신발도 붙인다")
+  void drawLookAddsTopAndShoesWithoutImage() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old man, white beard, straw hat",
+                "old man, white hair, brown checkered shirt, gray trousers, black rubber boots",
+                false))
+        .isEqualTo(
+            "old man, white beard, straw hat, brown checkered shirt, gray trousers, black rubber boots");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old man, white beard, straw hat",
+                "old man, white hair, brown checkered shirt, gray trousers, black rubber boots",
+                true))
+        .isEqualTo("old man, white beard, straw hat, brown checkered shirt, gray trousers");
+  }
+
+  @Test
+  @DisplayName("FR-006: medium은 신발을, close-up은 아래옷과 신발을 외모에서 뺀다")
+  void framedDropsHiddenParts() {
+    String look = "young man, short hair, navy sweater, gray jeans, white sneakers";
+    assertThat(LookHead.framed(look, "wide")).isEqualTo(look);
+    assertThat(LookHead.framed(look, "medium"))
+        .isEqualTo("young man, short hair, navy sweater, gray jeans");
+    assertThat(LookHead.framed(look, "close-up")).isEqualTo("young man, short hair, navy sweater");
+    assertThat(LookHead.framed(null, "close-up")).isNull();
+  }
+
+  @Test
+  @DisplayName("FR-006: 콘티의 아래옷은 캐릭터 모습에 아래옷이 없을 때만 붙이고, 신발은 참조 그림이 정하게 둔다")
+  void drawLookAddsBottomAndShoes() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "young man, black short hair, navy sweater",
+                "young man, short hair, navy sweater, gray jeans, white sneakers"))
+        .isEqualTo("young man, black short hair, navy sweater, gray jeans");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "brown bear, white shirt, long orange overall pants",
+                "bear, orange overalls, blue jeans, bare fur legs"))
+        .isEqualTo("brown bear, white shirt, long orange overall pants, bare fur legs");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old swordsman, gray robe, black cloth shoes",
+                "old swordsman, gray robe, white trousers, brown boots"))
+        .isEqualTo("old swordsman, gray robe, black cloth shoes, white trousers");
+    assertThat(CharacterLibrary.drawLook("girl, red dress", "girl, pink hoodie and blue jeans"))
+        .isEqualTo("girl, red dress");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "brown bear, white shirt, orange overalls",
+                "fox, orange scarf, blue jeans, white sneakers"))
+        .isEqualTo("brown bear, white shirt, orange overalls");
   }
 
   @Test
@@ -201,5 +262,17 @@ class LookHeadTest {
     assertThat(LookHead.agesWithDb("old man, cane", "OLD")).isTrue();
     assertThat(LookHead.agesWithDb("blue overalls", "YOUNG")).isTrue();
     assertThat(LookHead.agesWithDb("little girl", null)).isTrue();
+  }
+
+  @Test
+  @DisplayName("FR-006: 콘티 외모의 성별·나이 마디는 캐릭터 모습에 붙이지 않는다")
+  void dropsPersonWords() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "little boy swordsman, child, blue robe, wooden sword",
+                "small child, little girl, red robe, straight-leg white trousers",
+                true))
+        .isEqualTo(
+            "little boy swordsman, child, blue robe, wooden sword, straight-leg white trousers");
   }
 }
