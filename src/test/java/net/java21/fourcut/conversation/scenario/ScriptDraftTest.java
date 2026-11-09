@@ -97,4 +97,17 @@ class ScriptDraftTest {
     assertThat(ScriptDraft.flatten(json.readTree("[1]")).isArray()).isTrue();
     assertThat(ScriptDraft.resolve("{A} and {B}", Map.of())).isEqualTo("{A} and {B}");
   }
+
+  @Test
+  @DisplayName("FR-006: 소품 정의 안의 다른 소품 자리표도 그 정의로 바꾼다")
+  void nestedProp() {
+    Map<String, String> props =
+        ScriptDraft.props(
+            json.readTree(
+                """
+                [{"key":"강아지집","draw":"small wooden doghouse"},
+                 {"key":"양말더미","draw":"heap of socks spilling out of {강아지집}"}]
+                """));
+    assertThat(props.get("양말더미")).isEqualTo("heap of socks spilling out of small wooden doghouse");
+  }
 }

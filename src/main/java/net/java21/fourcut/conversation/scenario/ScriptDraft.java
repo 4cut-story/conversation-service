@@ -139,6 +139,9 @@ final class ScriptDraft {
         props.putIfAbsent(key.toLowerCase(Locale.ROOT), draw);
       }
     }
+    // 정의 안에 다른 소품 자리표가 있으면("heap of socks spilling out of {강아지집}") 한 번 풀어 둔다.
+    Map<String, String> plain = Map.copyOf(props);
+    props.replaceAll((key, draw) -> resolve(draw, plain));
     return props;
   }
 
