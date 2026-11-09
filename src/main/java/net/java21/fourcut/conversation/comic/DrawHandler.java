@@ -147,6 +147,7 @@ class DrawHandler implements StepHandler {
 
   static String prompt(
       String style, ComicScript script, ComicScript.Panel panel, Map<String, Staging.Side> stage) {
+    panel = dry(panel);
     Concept concept = Concept.of(script.concept());
     String scene = panel.scene().strip();
     boolean legacy = !scene.contains("{");
@@ -366,12 +367,35 @@ class DrawHandler implements StepHandler {
   /** 어둡게 그려야 하는 때. */
   static final Pattern DARK =
       Pattern.compile(
-          "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dark|starry|stars?|moonlit)\\b");
+          "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dark(?![ -](?:gray|grey))|starry|stars?|moonlit)\\b");
 
   /**
    * 배경에서 빛·날씨를 말하는 조각을 그림체 바로 뒤에 둔다. 배경은 프롬프트 끝에 붙어 힘이 약해, 새벽 3시 별 보는 장면이 낮처럼 밝게 그려지고 별이 빠졌다(시험 8회
    * 템플스테이 만화). 밤·새벽이면 "dark night lighting"도 붙인다.
    */
+  /** 창밖으로 비를 보는 실내 배경. */
+  private static final Pattern IN_WINDOW = Pattern.compile("(?i)\\bin the window\\b");
+
+  private static final Pattern RAIN_WORD = Pattern.compile("(?i)\\brain(?:y|ing|drops?)?\\b\\s*");
+
+  /**
+   * 창밖으로 하늘을 보는 실내 컷의 배경에서 비 낱말을 뺀다. 콘티가 "rainy morning, dark gray sky in the window"처럼 쓰면 방 안에
+   * 빗줄기가 그려졌다(회차 29 콘티 16판 solo-01 1·2·5컷).
+   */
+  static ComicScript.Panel dry(ComicScript.Panel panel) {
+    String s = panel.setting();
+    if (s == null || !IN_WINDOW.matcher(s).find() || !RAIN_WORD.matcher(s).find()) {
+      return panel;
+    }
+    String dried =
+        java.util.Arrays.stream(s.split(","))
+            .map(t -> RAIN_WORD.matcher(t).replaceAll("").strip())
+            .filter(t -> !t.isEmpty())
+            .collect(java.util.stream.Collectors.joining(", "));
+    return new ComicScript.Panel(
+        panel.role(), panel.shot(), panel.scene(), panel.lines(), dried, panel.faces());
+  }
+
   static String light(ComicScript.Panel panel) {
     String s = panel.setting();
     if (s == null || s.isBlank()) {
@@ -742,6 +766,84 @@ class DrawHandler implements StepHandler {
         + ", exactly two characters, each drawn only once";
   }
 
+  /**
+   * 물건을 가슴 앞에 드는 컷을 나눠 그리는 차례. 1차는 빈손으로 같은 자세를 그리고, 2차는 그 그림에 물건 하나만 더한다. 한 번에 그리면 휴대폰 두 대, 양말 두 짝,
+   * 머리 둘 달린 프라이팬처럼 든 물건이 겹쳐 그려졌다(회차 29 콘티 16판 심각 4편 중 3편).
+   */
+  record Hold(ComicScript.Panel emptyPanel, String object, String grip, String state) {}
+
+  private static final Pattern HOLD =
+      Pattern.compile(
+          "\\b(?:holds up|holds out|holds|lifts) (?!the hands|both|fists)(.+?)( by its [^,]+?)? at the chest"
+              + "((?:, screen showing [^,]+)?)");
+
+  /** 한 사람이 물건을 가슴 앞에 드는 컷이면 빈손 컷과 물건으로 나눈다. 아니면 null. */
+  static Hold hold(ComicScript.Panel panel) {
+    String scene = panel.scene() == null ? "" : panel.scene();
+    if ("close-up".equals(panel.shot())) {
+      return null;
+    }
+    Matcher marks = MARK.matcher(scene);
+    int people = 0;
+    while (marks.find()) {
+      people++;
+    }
+    Matcher m = HOLD.matcher(scene);
+    if (people != 1 || !m.find() || m.group(1).contains("{")) {
+      return null;
+    }
+    String object = m.group(1).strip();
+    String bare = object.replaceFirst("(?i)^(?:one lone |one |a single |an? |the )", "");
+    String empty =
+        scene.substring(0, m.start())
+            + "holds the hands together at the chest, hands empty"
+            + scene.substring(m.end());
+    List<ComicScript.Face> faces =
+        panel.faces() == null
+            ? null
+            : panel.faces().stream()
+                .map(
+                    f ->
+                        f == null || f.face() == null
+                            ? f
+                            : new ComicScript.Face(
+                                f.speaker(),
+                                f.face()
+                                    .replaceAll(
+                                        "looking at the (?:lone )?" + Pattern.quote(bare),
+                                        "looking down at the hands")))
+                .toList();
+    return new Hold(
+        new ComicScript.Panel(
+            panel.role(), panel.shot(), empty, panel.lines(), panel.setting(), faces),
+        object,
+        m.group(2) == null ? "" : m.group(2).strip(),
+        m.group(3).replaceFirst("^,\\s*", ""));
+  }
+
+  /** 2차 프롬프트: 1차 그림은 그대로 두고 손에 물건 하나만 쥐여 준다. */
+  static String holdPrompt(String style, Hold hold) {
+    String object = hold.object();
+    String bare = object.replaceFirst("(?i)^(?:one lone |one |a single |an? |the )", "");
+    String noun = bare.split(" with ")[0].split(" on ")[0].strip();
+    noun = noun.substring(noun.lastIndexOf(' ') + 1);
+    String count =
+        object.toLowerCase(java.util.Locale.ROOT).startsWith("one lone")
+            ? "one lone "
+            : "exactly one ";
+    return style
+        + ", edit this picture: keep the character, the face, the pose, the clothes, the background and"
+        + " the drawing style exactly the same, and add "
+        + count
+        + bare
+        + (hold.state().isEmpty() ? "" : ", " + hold.state())
+        + " in the character's hands at the chest"
+        + (hold.grip().isEmpty() ? "" : ", held " + hold.grip())
+        + ", only one "
+        + noun
+        + " in the whole picture";
+  }
+
   private static final Pattern CHILD_HEAD = Pattern.compile("\\b(?:girl|boy|child|kid)\\b");
 
   /** 무협의 아이("little swordsman"). 그림체가 무림 고수를 그리게 해 아이가 어른으로 그려졌다(회차 10 mystery-08). */
@@ -1015,7 +1117,7 @@ class DrawHandler implements StepHandler {
   static final Map<String, String> SHOTS =
       Map.of(
           "close-up", "close-up shot, head and shoulders filling the frame",
-          "medium", "medium shot from the waist up");
+          "medium", "medium shot from the waist up, upper body only, legs out of frame");
 
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
 

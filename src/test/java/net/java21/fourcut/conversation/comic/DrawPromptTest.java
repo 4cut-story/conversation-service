@@ -94,7 +94,7 @@ class DrawPromptTest {
         new ComicScript.Panel("전", "close-up", "{B} looks at {A}, {C} waits, cafe", List.of());
     assertThat(DrawHandler.prompt("s", script, panel))
         .isEqualTo(
-            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, the boy looks at the girl, a friend waits, cafe");
+            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, upper body only, legs out of frame, the boy looks at the girl, a friend waits, cafe");
   }
 
   @Test
@@ -113,7 +113,7 @@ class DrawPromptTest {
                 new ComicScript.Face("C", "not in scene")));
     assertThat(DrawHandler.prompt("s", script, duo))
         .isEqualTo(
-            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, ordering kiosk, the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up, the boy laughing, burger shop, ordering kiosk, trays of burgers");
+            "s, a girl and a boy, side by side, both fully visible, (girl, bob hair) on the left, (boy, glasses) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, upper body only, legs out of frame, ordering kiosk, the boy hands the girl a phone, burger shop, the girl wide-eyed, hands up, the boy laughing, burger shop, ordering kiosk, trays of burgers");
     var solo =
         new ComicScript.Panel(
             "결",
@@ -166,7 +166,7 @@ class DrawPromptTest {
     var panel = new ComicScript.Panel("승", "medium", "{B} hugs {A}, {B} smiles", List.of());
     assertThat(DrawHandler.prompt("s", twins, panel))
         .isEqualTo(
-            "s, two young women, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, the young woman on the right hugs the young woman on the left, the young woman on the right smiles");
+            "s, two young women, side by side, both fully visible, (young woman, bob hair) on the left, (young woman, ponytail) on the right, high quality illustration, crisp clean lineart, well-drawn faces, one single scene, one full-frame illustration of a single moment, exactly two characters, each drawn only once, same outfit and same props in every panel, medium shot from the waist up, upper body only, legs out of frame, the young woman on the right hugs the young woman on the left, the young woman on the right smiles");
   }
 
   @Test
@@ -316,6 +316,74 @@ class DrawPromptTest {
         .endsWith("exactly two characters, each drawn only once");
     // 한 사람 컷은 나누지 않는다
     assertThat(DrawHandler.split(new ComicScript.Panel("기", "wide", "{A} runs, park", List.of())))
+        .isNull();
+  }
+
+  @Test
+  @DisplayName("FR-006: 창밖 하늘을 보는 실내 컷은 비 낱말을 빼고, 짙은 회색 하늘은 밤으로 그리지 않는다")
+  void dryIndoors() {
+    var room =
+        new ComicScript.Panel(
+            "기",
+            "wide",
+            "{A} sits up, bedroom",
+            List.of(),
+            "small bedroom, rainy morning, dark gray sky in the window, dim room",
+            List.of());
+    assertThat(DrawHandler.dry(room).setting())
+        .isEqualTo("small bedroom, morning, dark gray sky in the window, dim room");
+    assertThat(DrawHandler.light(DrawHandler.dry(room))).doesNotContain("night");
+    var street =
+        new ComicScript.Panel(
+            "기", "wide", "{A} runs, street", List.of(), "street, heavy rain falling", List.of());
+    assertThat(DrawHandler.dry(street)).isSameAs(street);
+  }
+
+  @Test
+  @DisplayName("FR-006: 물건을 가슴 앞에 드는 컷은 빈손 컷과 물건 더하기로 나눠 그린다")
+  void holdSplit() {
+    var phone =
+        new ComicScript.Panel(
+            "승",
+            "medium",
+            "{A} holds up small black smartphone with a red case at the chest, screen showing a"
+                + " pancake picture, cozy living room",
+            List.of(),
+            "cozy living room",
+            List.of(
+                new ComicScript.Face(
+                    "A", "gasping, looking at the small black smartphone with a red case")));
+    var h = DrawHandler.hold(phone);
+    assertThat(h.emptyPanel().scene())
+        .isEqualTo("{A} holds the hands together at the chest, hands empty, cozy living room");
+    assertThat(h.emptyPanel().faces().get(0).face())
+        .isEqualTo("gasping, looking down at the hands");
+    assertThat(DrawHandler.holdPrompt("s", h))
+        .isEqualTo(
+            "s, edit this picture: keep the character, the face, the pose, the clothes, the"
+                + " background and the drawing style exactly the same, and add exactly one small"
+                + " black smartphone with a red case, screen showing a pancake picture in the"
+                + " character's hands at the chest, only one smartphone in the whole picture");
+    var sock =
+        new ComicScript.Panel(
+            "승",
+            "medium",
+            "{A} holds up one lone yellow sock with red stripes by its top at the chest, bedroom",
+            List.of());
+    assertThat(DrawHandler.holdPrompt("s", DrawHandler.hold(sock)))
+        .contains(
+            "add one lone yellow sock with red stripes in the character's hands at the chest,"
+                + " held by its top, only one sock");
+    // 얼굴만 나오는 컷과 빈손 동작은 나누지 않는다
+    assertThat(
+            DrawHandler.hold(
+                new ComicScript.Panel(
+                    "전", "close-up", "{A} holds up a cup at the chest", List.of())))
+        .isNull();
+    assertThat(
+            DrawHandler.hold(
+                new ComicScript.Panel(
+                    "전", "medium", "{A} holds both fists at the chest, park", List.of())))
         .isNull();
   }
 

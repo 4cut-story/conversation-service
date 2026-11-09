@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.17b";
+  static final String VERSION = "2026-11-09.18";
 
   private Prompts() {}
 
@@ -138,6 +138,9 @@ final class Prompts {
         그려진다). 동물 look에는 털색을 쓴다(예: "brown bear", "white rabbit").
       - look의 옷은 몸통을 덮는 윗옷(셔츠, 스웨터, 조끼, 도포, 저고리) 하나를 색과 함께 꼭 쓴다. 모자·목도리·안경·수염만
         쓰면 컷마다 윗옷이 바뀌어 그려진다.
+      - 인물끼리 윗옷 색이 겹치지 않게 하고, 동물 인물이면 종·털색도 겹치지 않게 한다. 입력에 이미 정해진 외모가 있는 인물이
+        있으면 다른 인물은 그 외모와 다른 종·털색·윗옷 색으로 고른다(엄마가 "brown bear, red sweater"인데 딸도 갈색 곰에 빨간
+        스웨터로 쓰면 두 인물이 같은 얼굴로 그려졌다).
       - look·bottom·shoes는 이 인물이 모든 컷에서 입는 한 벌이다. 컷마다 옷을 바꾸지 않는다. 가운·제복·승복 같은 직업 옷은
         이야기에 그 일을 하는 장면이 나올 때만 쓴다.
 
