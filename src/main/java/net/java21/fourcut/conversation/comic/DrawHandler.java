@@ -583,7 +583,10 @@ class DrawHandler implements StepHandler {
                 c ->
                     cast.containsKey(c.speaker())
                         ? c.withLook(
-                            CharacterLibrary.drawLook(cast.get(c.speaker()).look(), c.look()))
+                            CharacterLibrary.drawLook(
+                                cast.get(c.speaker()).look(),
+                                c.look(),
+                                cast.get(c.speaker()).referenceImageKey() != null))
                         : c)
             .toList();
     return new ComicScript(

@@ -123,12 +123,30 @@ class LookHeadTest {
                 "curly brown hair, navy hoodie", "boy, wooden sword, navy hoodie"))
         .isEqualTo("boy, curly brown hair, navy hoodie, wooden sword");
     assertThat(CharacterLibrary.drawLook("young man, gat", "young man, black gat, blue jeogori"))
-        .isEqualTo("young man, gat");
+        .isEqualTo("young man, gat, blue jeogori");
     assertThat(
             CharacterLibrary.drawLook(
                 "young woman, blonde bob, round glasses, yellow hoodie",
                 "girl, black pigtails, yellow hoodie, blue jeans"))
         .isEqualTo("young woman, blonde bob, round glasses, yellow hoodie, blue jeans");
+  }
+
+  @Test
+  @DisplayName("FR-006: 캐릭터 모습에 윗옷이 없으면 콘티 윗옷을 붙이고, 참조 그림이 없으면 콘티 신발도 붙인다")
+  void drawLookAddsTopAndShoesWithoutImage() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old man, white beard, straw hat",
+                "old man, white hair, brown checkered shirt, gray trousers, black rubber boots",
+                false))
+        .isEqualTo(
+            "old man, white beard, straw hat, brown checkered shirt, gray trousers, black rubber boots");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old man, white beard, straw hat",
+                "old man, white hair, brown checkered shirt, gray trousers, black rubber boots",
+                true))
+        .isEqualTo("old man, white beard, straw hat, brown checkered shirt, gray trousers");
   }
 
   @Test

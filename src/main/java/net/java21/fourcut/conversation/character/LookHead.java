@@ -423,6 +423,28 @@ public record LookHead(String animal, String gender, String age) {
           "cloak",
           "sash");
 
+  /** 윗옷 낱말. */
+  private static final Set<String> TOP =
+      Set.of(
+          "shirt",
+          "t-shirt",
+          "sweater",
+          "hoodie",
+          "jacket",
+          "coat",
+          "cardigan",
+          "robe",
+          "jeogori",
+          "blouse",
+          "vest",
+          "dopo",
+          "sweatshirt",
+          "polo",
+          "parka",
+          "uniform",
+          "apron",
+          "top");
+
   /** 아래옷 낱말. */
   private static final Set<String> BOTTOM =
       Set.of("pants", "jeans", "skirt", "chima", "trousers", "shorts", "leggings");
@@ -451,6 +473,15 @@ public record LookHead(String animal, String gender, String age) {
    * 컷마다 바지 색이 바뀌었다(회차 29). 없으면 빈 문자열.
    */
   static String props(String scriptLook, String characterLook) {
+    return props(scriptLook, characterLook, true);
+  }
+
+  /**
+   * {@link #props(String, String)}와 같되, 참조 그림이 없는 인물({@code hasImage} false)은 캐릭터 모습에 없는 신발을 콘티에서
+   * 붙인다. 캐릭터 모습에 윗옷이 없으면 콘티의 윗옷 마디도 붙인다. 윗옷이 없는 모습("old man, white beard, straw hat")은 컷마다 윗옷이
+   * 바뀌었다(회차 29 콘티 7판 family-09).
+   */
+  static String props(String scriptLook, String characterLook, boolean hasImage) {
     if (scriptLook == null) {
       return "";
     }
@@ -458,12 +489,13 @@ public record LookHead(String animal, String gender, String age) {
     Set<String> own = Set.copyOf(Arrays.asList(words(c)));
     boolean hasBottom = own.stream().anyMatch(w -> BOTTOM.contains(w) || ONE_PIECE.contains(w));
     // 참조 그림이 있는 인물은 신발을 그림이 정하게 둔다. 콘티 신발 글과 참조 그림 신발이 달라 컷마다 신발이 바뀌었다(회차 29 콘티 5판).
-    boolean hasShoes = !c.isBlank() || own.stream().anyMatch(SHOES::contains);
+    boolean hasShoes = (hasImage && !c.isBlank()) || own.stream().anyMatch(SHOES::contains);
+    boolean hasTop = own.stream().anyMatch(w -> TOP.contains(w) || ONE_PIECE.contains(w));
     String[] parts = scriptLook.split(",");
     return Arrays.stream(parts, 1, parts.length)
         .map(String::strip)
         .filter(p -> !p.isEmpty() && !c.contains(p.toLowerCase(Locale.ROOT)))
-        .filter(p -> fits(words(p.toLowerCase(Locale.ROOT)), hasBottom, hasShoes))
+        .filter(p -> fits(words(p.toLowerCase(Locale.ROOT)), hasBottom, hasShoes, hasTop))
         .collect(Collectors.joining(", "));
   }
 
@@ -495,7 +527,12 @@ public record LookHead(String animal, String gender, String age) {
   }
 
   /** 머리·옷 낱말이 없거나, 캐릭터 모습에 없는 아래옷·신발만 말하는 마디. */
-  private static boolean fits(String[] words, boolean hasBottom, boolean hasShoes) {
+  private static boolean fits(String[] words, boolean hasBottom, boolean hasShoes, boolean hasTop) {
+    if (!hasTop
+        && Arrays.stream(words).anyMatch(TOP::contains)
+        && Arrays.stream(words).allMatch(w -> TOP.contains(w) || !APPEARANCE.contains(w))) {
+      return true;
+    }
     boolean bottom = Arrays.stream(words).anyMatch(BOTTOM::contains);
     boolean shoes = Arrays.stream(words).anyMatch(SHOES::contains);
     boolean other =
