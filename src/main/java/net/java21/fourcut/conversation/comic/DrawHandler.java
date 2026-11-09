@@ -185,6 +185,7 @@ class DrawHandler implements StepHandler {
     }
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
+    scene = standFirst(scene);
     String shot =
         kind == null
             ? ""
@@ -255,6 +256,28 @@ class DrawHandler implements StepHandler {
           + ", nothing held in the hands";
     }
     return only;
+  }
+
+  /**
+   * 받침 위에 선 하나뿐인 물건("peering into the eyepiece of single brass telescope ... on tripod")은 물건을 장면 맨
+   * 앞에 먼저 세우고 동작에서는 "it"으로 받는다. 동작 안에 물건이 들어 있으면 물건을 둘 그리거나(23판) 물건 앞과 뒤에 같은 인물을 둘 그렸다(회차 29 콘티 24판
+   * mystery-08 5컷).
+   */
+  static String standFirst(String scene) {
+    Matcher m = SINGLE_PROP.matcher(scene);
+    if (!m.find()) {
+      return scene;
+    }
+    Matcher on = STANDS_ON.matcher(scene.substring(m.end()));
+    if (!on.lookingAt()) {
+      return scene;
+    }
+    int end = m.end() + on.end();
+    String object = "a single " + scene.substring(m.start(1), end).strip();
+    String rest =
+        (scene.substring(0, m.start()) + "it" + scene.substring(end))
+            .replaceAll("\\bthe ([a-z]+) of it\\b", "its $1");
+    return object + " stands in the picture, " + rest.replaceAll("\\s{2,}", " ").strip();
   }
 
   private static final Pattern STANDS_ON =

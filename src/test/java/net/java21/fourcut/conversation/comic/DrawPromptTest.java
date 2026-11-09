@@ -609,6 +609,20 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 받침 위에 선 하나뿐인 물건은 장면 맨 앞에 세우고 동작에서는 it으로 받는다")
+  void standFirst() {
+    assertThat(
+            DrawHandler.standFirst(
+                "small child stands on tiptoe peering into the eyepiece of single brass telescope"
+                    + " with one eyepiece on tripod, hilltop clearing"))
+        .isEqualTo(
+            "a single brass telescope with one eyepiece on tripod stands in the picture, small"
+                + " child stands on tiptoe peering into its eyepiece, hilltop clearing");
+    assertThat(DrawHandler.standFirst("old woman presses a single tall kiosk with plain screen"))
+        .isEqualTo("old woman presses a single tall kiosk with plain screen");
+  }
+
+  @Test
   @DisplayName("FR-006: 한 순간·인물 수·같은 옷과 소품 말은 인물 수에 맞게 붙고, 인물을 모르면 수를 빼고 붙는다")
   void frame() {
     assertThat(DrawHandler.frame(0))
