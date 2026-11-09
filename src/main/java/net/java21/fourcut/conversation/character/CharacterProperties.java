@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param embeddingUrl OpenAI 호환 임베딩 서버 주소. 비어 있으면 임베딩을 끄고 이름으로만 찾는다
  * @param embeddingModel 설명 임베딩 모델. 1024차원이어야 한다. 바꾸면 기존 임베딩을 다시 만든다
  * @param ipAdapter 워커의 IP-Adapter 이름. embedding 파일 이름이 되고, 바꾸면 embedding을 다시 계산한다
+ * @param tieMargin 가장 가까운 후보와 거리 차이가 이 안이면 같은 점수로 보고 대화마다 다르게 고른다
  */
 @ConfigurationProperties("characters")
 public record CharacterProperties(
@@ -18,7 +19,8 @@ public record CharacterProperties(
     @DefaultValue("0.30") double maxDistance,
     @DefaultValue("https://emb.java21.net") String embeddingUrl,
     @DefaultValue("bge-m3") String embeddingModel,
-    @DefaultValue("plus-sdxl-vit-h") String ipAdapter) {
+    @DefaultValue("plus-sdxl-vit-h") String ipAdapter,
+    @DefaultValue("0.02") double tieMargin) {
 
   /** 설명 임베딩 차원 (character_looks.description_embedding vector(1024)). */
   public static final int DIMENSIONS = 1024;

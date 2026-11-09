@@ -66,7 +66,8 @@ class DrawHandler implements StepHandler {
   public StepOutcome start(StepContext context) {
     String id = context.conversation().publicId();
     ComicScript written = scenarios.script(id);
-    Map<String, CharacterRef> cast = characters.match(wanted(written), concept(written));
+    Map<String, CharacterRef> cast =
+        characters.match(wanted(written), concept(written), seedOf(written));
     ComicScript named = withNames(written.withRoleCalls(), cast);
     if (!named.equals(written)) {
       // 등장인물 소개(COMPOSE가 content-service에 넘긴다)에 캐릭터 이름과 모습을 쓰게 저장한다. 대사·제목은 호칭으로 부른다.
