@@ -127,6 +127,33 @@ class LookHeadTest {
   }
 
   @Test
+  @DisplayName("FR-006: 콘티의 아래옷·신발은 캐릭터 모습에 그 부분이 없을 때만 그림 외모에 붙인다")
+  void drawLookAddsBottomAndShoes() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "young man, black short hair, navy sweater",
+                "young man, short hair, navy sweater, gray jeans, white sneakers"))
+        .isEqualTo("young man, black short hair, navy sweater, gray jeans, white sneakers");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "brown bear, white shirt, long orange overall pants",
+                "bear, orange overalls, blue jeans, bare fur legs"))
+        .isEqualTo("brown bear, white shirt, long orange overall pants, bare fur legs");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "old swordsman, gray robe, black cloth shoes",
+                "old swordsman, gray robe, white trousers, brown boots"))
+        .isEqualTo("old swordsman, gray robe, black cloth shoes, white trousers");
+    assertThat(CharacterLibrary.drawLook("girl, red dress", "girl, pink hoodie and blue jeans"))
+        .isEqualTo("girl, red dress");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "brown bear, white shirt, orange overalls",
+                "fox, orange scarf, blue jeans, white sneakers"))
+        .isEqualTo("brown bear, white shirt, orange overalls, white sneakers");
+  }
+
+  @Test
   @DisplayName("REQ-018: 성별 없이 시작하는 캐릭터 외모에는 DB 성별·나이대 명사를 붙인다")
   void withNoun() {
     assertThat(LookHead.withNoun("curly brown hair, white hoodie", "MALE", "CHILD"))

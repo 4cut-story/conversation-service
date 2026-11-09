@@ -412,24 +412,57 @@ public record LookHead(String animal, String gender, String age) {
           "cloak",
           "sash");
 
+  /** 아래옷 낱말. */
+  private static final Set<String> BOTTOM =
+      Set.of("pants", "jeans", "skirt", "chima", "trousers", "shorts", "leggings");
+
+  /** 아래까지 덮는 한 벌 옷. 이런 옷이 있으면 콘티의 아래옷을 붙이지 않는다(멜빵바지 위에 청바지). */
+  private static final Set<String> ONE_PIECE =
+      Set.of("overalls", "dress", "gown", "jumpsuit", "kimono", "pajamas");
+
+  /** 신발 낱말. */
+  private static final Set<String> SHOES =
+      Set.of("sneakers", "boots", "shoes", "sandals", "slippers");
+
   /**
    * 콘티 외모에서 머리·옷이 아닌 마디(소품: "brass telescope", "wooden sword"). 첫 마디(나이·성별)는 빼고, 캐릭터 모습에 이미 있는 마디도
-   * 뺀다. 없으면 빈 문자열.
+   * 뺀다. 아래옷("blue jeans")·신발("white sneakers") 마디는 캐릭터 모습에 그 부분이 없을 때만 붙인다. 모습 문구에 아래옷·신발이 없으면 컷마다
+   * 바지 색이 바뀌었다(회차 29). 없으면 빈 문자열.
    */
   static String props(String scriptLook, String characterLook) {
     if (scriptLook == null) {
       return "";
     }
     String c = characterLook == null ? "" : characterLook.toLowerCase(Locale.ROOT);
+    Set<String> own = Set.copyOf(Arrays.asList(words(c)));
+    boolean hasBottom = own.stream().anyMatch(w -> BOTTOM.contains(w) || ONE_PIECE.contains(w));
+    boolean hasShoes = own.stream().anyMatch(SHOES::contains);
     String[] parts = scriptLook.split(",");
     return Arrays.stream(parts, 1, parts.length)
         .map(String::strip)
         .filter(p -> !p.isEmpty() && !c.contains(p.toLowerCase(Locale.ROOT)))
-        .filter(
-            p ->
-                Arrays.stream(p.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}-]+"))
-                    .noneMatch(APPEARANCE::contains))
+        .filter(p -> fits(words(p.toLowerCase(Locale.ROOT)), hasBottom, hasShoes))
         .collect(Collectors.joining(", "));
+  }
+
+  private static String[] words(String text) {
+    return text.split("[^\\p{L}\\p{N}-]+");
+  }
+
+  /** 머리·옷 낱말이 없거나, 캐릭터 모습에 없는 아래옷·신발만 말하는 마디. */
+  private static boolean fits(String[] words, boolean hasBottom, boolean hasShoes) {
+    boolean bottom = Arrays.stream(words).anyMatch(BOTTOM::contains);
+    boolean shoes = Arrays.stream(words).anyMatch(SHOES::contains);
+    boolean other =
+        Arrays.stream(words)
+            .anyMatch(w -> APPEARANCE.contains(w) && !BOTTOM.contains(w) && !SHOES.contains(w));
+    if (other || (bottom && shoes)) {
+      return false;
+    }
+    if (bottom) {
+      return !hasBottom;
+    }
+    return !shoes || !hasShoes;
   }
 
   /** 이 첫 마디로 찾을 때 그 모습을 써도 되는지. */

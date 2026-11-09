@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-06.3";
+  static final String VERSION = "2026-11-09.1";
 
   private Prompts() {}
 
@@ -130,6 +130,28 @@ final class Prompts {
       - persona: 이 장면에서 드러난 성격을 "%CONCEPT%" 세계의 인물로 한 줄(예: 먹는 데 진심인 친구). 대사 말투는 이
         persona를 따르고, 한 인물은 모든 컷 내내 같은 말투를 쓴다.
       - look: %LOOK%
+      - bottom: 아래옷을 그림용 영어 4단어 이내로 색과 함께 쓴다(예: "blue jeans", "long navy skirt", "white trousers").
+        한 벌 옷(dress, robe, overalls)이면 그 아래 보이는 것을 쓰고, 바지를 입지 않은 동물은 "bare fur legs".
+      - shoes: 신발을 그림용 영어 3단어 이내로 색과 함께 쓴다(예: "white sneakers", "black cloth shoes"). 맨발이면 "bare feet".
+      - look·bottom·shoes는 이 인물이 모든 컷에서 입는 한 벌이다. 컷마다 옷을 바꾸지 않는다. 가운·제복·승복 같은 직업 옷은
+        이야기에 그 일을 하는 장면이 나올 때만 쓴다.
+
+      소품 (props, 0~4개, 한 번만 정한다)
+      - 이야기의 핵심 물건과 중심 동물(반려동물 등). key는 짧은 한국어 이름(예: 목검, 우산, 강아지).
+        draw는 그림용 영어 8단어 이내로 재질·색·크기·종까지 쓴다(예: "light brown wooden practice sword",
+        "small navy folding umbrella", "small old brown-and-white dog"). 비슷한 다른 물건(목검 → 쇠칼, 남색 우산 → 다른 색
+        우산)으로 바뀌지 않게 구체적으로 쓴다.
+      - 그림 모델은 글자를 제대로 못 쓰고 가짜 글자를 그린다. 글자가 보이는 물건(간판, 팻말, 문자 메시지, 책 표지)은 글자 없이
+        모양과 색으로 쓴다(예: "blank wooden name sign", "phone with glowing green screen").
+
+      장소 (places, 1~3개, 한 번만 정한다)
+      - key는 짧은 한국어 이름(예: 텃밭, 세탁실). draw는 그림용 영어 10단어 이내로 장소 이름을 먼저 쓰고, 컷마다 같아야 할
+        큰 특징 2~3개를 붙인다(예: "small backyard vegetable garden, wooden fence, tomato plants",
+        "apartment laundry room, white washing machine, drying rack"). 대화 내용과 시대(%CONCEPT%)에 맞게 정한다.
+      - 이야기 속에서 실제로 옮겨 갈 때만 장소를 하나 더 둔다.
+
+      자리표: 인물은 {A}, {B}, 소품은 {목검}처럼 key를 중괄호로 감싸 쓴다. action·setting·lookAt에서 인물과 소품을 영어로 다시
+      쓰지 않고 자리표만 쓴다. 자리표는 모든 컷에 같은 외모·draw 말로 바뀌어 들어간다.
 
       컷 수 (panels 4~10개)
       - 기본은 4컷이다. 4컷에 담으면 이야기의 중요한 순간이 빠질 때만 늘린다. 컷이 늘면 그리는 시간도 그만큼 늘어나므로
@@ -151,26 +173,21 @@ final class Prompts {
       - 모든 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
       - shot: wide, medium, close-up 중 하나. 기는 보통 wide, 전은 보통 close-up. 모든 컷이 같으면 안 되고, 컷이 많으면 같은 구도가
         세 컷 넘게 이어지지 않게 섞는다.
-      - scene: 그림 모델용 영어 15단어 이내. 그 순간을 그림만 보고 알 수 있게 쓴다. 인물은 {A}, {B}처럼 쓰고,
-        눈에 보이는 행동 하나와 이야기의 핵심 물건을 넣은 뒤 장소를 붙인다.
-        핵심 물건은 이야기에 나온 구체적인 것(예: 물 상자 더미, 합격 문자가 뜬 휴대폰, 불판 위 고기)이고 두 컷
-        이상에 나온다. 이야기의 중심인 동물(반려동물 등)도 핵심 물건으로 보고, 나오는 컷마다 "a small hamster"처럼
-        크기·색·종을 써서 넣고, 모든 컷에 같은 말로 쓴다(예: 모든 컷에
-        "a small old brown-and-white dog"). "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는 모습만 쓰지 않는다.
-        scene에는 그 컷의 주인공 한 명만 넣는다(보통 그 컷의 핵심 말을 하거나 가장 크게 반응하는 사람). 두 사람이 함께
+      - action: 그림 모델용 영어 12단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
+        (예: "{A} swings {목검} at a straw dummy", "{B} holds {우산} over {A}", "{A} points at {키오스크} screen").
+        이야기의 핵심 물건은 두 컷 이상에 나온다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는
+        모습만 쓰지 않는다. 동작은 손·팔·몸이 무엇을 하는지 보이게 쓴다.
+        action에는 그 컷의 주인공 한 명만 넣는다(보통 그 컷의 핵심 말을 하거나 가장 크게 반응하는 사람). 두 사람이 함께
         보여야 순간이 읽히는 컷(물건을 건넴, 둘이 같이 놀람, 마주 보고 다툼)에만 두 명을 넣고, 이런 컷은 전체 컷의 절반을
-        넘지 않게 한다. scene에 없는 인물의 대사는 컷 밖 말풍선으로 들어가므로 대사는 그대로 둔다. 세 명 이상은 넣지 않는다.
-        장소는 대화 내용에 맞게 하나 정해 모든 컷에 같이 쓴다(이야기 속에서 실제로 옮겨 갈 때만 바꾼다).
-        예: "{A} drops ice cream cone on ground, {B} gasps, park",
-        "{B} opens door to tower of water bottle boxes, {A} stares, apartment hallway"
-      - setting: 그 컷의 배경을 그림 모델용 영어 10단어 이내로 자세히 쓴다. 장소와, 이야기에 맞는 눈에 보이는 배경
-        물건 2~3개. 장소 바로 뒤에는 그 컷에 보여야 할 핵심 물건을 먼저 쓴다(예: "burger shop, ordering kiosk with menu screen, trays of burgers", "city bus aisle,
-        hanging straps, rainy window"). 장소가 같은 컷은 같은 장소 낱말로 시작한다. 인물과 표정은 쓰지 않는다.
-        밤·새벽·저녁이거나 비·눈이 오면 그 때와 하늘을 꼭 넣고, 대사에 나오는 별·달·노을도 눈에 보이게 쓴다(예: "temple
-        courtyard, night, dark sky full of stars, paper lanterns").
-      - faces: 그 컷 scene에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
-        쓴다(예: "wide-eyed, hands on cheeks", "laughing, pointing at phone", "teary smile"). 대사와 상황에 맞게
-        컷마다 바꾸고, 모든 컷을 같은 표정으로 두지 않는다. 성격·외모·이름은 쓰지 않는다.
+        넘지 않게 한다. action에 없는 인물의 대사는 컷 밖 말풍선으로 들어가므로 대사는 그대로 둔다. 세 명 이상은 넣지 않는다.
+      - place: places의 key 하나. 장소는 key로만 고른다.
+      - setting: 그 컷에 더 보여야 할 배경 물건 1~2개를 그림 모델용 영어 6단어 이내로 쓴다(예: "trays of burgers",
+        "rainy window"). 장소 이름과 인물·표정은 쓰지 않는다. 밤·새벽·저녁이거나 비·눈이 오면 그 때와 하늘을 꼭 넣고,
+        대사에 나오는 별·달·노을도 눈에 보이게 쓴다(예: "night, dark sky full of stars").
+      - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
+        쓴다(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로
+        두지 않는다. 성격·외모·이름은 쓰지 않는다. lookAt은 그 인물이 보는 곳이다: 말을 거는 상대의 자리표({B}), 대사가 가리키는
+        물건의 자리표({휴대폰}), 또는 "viewer"·"sky"·"down" 같은 영어 한 낱말. 말하는 사람과 듣는 사람이 엉뚱한 곳을 보지 않게 한다.
       - lines: 컷당 1~2개(대사 없는 컷은 만들지 않는다), 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 마지막 컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
         길면 앞뒤를 잘라 줄인다. 같은 말을 두 컷에 쓰지 않는다. 핵심 순간의 말은 꼭 전 컷(전이 여러 컷이면 그중 하나) 대사에 넣는다.
@@ -202,17 +219,22 @@ final class Prompts {
 
   static final String SCRIPT_SCHEMA =
       """
-      {"type":"object","required":["title","characters","panels","nameWarnings"],"properties":{
+      {"type":"object","required":["title","characters","props","places","panels","nameWarnings"],"properties":{
        "title":{"type":"string"},
        "characters":{"type":"array","minItems":1,"items":{"type":"object",
-        "required":["speaker","name","role","persona","look"],"properties":{"speaker":{"type":"string"},
-         "name":{"type":"string"},"role":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"}}}},
+        "required":["speaker","name","role","persona","look","bottom","shoes"],"properties":{"speaker":{"type":"string"},
+         "name":{"type":"string"},"role":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"},
+         "bottom":{"type":"string"},"shoes":{"type":"string"}}}},
+       "props":{"type":"array","maxItems":4,"items":{"type":"object","required":["key","draw"],
+        "properties":{"key":{"type":"string"},"draw":{"type":"string"}}}},
+       "places":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"object","required":["key","draw"],
+        "properties":{"key":{"type":"string"},"draw":{"type":"string"}}}},
        "panels":{"type":"array","minItems":4,"maxItems":10,"items":{"type":"object",
-        "required":["role","shot","scene","setting","faces","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
+        "required":["role","shot","action","place","setting","faces","lines"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
-         "scene":{"type":"string"},"setting":{"type":"string"},
-         "faces":{"type":"array","items":{"type":"object","required":["speaker","face"],
-          "properties":{"speaker":{"type":"string"},"face":{"type":"string"}}}},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
+         "action":{"type":"string"},"place":{"type":"string"},"setting":{"type":"string"},
+         "faces":{"type":"array","items":{"type":"object","required":["speaker","face","lookAt"],
+          "properties":{"speaker":{"type":"string"},"face":{"type":"string"},"lookAt":{"type":"string"}}}},"lines":{"type":"array","minItems":1,"maxItems":2,"items":{"type":"object",
           "required":["speaker","quote","text"],"properties":{"speaker":{"type":"string"},
            "quote":{"type":"string"},"text":{"type":"string"}}}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}

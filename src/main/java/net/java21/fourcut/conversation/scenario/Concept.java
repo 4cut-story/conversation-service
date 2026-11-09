@@ -135,7 +135,7 @@ public enum Concept {
         hanbok"으로 시작하고(노인은 "old woman in hanbok", "old man in hanbok", 아이는 "girl in hanbok", "boy in
         hanbok") 머리 모양이나 쓰개 하나와 한복 색 하나를 쓴다(예: "young man in hanbok, black gat, blue jeogori",
         "old woman in hanbok, white bun, gray chima"). 인물끼리 한복 색이 모두 달라야 한다.
-        scene에 나오는 현대 물건·장소는 조선시대 것으로 바꿔 쓴다(휴대폰 → letter, 택배 상자 → cloth bundles,
+        소품·장소·action에 나오는 현대 물건·장소는 조선시대 것으로 바꿔 쓴다(휴대폰 → letter, 택배 상자 → cloth bundles,
         거실 → hanok room, 식당 → jumak tavern).\
       """,
       """
@@ -160,7 +160,7 @@ public enum Concept {
         "young swordsman"으로 시작하고(노인은 "old swordswoman", "old swordsman", 아이는 "little swordswoman",
         "little swordsman") 도포 색 하나와 무기나 소품 하나를 쓴다(예: "young swordsman, white robe, long sword",
         "old swordsman, gray robe, wooden staff"). 인물끼리 도포 색이 모두 달라야 한다.
-        일상 이야기를 무림의 큰일처럼 과장해 그린다. scene의 현대 물건·장소는 무협 세계 것으로 바꿔 쓴다
+        일상 이야기를 무림의 큰일처럼 과장해 그린다. 소품·장소·action의 현대 물건·장소는 무협 세계 것으로 바꿔 쓴다
         (휴대폰 → secret scroll, 택배 상자 → treasure chests, 거실 → martial arts hall, 식당 → inn).\
       """,
       """

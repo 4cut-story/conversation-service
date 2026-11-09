@@ -128,7 +128,7 @@ class ScriptHandler implements StepHandler {
     List<String> inScene =
         SpokenLines.sentences(RealNames.apply(sceneText(transcript, scene), rename));
     ComicScript script =
-        llm.read(llm.content(result), ComicScript.class)
+        llm.read(ScriptDraft.flatten(llm.content(result)), ComicScript.class)
             .normalized()
             .withNames(cast)
             .withFictionalNames(spoken(transcript))
