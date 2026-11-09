@@ -166,7 +166,7 @@ final class Prompts {
           tube with one eyepiece on a tripod").
       - 모양이 헷갈리는 물건(판 놀이, 기계, 음식)은 전체 모양, 겉면, 작은 조각이 놓인 자리를 쓴다(예: "flat square chessboard
         of black and white squares, a few small chess pieces standing on it").
-      - 반려동물 소품은 "tiny"로 시작하고 "on four legs, bare natural fur"를 붙인다. 동물 인물과 한 컷에 나오면 그 인물 발치에 둔다
+      - 반려동물 소품은 "tiny"로 시작하고 "on four legs, no clothes"를 붙인다. 동물 인물과 한 컷에 나오면 그 인물 발치에 둔다
         (예: "{강아지} sits at {A}'s feet").
       - 식물 소품(나무, 고추 모종)의 draw에는 열매를 여럿 쓰지 않는다. 딴 열매·꽃을 드는 컷은 식물 소품을 쓰지 않고 든 것
         하나만 쓴다(예: "{B} holds up one long red pepper").

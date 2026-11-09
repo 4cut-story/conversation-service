@@ -66,7 +66,7 @@ class ScriptDraftTest {
         .isEqualTo("small backyard vegetable garden, wooden fence, night");
     assertThat(panels.get(0).has("action")).isFalse();
     assertThat(panels.get(0).path("faces").get(0).path("face").asString())
-        .isEqualTo("wide-eyed, looking at it");
+        .isEqualTo("wide-eyed, looking at the phone");
     assertThat(panels.get(0).path("faces").get(1).path("face").asString())
         .isEqualTo("grin, looking at the other person");
     assertThat(panels.get(0).path("faces").get(1).has("lookAt")).isFalse();

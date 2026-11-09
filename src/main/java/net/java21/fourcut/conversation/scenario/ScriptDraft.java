@@ -58,8 +58,6 @@ final class ScriptDraft {
    */
   private static void panel(
       ObjectNode panel, Map<String, String> props, Map<String, String> places) {
-    // 자리표가 남아 있는 동작(소품 시선을 "it"으로 받을지 정한다)
-    String marked = panel.path("action").asString("");
     if (panel.has("action")) {
       String place = place(panel.path("place").asString("").strip(), places);
       String name = place.split(",", 2)[0].strip();
@@ -81,7 +79,7 @@ final class ScriptDraft {
     String scene = panel.path("scene").asString("");
     for (JsonNode f : panel.path("faces")) {
       if (f instanceof ObjectNode face && face.has("lookAt")) {
-        String gaze = gaze(face.path("lookAt").asString("").strip(), scene, marked, props);
+        String gaze = gaze(face.path("lookAt").asString("").strip(), scene, props);
         String expression = face.path("face").asString("").strip();
         face.put(
             "face",
@@ -106,11 +104,6 @@ final class ScriptDraft {
 
   /** 시선 영어 말. 인물 자리표는 그 사람 쪽, 소품 자리표는 그 소품 이름, 나머지는 쓴 낱말. */
   static String gaze(String lookAt, String scene, Map<String, String> props) {
-    return gaze(lookAt, scene, "", props);
-  }
-
-  /** marked는 자리표가 남아 있는 동작. 시선 대상 소품이 거기 있으면 "looking at it"으로 받는다. */
-  static String gaze(String lookAt, String scene, String marked, Map<String, String> props) {
     if (lookAt.isEmpty()) {
       return "";
     }
@@ -121,10 +114,6 @@ final class ScriptDraft {
         return scene.contains("{" + key + "}")
             ? "looking at the other person"
             : "looking off to the side at someone";
-      }
-      // 그 컷 동작에 이미 나온 물건은 이름을 다시 쓰지 않는다. 같은 이름을 두 번 읽으면 물건을 두 번 그린다
-      if (marked.contains("{" + key + "}")) {
-        return "looking at it";
       }
       String draw = props.getOrDefault(key.toLowerCase(Locale.ROOT), key);
       // draw 앞의 관사·"a single"은 뺀다("looking at the a single small wooden hut", 회차 29 콘티 14판

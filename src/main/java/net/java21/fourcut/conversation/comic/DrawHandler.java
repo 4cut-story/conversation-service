@@ -186,7 +186,12 @@ class DrawHandler implements StepHandler {
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
     String shot =
-        kind == null ? "" : SHOTS.getOrDefault(kind, kind.replace('-', ' ') + " shot") + ", ";
+        kind == null
+            ? ""
+            : ("wide".equals(kind) && people == 1
+                    ? WIDE_ONE
+                    : SHOTS.getOrDefault(kind, kind.replace('-', ' ') + " shot"))
+                + ", ";
     String who = people >= 2 && stage.size() >= 2 ? who(stage, looks, concept) : null;
     String count =
         people >= 2
@@ -205,22 +210,22 @@ class DrawHandler implements StepHandler {
         people >= 2
             ? count + lineup
             : looks.size() == 1 ? looks.values().iterator().next() + ", " : "";
-    // 순서는 FLUX.2 [klein] 프롬프트 가이드대로 구도 → 인물 → 동작 → 표정·배경 → 빛 → 그림체다(콘티 20c판). 구도가 품질 말 뒤에 있어
-    // medium 컷이 온몸으로 그려졌다.
     return once(
-        shot
+        style
+            + light(panel)
+            + ", "
             + lead
+            + QUALITY
+            + ", "
+            + SINGLE
+            + ", "
             + frame(legacy ? 0 : people)
             + ", "
+            + shot
             + keyObject(panel)
             + scene
             + detail
-            + cast
-            + light(panel)
-            + ", "
-            + style
-            + ", "
-            + QUALITY);
+            + cast);
   }
 
   /**
@@ -292,13 +297,13 @@ class DrawHandler implements StepHandler {
         people <= 0
             ? ""
             : people == 1
-                ? "exactly one character, "
+                ? "exactly one character, alone in the frame, drawn only once, "
                 : "exactly "
                     + COUNTS.get(Math.min(people, COUNTS.size()) - 1)
                     + " characters, each drawn only once, ";
     return "one full-frame illustration of a single moment, "
         + count
-        + "same outfit in every panel";
+        + "same outfit and same props in every panel";
   }
 
   /**
@@ -851,7 +856,7 @@ class DrawHandler implements StepHandler {
     String head = String.join(" ", java.util.Arrays.copyOf(words, Math.min(3, words.length)));
     String empty =
         scene.substring(0, m.start())
-            + "holds the hands together at the chest"
+            + "holds the hands together at the chest, hands empty"
             + scene.substring(m.end());
     List<ComicScript.Face> faces =
         panel.faces() == null
@@ -865,9 +870,7 @@ class DrawHandler implements StepHandler {
                                 f.speaker(),
                                 f.face()
                                     .replaceAll(
-                                        "looking at (?:it\\b|the (?:lone )?"
-                                            + Pattern.quote(head)
-                                            + ")[^,]*",
+                                        "looking at the (?:lone )?" + Pattern.quote(head) + "[^,]*",
                                         "looking down at the hands")))
                 .toList();
     return new Hold(
@@ -898,7 +901,7 @@ class DrawHandler implements StepHandler {
         + (hold.grip().isEmpty() ? "" : ", held " + hold.grip())
         + ", only one "
         + noun
-        + " in the whole picture, the floor and the background stay as they are";
+        + " in the whole picture";
   }
 
   private static final Pattern CHILD_HEAD = Pattern.compile("\\b(?:girl|boy|child|kid)\\b");
@@ -913,14 +916,6 @@ class DrawHandler implements StepHandler {
   private static final Pattern YOUNG = Pattern.compile("(?i)^young (woman|man)\\b");
 
   /** "young woman"을 "young adult woman"으로 바꾼다. */
-  /** 첫 쉼표 앞(인물 머리말) 뒤에 어른 몸 비율 말을 넣는다. */
-  static String proportions(String look) {
-    int comma = look.indexOf(',');
-    return comma < 0
-        ? look + ", mature adult body proportions"
-        : look.substring(0, comma) + ", mature adult body proportions" + look.substring(comma);
-  }
-
   static ComicScript young(ComicScript script) {
     List<ComicScript.Character> out =
         script.characters().stream()
@@ -932,12 +927,10 @@ class DrawHandler implements StepHandler {
                   String look = c.look().strip();
                   Matcher m = YOUNG.matcher(look);
                   return m.find()
-                      // 아이 체형으로 그려지지 않게 어른 몸 비율을 함께 쓴다(회차 29 콘티 19판 love-07 8컷)
                       ? c.withLook(
-                          proportions(
-                              "young adult "
-                                  + m.group(1).toLowerCase(java.util.Locale.ROOT)
-                                  + look.substring(m.end())))
+                          "young adult "
+                              + m.group(1).toLowerCase(java.util.Locale.ROOT)
+                              + look.substring(m.end()))
                       : c;
                 })
             .toList();
@@ -1184,9 +1177,12 @@ class DrawHandler implements StepHandler {
   static final Map<String, String> SHOTS =
       Map.of(
           "close-up",
-          "tight close-up portrait, the face and shoulders filling the frame",
+          "close-up shot, head and shoulders filling the frame, three-quarter view",
           "medium",
-          "medium waist-up portrait, camera framed closely on the upper body");
+          "medium shot from the waist up, upper body only, legs out of frame, three-quarter view");
+
+  /** 한 사람 wide 컷. "wide shot"만 쓰면 인물이 화면 아래에 작게 그려졌다(회차 29 콘티 20판). 온몸이 화면을 크게 채우게 한다. */
+  static final String WIDE_ONE = "full-body shot, the character large in the frame";
 
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
 
