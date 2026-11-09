@@ -433,7 +433,17 @@ public record LookHead(String animal, String gender, String age) {
 
   /** 신발 낱말. */
   private static final Set<String> SHOES =
-      Set.of("sneakers", "boots", "shoes", "sandals", "slippers");
+      Set.of(
+          "sneakers",
+          "boots",
+          "shoes",
+          "sandals",
+          "slippers",
+          "flip-flops",
+          "loafers",
+          "heels",
+          "barefoot",
+          "feet");
 
   /**
    * 콘티 외모에서 머리·옷이 아닌 마디(소품: "brass telescope", "wooden sword"). 첫 마디(나이·성별)는 빼고, 캐릭터 모습에 이미 있는 마디도
