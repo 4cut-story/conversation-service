@@ -27,6 +27,9 @@ final class LivePlayback {
   static final double VOLUME = 0.8;
   static final int FADE_MS = 800;
 
+  /** 사건 효과음은 배경음 위에 한 번, 조금 크게 바로 튼다. */
+  static final double EFFECT_VOLUME = 0.9;
+
   private LivePlayback() {}
 
   /**
@@ -37,6 +40,18 @@ final class LivePlayback {
       JsonMapper json,
       ComicScript script,
       List<Optional<SoundMatcher.Picked>> sounds,
+      List<Boolean> moving) {
+    return build(json, script, sounds, List.of(), moving);
+  }
+
+  /**
+   * @param effects 컷별 사건 효과음(컷과 같은 순서). 없는 컷은 빈 값
+   */
+  static ObjectNode build(
+      JsonMapper json,
+      ComicScript script,
+      List<Optional<SoundMatcher.Picked>> sounds,
+      List<Optional<SoundMatcher.Picked>> effects,
       List<Boolean> moving) {
     ObjectNode root = json.createObjectNode();
     root.put("version", VERSION);
@@ -51,9 +66,15 @@ final class LivePlayback {
       panel.put("durationMs", durationMs(p));
       Optional<SoundMatcher.Picked> sound = i < sounds.size() ? sounds.get(i) : Optional.empty();
       if (sound.isPresent()) {
-        panel.set("sound", sound(json, sound.get()));
+        panel.set("sound", sound(json, sound.get(), VOLUME, FADE_MS, true));
       } else {
         panel.putNull("sound");
+      }
+      Optional<SoundMatcher.Picked> effect = i < effects.size() ? effects.get(i) : Optional.empty();
+      if (effect.isPresent()) {
+        panel.set("effect", sound(json, effect.get(), EFFECT_VOLUME, 0, false));
+      } else {
+        panel.putNull("effect");
       }
       Optional<Motion> motion = p.liveMotion();
       if (motion.isPresent() && i < moving.size() && Boolean.TRUE.equals(moving.get(i))) {
@@ -80,13 +101,14 @@ final class LivePlayback {
     return Math.max(MIN_MS, Math.min(MAX_MS, MIN_MS + chars * PER_CHAR_MS));
   }
 
-  private static ObjectNode sound(JsonMapper json, SoundMatcher.Picked s) {
+  private static ObjectNode sound(
+      JsonMapper json, SoundMatcher.Picked s, double volume, int fadeMs, boolean loop) {
     ObjectNode node = json.createObjectNode();
     node.put("publicId", s.publicId());
     node.put("title", s.title());
-    node.put("volume", VOLUME);
-    node.put("fadeMs", FADE_MS);
-    node.put("loop", true);
+    node.put("volume", volume);
+    node.put("fadeMs", fadeMs);
+    node.put("loop", loop);
     ObjectNode credit = node.putObject("credit");
     credit.put("author", s.author());
     credit.put("license", s.license());

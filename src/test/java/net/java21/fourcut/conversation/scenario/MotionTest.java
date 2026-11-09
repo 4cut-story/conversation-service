@@ -76,6 +76,19 @@ class MotionTest {
     ComicScript.Panel copy = p.withLines(List.of()).withScene("{A} stands");
     assertThat(copy.sound()).isEqualTo("밤 공원, 풀벌레");
     assertThat(copy.motion()).isEqualTo("twinkle");
+    ComicScript.Panel alarm =
+        new ComicScript.Panel(
+            "기", "wide", "x", List.of(), "s", List.of(), "아침 방, 빗소리", "none", "휴대폰 알람 소리");
+    assertThat(alarm.withLines(List.of()).withScene("y").withMotion(null).effect())
+        .isEqualTo("휴대폰 알람 소리");
+    assertThat(p.effect()).isNull();
+  }
+
+  @Test
+  @DisplayName("FR-019: 콘티 지시와 스키마에 사건 효과음(effect)이 있다")
+  void effectInPrompt() {
+    assertThat(Prompts.SCRIPT_SCHEMA).contains("\"effect\"");
+    assertThat(Prompts.SCRIPT_SYSTEM).contains("effect:", "휴대폰 알람 소리");
   }
 
   private static ComicScript.Panel panel(String role, String scene, String setting, String motion) {

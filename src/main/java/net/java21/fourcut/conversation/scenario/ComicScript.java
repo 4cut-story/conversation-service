@@ -111,6 +111,8 @@ public record ComicScript(
    * @param faces 인물별 표정·몸짓. 예전 콘티에는 없다
    * @param sound 라이브 모드 소리 장면 한 줄(한국어). 컷 배경음을 고르는 질의가 된다. 예전 콘티에는 없다
    * @param motion 라이브 모드 두 장 움직임({@link Motion} 코드). 없으면 null 또는 "none". 그림의 첫 프롬프트에는 쓰지 않는다
+   * @param effect 라이브 모드 사건 소리 한 줄(한국어, 예: "휴대폰 알람 소리"). 그 컷에서 실제로 나는 소리만 쓰고 없으면 빈 값이다. 컷 시작 때 배경음
+   *     위에 한 번 트는 효과음을 고르는 질의가 된다. 예전 콘티에는 없다
    */
   public record Panel(
       String role,
@@ -120,7 +122,20 @@ public record ComicScript(
       String setting,
       List<Face> faces,
       String sound,
-      String motion) {
+      String motion,
+      String effect) {
+
+    public Panel(
+        String role,
+        String shot,
+        String scene,
+        List<Line> lines,
+        String setting,
+        List<Face> faces,
+        String sound,
+        String motion) {
+      this(role, shot, scene, lines, setting, faces, sound, motion, null);
+    }
 
     public Panel(
         String role,
@@ -138,17 +153,17 @@ public record ComicScript(
 
     /** 대사만 바꾼 컷. */
     public Panel withLines(List<Line> next) {
-      return new Panel(role, shot, scene, next, setting, faces, sound, motion);
+      return new Panel(role, shot, scene, next, setting, faces, sound, motion, effect);
     }
 
     /** 장면만 바꾼 컷. */
     public Panel withScene(String next) {
-      return new Panel(role, shot, next, lines, setting, faces, sound, motion);
+      return new Panel(role, shot, next, lines, setting, faces, sound, motion, effect);
     }
 
     /** 움직임만 바꾼 컷. */
     public Panel withMotion(String next) {
-      return new Panel(role, shot, scene, lines, setting, faces, sound, next);
+      return new Panel(role, shot, scene, lines, setting, faces, sound, next, effect);
     }
 
     /** 걸러진 움직임. 없거나 목록 밖이면 빈 값. */

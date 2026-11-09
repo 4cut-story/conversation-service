@@ -171,7 +171,13 @@ class ComposeHandler implements StepHandler {
         }
         moving.add(move);
       }
-      ObjectNode live = LivePlayback.build(json, script, sounds.match(queries(script)), moving);
+      ObjectNode live =
+          LivePlayback.build(
+              json,
+              script,
+              sounds.match(queries(script)),
+              sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
+              moving);
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),

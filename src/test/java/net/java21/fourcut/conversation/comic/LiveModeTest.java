@@ -66,6 +66,26 @@ class LiveModeTest {
   }
 
   @Test
+  @DisplayName("FR-019: 사건 효과음은 배경음 위에 한 번(반복 없음, 바로) 틀고, 없는 컷은 null이다")
+  void effect() {
+    var alarm =
+        new SoundMatcher.Picked(
+            "ccccccccccccccccccccc", "알람", "작가", "CC-BY-4.0", "l", "s", "alarm");
+
+    var live =
+        LivePlayback.build(
+            json, script, List.of(), List.of(Optional.of(alarm)), List.of(false, false));
+
+    var first = live.path("panels").get(0).path("effect");
+    assertThat(first.path("publicId").asString()).isEqualTo("ccccccccccccccccccccc");
+    assertThat(first.path("loop").asBoolean()).isFalse();
+    assertThat(first.path("fadeMs").asInt()).isZero();
+    assertThat(first.path("credit").path("license").asString()).isEqualTo("CC-BY-4.0");
+    assertThat(live.path("panels").get(1).path("effect").isNull()).isTrue();
+    assertThat(live.path("panels").get(0).path("sound").isNull()).isTrue();
+  }
+
+  @Test
   @DisplayName("FR-003: 보여 주는 시간은 대사 길이에 따라 3.5~8초다")
   void duration() {
     assertThat(LivePlayback.durationMs(script.panels().get(1))).isEqualTo(3500);
