@@ -78,25 +78,33 @@ class DrawHandler implements StepHandler {
     long seed = Math.floorMod(seedOf(written), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();
     ArrayNode images = payload.putArray("images");
+    String style = style(script, properties);
     for (int i = 0; i < script.panels().size(); i++) {
       ObjectNode image = images.addObject();
       image.put("name", panelName(i));
-      image.put(
-          "prompt",
-          prompt(style(script, properties), script, script.panels().get(i), stages.get(i)));
+      ComicScript.Panel panel = script.panels().get(i);
+      Map<String, Staging.Side> stage = stages.get(i);
+      TwoPass two = properties.twoPass() ? twoPass(style, script, panel, cast) : null;
+      if (two != null) {
+        // 1차는 빈손 자세나 앞사람만 그린다. 2차(edit)가 그 그림에 물건이나 뒷사람을 더한다
+        panel = two.first();
+        stage = Staging.panel(script, panel);
+      }
+      image.put("prompt", prompt(style, script, panel, stage));
       image.put(
           "negativePrompt", negative(script, properties) + dayNegative(script.panels().get(i)));
-      ArrayNode regions =
-          regions(style(script, properties), script, script.panels().get(i), stages.get(i));
+      ArrayNode regions = regions(style, script, panel, stage);
       if (!regions.isEmpty()) {
         image.set("regions", regions);
       }
-      ArrayNode checks = checks(script, script.panels().get(i), stages.get(i));
+      ArrayNode checks = checks(script, panel, stage);
       if (!checks.isEmpty()) {
         image.set("checks", checks);
       }
-      ArrayNode refs =
-          references(stages.get(i), cast, othersInScene(script, script.panels().get(i)));
+      if (two != null) {
+        image.set("edit", two.edit());
+      }
+      ArrayNode refs = references(stage, cast, othersInScene(script, panel));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast, properties.panelSeedStep()));
       image.put("width", properties.imageSize());
       image.put("height", properties.imageSize());
@@ -751,6 +759,34 @@ class DrawHandler implements StepHandler {
         script.reviewed(),
         script.nameWarnings(),
         script.concept());
+  }
+
+  /** 2단 그리기: 1차로 그릴 컷과 2차 edit({prompt, references}). */
+  record TwoPass(ComicScript.Panel first, ObjectNode edit) {}
+
+  /**
+   * 컷을 2단으로 나눈다. 두 사람 컷은 앞사람을 먼저 그리고 뒷사람(참조 포함)을 더한다. 한 사람이 물건을 가슴 앞에 들거나 받침 위 물건을 들여다보는 컷은 빈손 자세를
+   * 먼저 그리고 물건 하나를 더한다. 나눌 수 없으면 null.
+   */
+  TwoPass twoPass(
+      String style, ComicScript script, ComicScript.Panel panel, Map<String, CharacterRef> cast) {
+    Split split = split(panel);
+    if (split != null) {
+      ObjectNode edit = json.createObjectNode();
+      edit.put("prompt", addPrompt(style, script, panel, split));
+      ArrayNode refs = references(Map.of(split.back(), Staging.Side.RIGHT), cast);
+      if (!refs.isEmpty()) {
+        edit.set("references", refs);
+      }
+      return new TwoPass(split.frontPanel(), edit);
+    }
+    Hold hold = hold(panel);
+    if (hold != null) {
+      ObjectNode edit = json.createObjectNode();
+      edit.put("prompt", holdPrompt(style, hold));
+      return new TwoPass(hold.emptyPanel(), edit);
+    }
+    return null;
   }
 
   /**

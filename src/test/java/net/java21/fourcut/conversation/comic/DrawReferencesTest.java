@@ -49,6 +49,36 @@ class DrawReferencesTest {
           0.2);
 
   @Test
+  @DisplayName("FR-006: 물건을 가슴 앞에 드는 컷은 빈손 자세를 1차로, 물건 하나 더하기를 2차 edit으로 나눈다")
+  void twoPassHold() {
+    var panel =
+        new ComicScript.Panel("승", "medium", "{A} holds one red phone at the chest, kitchen", null);
+    DrawHandler.TwoPass two = handler.twoPass("ink", script, panel, Map.of());
+    assertThat(two.first().scene()).contains("hands empty").doesNotContain("phone");
+    assertThat(two.edit().path("prompt").asString())
+        .contains("add exactly one red phone in the character's hands at the chest");
+    assertThat(two.edit().has("references")).isFalse();
+    assertThat(
+            handler.twoPass(
+                "ink", script, new ComicScript.Panel("기", "wide", "{A} waves", null), Map.of()))
+        .isNull();
+  }
+
+  @Test
+  @DisplayName("FR-006: 두 사람 컷은 앞사람을 1차로 그리고, 뒷사람과 그 캐릭터 참조를 2차 edit에 넣는다")
+  void twoPassSplit() {
+    var panel =
+        new ComicScript.Panel(
+            "전", "wide", "{A} waves in the foreground, {B} sits far behind", null);
+    DrawHandler.TwoPass two = handler.twoPass("ink", script, panel, Map.of("B", ready));
+    assertThat(two.first().scene()).contains("{A}").doesNotContain("{B}");
+    assertThat(two.edit().path("prompt").asString()).contains("exactly two characters");
+    JsonNode ref = two.edit().path("references").get(0);
+    assertThat(ref.path("character").asString()).isEqualTo(ready.publicId());
+    assertThat(ref.path("region").asString()).isEqualTo("right");
+  }
+
+  @Test
   @DisplayName("REQ-018: 캐릭터를 찾은 인물은 캐릭터의 외모 문구로 그리고, 성별이 빠졌으면 콘티 첫 마디를 붙인다")
   void looks() {
     ComicScript drawn = DrawHandler.withLooks(script, Map.of("A", ready));
@@ -156,7 +186,7 @@ class DrawReferencesTest {
   @DisplayName("REQ-018: 참조가 있는 컷에는 설정의 IP-Adapter 강도 스케줄을 함께 보낸다")
   void ipSchedule() {
     JsonNode s =
-        handler.ipSchedule(new ComicProperties(768, "s", "n", "http://x", 0.25, 3, 0.15, 0));
+        handler.ipSchedule(new ComicProperties(768, "s", "n", "http://x", 0.25, 3, 0.15, 0, false));
     assertThat(s.path("earlyScale").asDouble()).isEqualTo(0.25);
     assertThat(s.path("earlySteps").asInt()).isEqualTo(3);
     assertThat(s.path("lateBoost").asDouble()).isEqualTo(0.15);
