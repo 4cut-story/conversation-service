@@ -39,4 +39,35 @@ class DrawMotionTest {
         new ComicScript.Panel("기", "wide", "{A} sits", List.of(), "day", List.of(), "공원", "none");
     assertThat(handler.motion("s", "c1", 0, none)).isNull();
   }
+
+  @Test
+  @DisplayName("FR-030: 컷마다 완성 컷을 바탕으로 16:9 넓은 그림을 요청하고, 그림 안 글자·말풍선·테두리를 빼게 한다")
+  void liveImage() {
+    var panel =
+        new ComicScript.Panel(
+            "기", "wide", "{A} sits", List.of(), "night park, stars", List.of(), "밤 공원", "none");
+
+    var live = handler.live(ComicProperties.DEFAULT_STYLE, "c1", 1, panel);
+
+    assertThat(live.path("width").asInt()).isEqualTo(1024);
+    assertThat(live.path("height").asInt()).isEqualTo(576);
+    assertThat(live.path("uploadPutKey").asString()).isEqualTo("pipeline-work/c1/panel-2-w.png");
+    assertThat(live.path("prompt").asString())
+        .contains("wide 16:9 cinematic shot", "keep the same characters", "night park, stars")
+        .contains("no text", "no speech bubbles", "no panel borders")
+        .doesNotContain("simple background");
+  }
+
+  @Test
+  @DisplayName("FR-032: 넓은 그림은 장면 시간대·실내외에 맞는 빛과 비·눈 공기를 더한다")
+  void liveLight() {
+    assertThat(DrawHandler.light("night street")).contains("street lamps");
+    assertThat(DrawHandler.light("night, bedroom")).contains("lamp light in the dark room");
+    assertThat(DrawHandler.light("sunset beach")).contains("golden evening light");
+    assertThat(DrawHandler.light("cafe")).contains("daylight from the window");
+    assertThat(DrawHandler.light("park")).contains("natural daylight");
+    assertThat(DrawHandler.weather("rainy alley 빗소리")).contains("wet reflections");
+    assertThat(DrawHandler.weather("snowy road")).contains("snow");
+    assertThat(DrawHandler.weather("park")).isEmpty();
+  }
 }

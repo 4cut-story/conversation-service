@@ -105,6 +105,10 @@ class DrawHandler implements StepHandler {
       if (two != null) {
         image.set("edit", two.edit());
       }
+      if (properties.twoPass()) {
+        // 라이브 전용 넓은 그림. 완성 컷을 바탕으로 같은 인물·장면을 16:9로 넓히고 빛·거리감을 더한다(첫 그림 프롬프트는 그대로)
+        image.set("live", live(style, id, i, script.panels().get(i)));
+      }
       ObjectNode motion =
           properties.twoPass() ? motion(style, id, i, script.panels().get(i)) : null;
       if (motion != null) {
@@ -807,6 +811,83 @@ class DrawHandler implements StepHandler {
               return node;
             })
         .orElse(null);
+  }
+
+  /** 라이브 전용 넓은 그림 크기. 컷 그림(768×768)과 픽셀 수가 거의 같아 그리는 시간·메모리가 늘지 않는다. 16의 배수. */
+  static final int LIVE_WIDTH = 1024;
+
+  static final int LIVE_HEIGHT = 576;
+
+  /**
+   * 라이브 모드 넓은 그림 요청({prompt, width, height, uploadPutKey}) (docs specs/003-live-mode FR-030~032).
+   */
+  ObjectNode live(String style, String conversationId, int index, ComicScript.Panel panel) {
+    ObjectNode node = json.createObjectNode();
+    node.put("prompt", livePrompt(style, panel));
+    node.put("width", LIVE_WIDTH);
+    node.put("height", LIVE_HEIGHT);
+    node.put("uploadPutKey", WorkKeys.panelWide(conversationId, index + 1));
+    return node;
+  }
+
+  private static final Pattern EVENING =
+      Pattern.compile("(?i)\\b(sunset|dusk|evening|twilight|golden hour)\\b");
+
+  private static final Pattern RAIN = Pattern.compile("(?i)\\b(rain|rainy|raining|drizzle)\\b");
+
+  private static final Pattern SNOW = Pattern.compile("(?i)\\b(snow|snowy|snowing)\\b");
+
+  private static final Pattern INDOOR =
+      Pattern.compile(
+          "(?i)\\b(room|bedroom|kitchen|office|classroom|cafe|café|restaurant|store|shop|mart|"
+              + "hospital|living room|bathroom|hall|indoors?|inside)\\b");
+
+  /**
+   * 넓은 그림 프롬프트: 같은 인물·옷·자세·그림체는 그대로 두고 같은 장소를 좌우로 넓힌다. 장면의 시간대 빛·날씨·앞뒤 거리감을 더 진하게 쓰고, 글자·말풍선·테두리를
+   * 빼게 한다. 컷 그림체의 "simple background"는 넓은 그림에서는 뺀다(배경을 채워야 넓어 보인다).
+   */
+  static String livePrompt(String style, ComicScript.Panel panel) {
+    String base = style.replace(", simple background", "").replace("simple background, ", "");
+    String setting = panel.setting() == null ? "" : panel.setting();
+    String sound = panel.sound() == null ? "" : panel.sound();
+    return base
+        + ", edit this picture into one wide 16:9 cinematic shot: keep the same characters, the"
+        + " same faces, hair, clothes, poses, objects and drawing style, and extend the same"
+        + " place to the left and right"
+        + setting(panel)
+        + ", "
+        + light(setting)
+        + weather(setting + " " + sound)
+        + ", clear foreground, middle ground and background with depth, soft atmosphere in the"
+        + " air, a fuller background"
+        + ", no text, no letters, no speech bubbles, no captions, no panel borders, no frame";
+  }
+
+  /** 장면 시간대에 맞춘 빛. 실내는 창빛·실내등이다. */
+  static String light(String setting) {
+    boolean indoor = INDOOR.matcher(setting).find();
+    if (DARK.matcher(setting).find()) {
+      return indoor
+          ? "warm lamp light in the dark room, deep blue shadows by the window"
+          : "night lighting, warm glow of street lamps, deep blue sky and shadows";
+    }
+    if (EVENING.matcher(setting).find()) {
+      return "warm golden evening light, long soft shadows, orange and pink sky";
+    }
+    return indoor
+        ? "soft daylight from the window, gentle shadows"
+        : "soft natural daylight, gentle shadows, light haze in the distance";
+  }
+
+  /** 비·눈이 있는 장면의 공기. 없으면 빈 문자열. */
+  static String weather(String text) {
+    if (RAIN.matcher(text).find()) {
+      return ", rainy air, wet reflections on the ground";
+    }
+    if (SNOW.matcher(text).find()) {
+      return ", snowy air, soft falling snow haze";
+    }
+    return "";
   }
 
   /** 두 번째 그림 프롬프트: 인물·구도는 그대로, 배경의 그 부분만 바꾼다. */

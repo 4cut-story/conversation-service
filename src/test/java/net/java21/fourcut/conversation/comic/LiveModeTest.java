@@ -66,7 +66,7 @@ class LiveModeTest {
   }
 
   @Test
-  @DisplayName("FR-019: 사건 효과음은 배경음 위에 한 번(반복 없음, 바로) 틀고, 없는 컷은 null이다")
+  @DisplayName("FR-020: 사건 효과음은 배경음 위에 한 번(반복 없음, 바로) 틀고, 없는 컷은 null이다")
   void effect() {
     var alarm =
         new SoundMatcher.Picked(
@@ -145,5 +145,48 @@ class LiveModeTest {
     g.setColor(c);
     g.fillRect(0, 0, 400, 400);
     return image;
+  }
+
+  @Test
+  @DisplayName("FR-031·035: 넓은 그림 컷은 16:9와 대사 자막(호칭·시간)을, 아닌 컷은 1:1을 담고 카메라는 앞뒤 컷이 다르다")
+  void wide() {
+    var two =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "민지", "", "girl"),
+                new ComicScript.Character("B", "하늘", "", "boy")),
+            List.of(
+                new ComicScript.Panel(
+                    "기",
+                    "wide",
+                    "{A} {B}",
+                    List.of(
+                        new ComicScript.Line("A", "별이 많다"),
+                        new ComicScript.Line("B", "  "),
+                        new ComicScript.Line("C", "그러게 정말 많네")),
+                    "night",
+                    List.of()),
+                new ComicScript.Panel("결", "wide", "{A} smiles", List.of())),
+            true,
+            List.of());
+
+    var live =
+        LivePlayback.build(json, two, List.of(), List.of(), List.of(false, false), List.of(true));
+
+    var first = live.path("panels").get(0);
+    assertThat(first.path("aspect").asString()).isEqualTo("16:9");
+    var captions = first.path("captions");
+    assertThat(captions.size()).isEqualTo(2);
+    assertThat(captions.get(0).path("speaker").asString()).isEqualTo("민지");
+    assertThat(captions.get(0).path("startMs").asInt()).isEqualTo(300);
+    assertThat(captions.get(1).path("speaker").isNull()).isTrue();
+    assertThat(captions.get(1).path("startMs").asInt())
+        .isGreaterThan(captions.get(0).path("endMs").asInt());
+    assertThat(captions.get(1).path("endMs").asInt()).isEqualTo(first.path("durationMs").asInt());
+    var last = live.path("panels").get(1);
+    assertThat(last.path("aspect").asString()).isEqualTo("1:1");
+    assertThat(last.has("captions")).isFalse();
+    assertThat(first.path("camera").asString()).isNotEqualTo(last.path("camera").asString());
   }
 }

@@ -141,7 +141,7 @@ class SoundMatcherTest {
   }
 
   @Test
-  @DisplayName("FR-019: 사건 소리가 있는 컷만 효과음에서 고르고, 긴 말로 못 찾으면 낱말로 찾는다")
+  @DisplayName("FR-020: 사건 소리가 있는 컷만 효과음에서 고르고, 긴 말로 못 찾으면 낱말로 찾는다")
   void effects() {
     List<String> asked = new ArrayList<>();
     SoundMatcher matcher =
@@ -171,7 +171,7 @@ class SoundMatcherTest {
   }
 
   @Test
-  @DisplayName("FR-019: 효과음은 사건 소리의 끝 낱말(중심)이 제목에 있는 후보를 먼저 고른다 (휴대폰 알람 → 진동이 아니라 알람)")
+  @DisplayName("FR-021: 효과음은 사건 소리의 끝 낱말(중심)이 제목에 있는 후보를 먼저 고른다 (휴대폰 알람 → 진동이 아니라 알람)")
   void effectHead() {
     var vibrate = described("aaaaaaaaaaaaaaaaaaaaa", "휴대폰 진동", "");
     var alarm = described("bbbbbbbbbbbbbbbbbbbbb", "전자 알람시계", "");
