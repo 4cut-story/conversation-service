@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.8";
+  static final String VERSION = "2026-11-09.9";
 
   private Prompts() {}
 
@@ -143,8 +143,9 @@ final class Prompts {
       소품 (props, 0~4개, 한 번만 정한다)
       - 이야기의 핵심 물건과 중심 동물(반려동물 등). key는 짧은 한국어 이름(예: 줄넘기, 연, 강아지).
         draw는 그림용 영어 8단어 이내로 재질·색·크기·종까지 쓴다(예: "red plastic jump rope with wooden handles",
-        "small yellow diamond-shaped paper kite", "small old brown-and-white dog"). 반려동물 소품은 "on four legs, no
-        clothes"를 붙여 옷 입은 인물과 섞이지 않게 쓴다. 비슷한 다른 물건(연 → 풍선, 노란 연 →
+        "small yellow diamond-shaped paper kite", "small old brown-and-white dog"). 반려동물 소품은 "tiny"로 시작하고 "on four legs, no
+        clothes"를 붙여 옷 입은 인물과 섞이지 않게 쓴다. 동물 인물과 반려동물이 한 컷에 나오면 반려동물은 그 인물 발치에 둔다
+        (예: "{강아지} sits at {A}'s feet"). 비슷한 다른 물건(연 → 풍선, 노란 연 →
         다른 색 연)으로 바뀌지 않게 구체적으로 쓴다.
       - 인물이 여러 컷에 들고 다니거나 몸에 지니는 물건(가방, 지팡이, 책, 휴대폰)도 props에 넣는다. props에 없는 물건은 컷마다
         다른 물건(배낭 → 손가방 → 바구니)으로 그려진다.
@@ -194,22 +195,25 @@ final class Prompts {
         크게 보이는 컷이다. 기는 보통 wide, 전은 보통 close-up이고, wide는 전체 컷의 절반을 넘지 않는다. close-up은 한
         사람만 나오는 컷에 쓴다. 같은 구도가 두 컷 넘게 이어지지 않게 섞는다.
         shot은 action과 맞아야 그림에 그대로 나온다. 걷기·달리기·뛰기·앉기·무릎 꿇기·웅크리기·눕기처럼 다리가 보여야 하는
-        동작은 wide에만 쓴다. medium·close-up 컷의 action은 손·팔·얼굴만 쓰는 동작이다(물건 들어 올리기, 두 손으로
-        내밀기, 버튼 누르기, 두 손으로 볼 감싸기).
+        동작은 wide에만 쓴다. medium·close-up 컷의 action은 손·팔·얼굴만 쓰는 동작이다(물건 들어 올리기,
+        내밀기, 버튼 누르기, 볼 감싸기).
       - 컷에 나오는 사람: 한 컷은 그 컷의 주인공 한 명을 기본으로 그린다. 두 사람이 몸으로 함께 하는 일(물건 건네기, 같은
         물건 함께 보기)이 장면의 핵심일 때만 두 명을 넣는다. 두 명 컷은 편 전체에서 두 컷까지(4컷 편은 한 컷까지)이고
         shot은 wide로 둔다. 세 명 이상은 넣지 않는다.
         한 컷에 여러 명이 나오면 그림 모델이 같은 사람을 둘로 그리거나 두 사람의 옷·얼굴을 섞는다.
         두 명 컷은 두 사람을 왼쪽과 오른쪽에 떨어뜨려 세우고, 몸이 겹치거나 손이 맞닿는 동작(안기, 손잡기, 악수, 함께 쥐기,
-        귓속말)을 쓰지 않는다. 두 사람 중 한 사람만 물건을 쥐고 움직이고, 다른 사람은 팔을 내린 채 표정으로 반응한다
-        (예: "{A} holds up {연} with both hands, {B} stands apart watching"). 한 물건(우산, 쟁반, 상자)을 두 사람이 함께
+        귓속말)을 쓰지 않는다. 두 명 컷은 두 사람이 같은 동작을 하게 쓴다(나란히 서서 같은 곳 바라보기, 함께 손 흔들기, 함께 뛰기).
+        두 사람이 서로 다른 동작을 하면 그림 모델이 누가 무엇을 하는지 바꿔 그린다. 물건이 필요하면 한 사람만 물건을
+        쥐고, 다른 사람은 팔을 내린 채 같은 물건을 바라본다 (예: "{A} and {B} stand side by side looking up at {연}"). 한 물건(우산, 쟁반, 상자)을 두 사람이 함께
         쥐거나 함께 쓰지 않는다. 팔이 합쳐지거나 한 사람 몸이 하나 더 그려진다.
         두 사람이 탁자·판·책상을 사이에 두고 마주 앉는 대칭 구도도 쓰지 않는다(같은 사람이 양쪽에 둘로 그려진다). 판 놀이나
         식사처럼 마주 앉는 장면은 한 사람만 그리거나, 두 사람을 같은 쪽에 나란히 두고 같은 방향을 보게 쓴다.
       - action: 그림 모델용 영어 14단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
-        (예: "{A} jumps over {줄넘기} swinging it with both hands", "{B} runs holding {연} string up high").
-        물건을 쓰는 동작은 어느 손(손가락)이 물건의 어느 부분에 무엇을 하는지, 그 부분에 무엇이 보이는지까지 쓴다
-        (예: "{B} presses a drink button on {자판기} with one finger", "{A} pours water from {주전자} into
+        (예: "{A} jumps over {줄넘기} swinging it", "{B} runs holding {연} string up high").
+        물건을 쓰는 동작은 단순한 동사로 무엇을 어떻게 하는지 쓰고("holds up", "pours", "presses"), "with both hands",
+        "with one hand"처럼 손 수를 정하는 말은 쓰지 않는다(그림 모델이 자주 무시한다). 버튼·작은 조각처럼 손끝이 닿는 곳만
+        물건의 어느 부분에 무엇을 하는지, 그 부분에 무엇이 보이는지까지 쓴다
+        (예: "{B} presses a drink button on {자판기}", "{A} pours water from {주전자} into
         a cup", "{A} holds {휴대폰} up to {B}, screen showing a photo").
         이야기의 핵심 물건은 두 컷 이상에 나온다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는
         모습만 쓰지 않는다. 동작은 손·팔·몸이 무엇을 하는지 보이게 쓴다.
@@ -217,7 +221,7 @@ final class Prompts {
         처럼 작고 미묘한 동작은 그림에서 그냥 서 있는 모습으로 바뀌므로, 같은 뜻의 큰 동작(두 팔을 앞으로 뻗기, 두 손을 번쩍
         들기, 물건을 머리 위로 들기)으로 바꿔 쓴다. 한 동작에 물건은 하나만 쓴다.
         손이 물건에서 떨어진 동작(멀리 있는 것 가리키기, 문 밀기, 이불 당기기, 엄지로 뒤 가리키기)은 그림에서 빈손 자세로
-        바뀌므로, 손에 물건을 쥐고 있는 동작(들어 올리기, 내밀기, 끌어안기, 두 손으로 받치기)이나 버튼처럼 손끝이 닿는
+        바뀌므로, 손에 물건을 쥐고 있는 동작(들어 올리기, 내밀기, 끌어안기, 받치기)이나 버튼처럼 손끝이 닿는
         동작으로 쓴다.
         두 팔이 서로 다른 일을 하는 동작(팔짱 끼고 가리키기, 한 손으로 들고 다른 손으로 가리키기)은 팔이 셋으로 그려지므로,
         한 팔만 쓰거나 두 팔이 같은 일을 하는 동작으로 쓴다.
