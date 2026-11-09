@@ -140,30 +140,32 @@ class SoundLibrary {
 
   /** 검색어와 가까운 소리 n개. 임베딩 서버나 pgvector가 없으면 글자로 찾는다. */
   List<Sound> search(Filter f, String q, int n) {
+    return scored(f, q, n).stream().map(SoundMatcher.Scored::sound).toList();
+  }
+
+  /** 검색어와 가까운 소리 n개와 거리(코사인). 글자로 찾으면 거리는 순위다. */
+  List<SoundMatcher.Scored> scored(Filter f, String q, int n) {
     Optional<String> schema = schema();
     Optional<float[]> v = schema.isPresent() ? embedder.embed(q) : Optional.empty();
     if (schema.isPresent() && v.isPresent()) {
       String s = Vectors.quote(schema.get());
-      return jdbc
-          .sql(
+      String distance =
+          "s.description_embedding operator(" + s + ".<=>) cast(:v as " + s + ".vector)";
+      return jdbc.sql(
               "select "
                   + COLUMNS
-                  + " from background_sounds s where "
+                  + ", "
+                  + distance
+                  + " as distance from background_sounds s where "
                   + WHERE
-                  + " and s.description_embedding is not null order by s.description_embedding"
-                  + " operator("
-                  + s
-                  + ".<=>) cast(:v as "
-                  + s
-                  + ".vector) limit :n")
+                  + " and s.description_embedding is not null order by distance limit :n")
           .params(filterParams(f))
           .param("v", Vectors.literal(v.get()))
           .param("n", n)
-          .query(ROW)
-          .list()
-          .stream()
-          .map(Row::sound)
-          .toList();
+          .query(
+              (rs, i) ->
+                  new SoundMatcher.Scored(ROW.mapRow(rs, i).sound(), rs.getDouble("distance")))
+          .list();
     }
     String like = "%" + q.toLowerCase(Locale.ROOT).replace("%", "").replace("_", "") + "%";
     return jdbc
@@ -181,7 +183,9 @@ class SoundLibrary {
         .list()
         .stream()
         .map(Row::sound)
-        .toList();
+        .collect(
+            java.util.stream.Collectors.collectingAndThen(
+                java.util.stream.Collectors.toList(), SoundMatcher::byRank));
   }
 
   /** 종류·카테고리별 수와 분위기별 수. 둘러보기 필터에 쓴다. */
