@@ -264,6 +264,62 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 두 사람 컷은 앞사람 컷과 뒷사람 한 마디로 나눠 그린다")
+  void splitTwo() {
+    var faces =
+        List.of(
+            new ComicScript.Face("A", "easy grin, looking at the other person"),
+            new ComicScript.Face("B", "head tilted, looking at the other person"));
+    var walk =
+        new ComicScript.Panel(
+            "승",
+            "wide",
+            "{A} walks tilting navy umbrella toward small {B} seen from behind, shoulder soaked, city"
+                + " sidewalk",
+            List.of(),
+            "city sidewalk",
+            faces);
+    var s = DrawHandler.split(walk);
+    assertThat(s.front()).isEqualTo("A");
+    assertThat(s.back()).isEqualTo("B");
+    assertThat(s.frontPanel().scene())
+        .isEqualTo("{A} walks tilting navy umbrella, shoulder soaked, city sidewalk");
+    assertThat(s.frontPanel().faces())
+        .extracting(ComicScript.Face::face)
+        .containsExactly("easy grin, looking to the side");
+    assertThat(s.backClause()).isEqualTo("{B} seen from behind");
+    var hold =
+        new ComicScript.Panel(
+            "결",
+            "wide",
+            "{B} holds up {연} at the chest in the foreground, {A} watching from the background,"
+                + " park",
+            List.of(),
+            "park",
+            faces);
+    var h = DrawHandler.split(hold);
+    assertThat(h.front()).isEqualTo("B");
+    assertThat(h.frontPanel().scene()).isEqualTo("{B} holds up {연} at the chest, park");
+    var script =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "친구", "", "young man, navy sweater"),
+                new ComicScript.Character("B", "친구", "", "young woman, teal overalls")),
+            List.of(),
+            true,
+            List.of());
+    assertThat(DrawHandler.addPrompt("s", script, hold, h))
+        .startsWith("s, edit this picture")
+        .contains(
+            "(young man, navy sweater), the young man watching, easy grin, looking at the first")
+        .endsWith("exactly two characters, each drawn only once");
+    // 한 사람 컷은 나누지 않는다
+    assertThat(DrawHandler.split(new ComicScript.Panel("기", "wide", "{A} runs, park", List.of())))
+        .isNull();
+  }
+
+  @Test
   @DisplayName("FR-006: young woman·young man은 young adult로 그려 아이 체형이 되지 않게 한다")
   void youngAdults() {
     var pair =

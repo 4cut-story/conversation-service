@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.17";
+  static final String VERSION = "2026-11-09.17b";
 
   private Prompts() {}
 
@@ -231,11 +231,18 @@ final class Prompts {
         one long red pepper"). 식물 소품의 draw에는 열매를 여럿 쓰지 않는다. 함께 쓰면 손에 하나, 다른 손에 또 하나가 그려진다.
       - action·face에 his·her·him·she·he 같은 대명사를 쓰지 않는다. 몸은 the로 쓴다(예: "{A} puts fists on the hips",
         "holding {우산} by its handle at the chest"). 대명사가 인물 성별과 어긋나면 남자가 여자로, 여자가 남자로 그려진다.
-      - 컷에 나오는 사람: 모든 컷은 그 컷의 주인공 한 명만 그린다. 한 컷에 두 명 이상을 그리면 그림 모델이 같은 사람을 둘로
-        그리거나, 두 사람의 옷·얼굴·귀를 섞거나, 두 사람의 동작과 표정을 뒤바꾼다(자리를 정해도 바뀐다). 두 사람이 함께 하는
-        순간(물건 건네기, 같은 것 보기, 주고받는 말)은 한 사람이 하는 컷과 다른 사람이 반응하는 컷으로 나눠 이어 그린다
-        (예: 3컷 "{A} holds up {연} at chest", 4컷 "{B} looks up at {연}, wide-eyed"). action에는 그 컷 주인공 한 명만 쓴다.
-        판 놀이나 식사처럼 마주 앉는 장면도 한 사람만 그린다.
+      - 컷에 나오는 사람: 컷은 보통 그 컷의 주인공 한 명만 그린다. 두 사람이 함께 있어야 이야기가 읽히는 순간(물건 건네기,
+        나란히 걷기, 같은 것 보기)만 두 사람 컷으로 쓰고, 한 편에 두 컷까지 쓴다. 두 사람 컷은 앞사람을 먼저 그리고 그 그림 위에
+        뒷사람을 더해 그리므로 이렇게 쓴다.
+        · shot은 wide다.
+        · action은 앞사람 동작을 먼저 다 쓰고, 맨 끝에 쉼표 뒤로 뒷사람 한 마디를 "{B} + 자세 + in the background"로 따로 붙인다
+          (예: "{A} holds up {연} at the chest, {B} watching from the background"). 뒷사람을 앞사람 동작 안에 넣지 않는다
+          ("{A} walks toward {B}"는 쓰지 않는다).
+        · 물건은 앞사람만 쥐고, 뒷사람은 서 있거나 걷거나 바라보는 자세만 쓴다.
+        · faces에는 두 사람 표정을 다 쓴다.
+        나머지 함께 하는 순간과 주고받는 말은 한 사람이 하는 컷과 다른 사람이 반응하는 컷으로 나눠 이어 그린다
+        (예: 3컷 "{A} holds up {연} at chest", 4컷 "{B} looks up at {연}, wide-eyed"). 판 놀이나 식사처럼 마주 앉는 장면도
+        한 사람만 그린다.
       - action: 그림 모델용 영어 14단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
         (예: "{A} jumps over {줄넘기} swinging it", "{B} runs holding {연} string up high").
         물건을 쓰는 동작은 단순한 동사로 무엇을 어떻게 하는지 쓰고("holds up", "pours", "presses"), "with both hands",
@@ -265,7 +272,7 @@ final class Prompts {
         동작으로 쓴다.
         두 팔이 서로 다른 일을 하는 동작(팔짱 끼고 가리키기, 한 손으로 들고 다른 손으로 가리키기)은 팔이 셋으로 그려지므로,
         한 팔만 쓰거나 두 팔이 같은 일을 하는 동작으로 쓴다.
-        그 컷 lines의 speaker는 그 컷에 나오는 한 사람이다. 대사를 고를 때 그 컷 주인공의 말을 고르고, 상대의 대답은 상대가
+        그 컷 lines의 speaker는 그 컷에 나오는 사람이다(두 사람 컷은 앞사람). 대사를 고를 때 그 컷 주인공의 말을 고르고, 상대의 대답은 상대가
         나오는 다음 컷에 둔다.
       - place: places의 key 하나. 장소는 key로만 고른다.
       - setting: 그 컷의 때와 분위기를 보여 주는 배경 한 마디와, 더 보여야 할 배경 물건 0~1개를 그림 모델용 영어 10단어

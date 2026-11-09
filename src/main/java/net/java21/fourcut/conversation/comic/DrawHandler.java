@@ -631,6 +631,117 @@ class DrawHandler implements StepHandler {
         script.concept());
   }
 
+  /**
+   * 두 사람 컷을 나눠 그리는 차례. 1차는 앞사람만 그린 컷(frontPanel), 2차는 1차 그림을 입력으로 받아 뒷사람을 더한다(addPrompt). 두 사람을 한
+   * 번에 그리면 옷·얼굴이 섞이거나 동작이 뒤바뀌고 사람이 복제됐다(회차 29 콘티 18판, 심각 8편). 나눠 그리면 같은 컷 8개가 모두 제 옷·제 역할로
+   * 나왔다(conti18seq).
+   */
+  record Split(String front, String back, ComicScript.Panel frontPanel, String backClause) {}
+
+  private static final Pattern IN_FRONT = Pattern.compile("\\s+in the foreground\\b");
+
+  /** 두 사람 컷을 앞사람 컷과 뒷사람 한 마디로 나눈다. 두 사람 컷이 아니면 null. 앞사람은 장면에 먼저 나오는 사람이다. */
+  static Split split(ComicScript.Panel panel) {
+    String scene = panel.scene() == null ? "" : panel.scene().strip();
+    List<String> marks = new java.util.ArrayList<>();
+    Matcher m = MARK.matcher(scene);
+    while (m.find()) {
+      if (!marks.contains(m.group(1))) {
+        marks.add(m.group(1));
+      }
+    }
+    if (marks.size() != 2) {
+      return null;
+    }
+    String front = marks.get(0);
+    String back = marks.get(1);
+    String mark = "{" + back + "}";
+    List<String> kept = new java.util.ArrayList<>();
+    String clause = null;
+    for (String part : scene.split(",\\s*")) {
+      int at = part.indexOf(mark);
+      if (at < 0 || clause != null) {
+        kept.add(part);
+        continue;
+      }
+      String head = part.substring(0, at).strip();
+      if (head.isEmpty() || head.equalsIgnoreCase("small")) {
+        clause = part.substring(at);
+      } else {
+        // 앞사람 동작 안에 든 뒷사람("walks toward small {B} seen from behind")은 앞 낱말과 함께 떼어 낸다.
+        Matcher cut =
+            Pattern.compile(
+                    "\\s+(?:[a-z]+\\s+)?(?:the\\s+)?(?:small\\s+)?" + Pattern.quote(mark) + ".*$")
+                .matcher(part);
+        if (cut.find()) {
+          clause = part.substring(part.indexOf(mark));
+          String rest = part.substring(0, cut.start()).strip();
+          if (!rest.isEmpty()) {
+            kept.add(rest);
+          }
+        } else {
+          kept.add(part);
+        }
+      }
+    }
+    if (clause == null) {
+      return null;
+    }
+    String frontScene = IN_FRONT.matcher(String.join(", ", kept)).replaceAll("");
+    List<ComicScript.Face> faces =
+        panel.faces() == null
+            ? null
+            : panel.faces().stream()
+                .filter(f -> f != null && front.equals(f.speaker()))
+                .map(f -> new ComicScript.Face(f.speaker(), aside(f.face(), "looking to the side")))
+                .toList();
+    ComicScript.Panel frontPanel =
+        new ComicScript.Panel(
+            panel.role(), panel.shot(), frontScene, panel.lines(), panel.setting(), faces);
+    return new Split(front, back, frontPanel, clause);
+  }
+
+  private static String aside(String face, String with) {
+    return face == null ? null : face.replace("looking at the other person", with);
+  }
+
+  private static final Pattern BACK_WORDS =
+      Pattern.compile("(?i)\\s*\\b(?:small|far|in the background|from the background)\\b");
+
+  /** 2차 프롬프트: 1차 그림은 그대로 두고 뒷사람을 오른쪽 중간 거리에 더한다. */
+  static String addPrompt(String style, ComicScript script, ComicScript.Panel panel, Split split) {
+    ComicScript.Character who =
+        script.characters().stream()
+            .filter(c -> split.back().equals(c.speaker()))
+            .findFirst()
+            .orElseThrow();
+    String look = who.look().strip();
+    String head = look.split(",", 2)[0].strip();
+    String pose =
+        BACK_WORDS
+            .matcher(split.backClause().replace("{" + split.back() + "}", "the " + head))
+            .replaceAll("")
+            .replaceAll("\\s{2,}", " ")
+            .strip();
+    String face =
+        panel.faces() == null
+            ? ""
+            : panel.faces().stream()
+                .filter(f -> f != null && split.back().equals(f.speaker()) && f.face() != null)
+                .map(f -> ", " + aside(f.face().strip(), "looking at the first character"))
+                .findFirst()
+                .orElse("");
+    return style
+        + ", edit this picture: keep the character, the objects, the background, the light and the"
+        + " drawing style exactly the same, and add one more character in the middle distance on the"
+        + " right side: ("
+        + look
+        + "), "
+        + pose
+        + face
+        + ", exactly two characters, each drawn only once";
+  }
+
   private static final Pattern CHILD_HEAD = Pattern.compile("\\b(?:girl|boy|child|kid)\\b");
 
   /** 무협의 아이("little swordsman"). 그림체가 무림 고수를 그리게 해 아이가 어른으로 그려졌다(회차 10 mystery-08). */
