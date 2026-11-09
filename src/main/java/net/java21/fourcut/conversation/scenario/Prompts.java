@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.28";
+  static final String VERSION = "2026-11-09.29";
 
   private Prompts() {}
 
@@ -321,8 +321,9 @@ final class Prompts {
         flicker. 벚꽃길을 걷는 컷 → petals.
         나쁜 예: 인물이 손을 흔든다 → none(인물 동작). 밤인데 setting에 별이 없다 → none. 창밖에 비가 오는 방 안 → none
         (실내). 놀라서 펄쩍 뛴다 → none. 모든 컷에 twinkle → 한두 컷만 남기고 none.
-      - ambient: 라이브 모드에서 그림 위에 화면이 얹는 작은 움직임 층이다(그림은 그대로). 아래 아홉 가지에서 그 컷 배경에
-        실제로 보이는 것만 0~2개 고른다. 그 낱말(괄호 안)이 그 컷 setting에 쓰여 있어야 하고, 없으면 빈 배열 []이다. motion과
+      - ambient: 라이브 모드에서 그림 위에 화면이 얹는 작은 움직임 층이다(그림은 그대로). 아래 열두 가지에서 그 컷 배경에
+        실제로 보이는 것만 0~2개 고른다. 대사나 장면에 하늘·날씨 사건(별똥별, 불꽃놀이, 번개)이 나오면 그 낱말을 setting에도
+        쓰고 꼭 고른다. 그 낱말(괄호 안)이 그 컷 setting에 쓰여 있어야 하고, 없으면 빈 배열 []이다. motion과
         달리 여러 컷에 써도 된다. 같은 장소·날씨가 이어지면 같은 값을 쓴다. 확실하지 않으면 [].
         · twinkle: 별빛·전구 불빛이 반짝인다(stars, night sky, fairy lights, city lights).
         · rain: 빗줄기(rain). 야외 컷만이다. 창밖에 비가 오는 방 안은 안 된다.
@@ -333,8 +334,11 @@ final class Prompts {
         · steam: 뜨거운 음식·음료·목욕물에서 김이 오른다(coffee, tea, ramen, soup, steam, bath).
         · dust: 창으로 든 햇빛 속에 먼지가 떠다닌다(sunlight, sunbeams).
         · flicker: 촛불·등불·모닥불·네온 불빛이 흔들린다(candle, lantern, campfire, neon).
+        · meteor: 별똥별이 하늘을 가로질러 떨어진다(shooting star, meteor).
+        · fireworks: 불꽃놀이가 터진다(fireworks).
+        · lightning: 번개가 번쩍인다(lightning, thunderstorm).
         좋은 예: 별이 뜬 밤 옥상 → ["twinkle"]. 비 오는 밤 골목 → ["rain"]. 카페에서 김 나는 커피를 마신다 → ["steam"].
-        햇살 드는 아침 방 → ["dust"]. 캠핑장 밤 모닥불 → ["flicker","twinkle"]. 벚꽃길 → ["petals"].
+        햇살 드는 아침 방 → ["dust"]. "별똥별이다!" 하며 밤하늘을 보는 컷 → ["meteor","twinkle"]. 축제 밤 불꽃놀이 → ["fireworks"]. 캠핑장 밤 모닥불 → ["flicker","twinkle"]. 벚꽃길 → ["petals"].
         나쁜 예: 밤이라는 말만 있고 setting에 별이 없다 → []. 차가운 아이스커피 → [](김이 안 난다). 창밖에 비가 오는
         방 안 → [](실내). 낮 하늘에 twinkle → []. 세 개 이상 → 두 개까지만.
 
@@ -372,7 +376,7 @@ final class Prompts {
          "effect":{"type":"string"},
          "motion":{"type":"string","enum":["none","twinkle","rain","snow","flicker","shimmer","petals"]},
          "ambient":{"type":"array","maxItems":2,"items":{"type":"string",
-          "enum":["twinkle","rain","snow","fireflies","petals","leaves","steam","dust","flicker"]}}}}},
+          "enum":["twinkle","rain","snow","fireflies","petals","leaves","steam","dust","flicker","meteor","fireworks","lightning"]}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;
 }

@@ -195,7 +195,8 @@ public record ComicScript(
 
   /**
    * 라이브 모드 화면 효과 층을 거른다: 목록 밖 값, 그 배경 낱말이 컷 장면·배경에 없는 값, 실내 비·눈은 지우고 한 컷에 {@link
-   * Ambient#MAX_PER_PANEL}개까지 남긴다. 예전 콘티(효과 없음)는 그대로다.
+   * Ambient#MAX_PER_PANEL}개까지 남긴다. 남은 효과가 없으면 배경 문구로 하나를 고르고 그래도 없으면 은은한 빛(glow)을 넣어 모든 컷이 움직인다. 예전
+   * 콘티(효과 필드 없음)는 그대로다.
    */
   public ComicScript withAmbientLimits() {
     if (panels == null) {
@@ -212,6 +213,9 @@ public record ComicScript(
               + ", "
               + java.util.Objects.toString(p.setting(), "");
       List<String> kept = Ambient.filter(p.ambient(), background);
+      if (kept.isEmpty()) {
+        kept = Ambient.fallback(background);
+      }
       out.add(kept.equals(p.ambient()) ? p : p.withAmbient(kept));
     }
     return out.equals(panels)

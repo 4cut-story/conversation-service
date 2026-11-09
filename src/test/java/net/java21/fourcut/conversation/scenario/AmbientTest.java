@@ -42,7 +42,7 @@ class AmbientTest {
   }
 
   @Test
-  @DisplayName("FR-041: 콘티 화면 효과는 컷 배경으로 거르고, 필드가 없는 예전 콘티는 그대로다")
+  @DisplayName("FR-041·045: 콘티 화면 효과는 컷 배경으로 거르고 빈 컷은 채우며, 필드가 없는 예전 콘티는 그대로다")
   void limits() {
     ComicScript script =
         new ComicScript(
@@ -58,7 +58,8 @@ class AmbientTest {
     List<List<String>> kept =
         script.withAmbientLimits().panels().stream().map(ComicScript.Panel::ambient).toList();
 
-    assertThat(kept).containsExactly(List.of("steam"), List.of(), List.of("twinkle"));
+    // 근거 없는 효과를 지운 컷에도 은은한 빛을 넣어 모든 컷이 움직인다
+    assertThat(kept).containsExactly(List.of("steam"), List.of("glow"), List.of("twinkle"));
     ComicScript old =
         new ComicScript(
             "t",
@@ -67,6 +68,28 @@ class AmbientTest {
             true,
             List.of());
     assertThat(old.withAmbientLimits()).isSameAs(old);
+  }
+
+  @Test
+  @DisplayName("FR-045: 효과가 없는 컷은 배경 문구에 근거가 있는 효과를, 없으면 은은한 빛을 넣는다")
+  void fallback() {
+    assertThat(Ambient.fallback("bedroom, morning sunlight through the curtains"))
+        .containsExactly("dust");
+    assertThat(Ambient.fallback("rooftop at night, a shooting star across the sky"))
+        .containsExactly("twinkle");
+    assertThat(Ambient.fallback("plain white office")).containsExactly("glow");
+    assertThat(Ambient.fallback(null)).containsExactly("glow");
+  }
+
+  @Test
+  @DisplayName("FR-046: 별똥별·불꽃놀이·번개는 그 낱말이 배경에 있을 때만 맞는다")
+  void events() {
+    assertThat(Ambient.METEOR.fits("night sky, a shooting star falls")).isTrue();
+    assertThat(Ambient.METEOR.fits("night sky full of stars")).isFalse();
+    assertThat(Ambient.FIREWORKS.fits("summer festival, fireworks over the river")).isTrue();
+    assertThat(Ambient.LIGHTNING.fits("dark thunderstorm over the city")).isTrue();
+    assertThat(Ambient.filter(List.of("meteor", "twinkle"), "night, shooting star, stars"))
+        .containsExactly("meteor", "twinkle");
   }
 
   @Test
