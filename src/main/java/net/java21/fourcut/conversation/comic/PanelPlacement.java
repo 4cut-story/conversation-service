@@ -41,7 +41,9 @@ class PanelPlacement {
           + " 중 어디에 있는지, 그림에 없으면 absent로 답한다. 나이·성별·머리·옷으로 가린다. 두 사람을 같은 쪽으로 답하지 않는다."
           + " 그림에 있는 인물은 얼굴 가운데 위치를 그림 폭·높이에 대한 백분율 x, y(왼쪽 위가 0, 오른쪽 아래가 100)로,"
           + " 얼굴 높이를 그림 높이에 대한 백분율 size로 답한다. 인물 참조 그림이 먼저 오면 컷 속 인물을 참조의 얼굴·머리·옷 색과 맞춰 가린다."
-          + " 한 얼굴을 두 사람에게 주지 않는다. 그림에 한 사람만 보이면 그 사람 하나만 답하고 나머지는 absent다.";
+          + " 한 얼굴을 두 사람에게 주지 않는다. 그림에 한 사람만 보이면 그 사람 하나만 답하고 나머지는 absent다."
+          + " 말풍선이 가리면 안 되는 중요한 물건(인물이 들거나 먹거나 보고 있는 물건, 음식, 화면, 글씨)이 있으면 objects에"
+          + " 최대 3개까지 그 물건을 감싸는 상자의 왼쪽 위 x, y와 폭 w, 높이 h를 같은 백분율로 답한다. 사람 몸·가구·벽·창문 같은 배경은 넣지 않는다.";
 
   static final String SCHEMA =
       """
@@ -49,7 +51,10 @@ class PanelPlacement {
       "properties":{"panel":{"type":"integer"},"people":{"type":"array","items":{"type":"object",\
       "properties":{"speaker":{"type":"string"},"side":{"type":"string",\
       "enum":["left","right","center","absent"]},"x":{"type":"number"},"y":{"type":"number"},\
-      "size":{"type":"number"}},"required":["speaker","side"]}}},\
+      "size":{"type":"number"}},"required":["speaker","side"]}},\
+      "objects":{"type":"array","items":{"type":"object","properties":{"x":{"type":"number"},\
+      "y":{"type":"number"},"w":{"type":"number"},"h":{"type":"number"}},\
+      "required":["x","y","w","h"]}}},\
       "required":["panel","people"]}}},"required":["panels"]}""";
 
   private final DirectLlm llm;
@@ -71,12 +76,35 @@ class PanelPlacement {
   record Head(double x, double y, double size) {}
 
   /**
-   * 컷별 자리와 얼굴.
+   * 말풍선이 가리면 안 되는 물건(그릇·휴대폰·화면 등)을 감싸는 상자. 그림 폭·높이에 대한 비율(0~1).
+   *
+   * @param x 왼쪽
+   * @param y 위
+   * @param w 폭
+   * @param h 높이
+   */
+  record Prop(double x, double y, double w, double h) {}
+
+  /** 컷 하나에서 받는 물건 상자 수. */
+  static final int MAX_PROPS = 3;
+
+  /**
+   * 컷별 자리와 얼굴, 물건.
    *
    * @param stages 컷별 인물 자리(확인한 컷은 그림에서 본 쪽)
    * @param heads 컷별 인물 얼굴(본 인물만)
+   * @param props 컷별 가리면 안 되는 물건(본 컷만)
    */
-  record Spots(List<Map<String, Staging.Side>> stages, List<Map<String, Head>> heads) {}
+  record Spots(
+      List<Map<String, Staging.Side>> stages,
+      List<Map<String, Head>> heads,
+      List<List<Prop>> props) {
+
+    /** 물건을 모르는 자리. */
+    Spots(List<Map<String, Staging.Side>> stages, List<Map<String, Head>> heads) {
+      this(stages, heads, List.of());
+    }
+  }
 
   /** 컷별 자리. 확인한 컷은 그림에서 본 자리로, 나머지는 정해 둔 자리 그대로. */
   List<Map<String, Staging.Side>> check(
@@ -177,8 +205,11 @@ class PanelPlacement {
     List<Map<String, Head>> none = fallback(planned).heads();
     Map<Integer, Map<String, String>> seen = read(answer, asked);
     Map<Integer, Map<String, Head>> faces = heads(answer, asked);
+    Map<Integer, List<Prop>> things = props(answer, asked);
     List<Map<String, Staging.Side>> out = new ArrayList<>(planned);
     List<Map<String, Head>> heads = new ArrayList<>(none);
+    List<List<Prop>> props = new ArrayList<>();
+    planned.forEach(p -> props.add(List.of()));
     for (Map.Entry<Integer, Map<String, String>> e : seen.entrySet()) {
       int i = e.getKey();
       Map<String, Staging.Side> fixed = fix(planned.get(i), e.getValue());
@@ -187,8 +218,9 @@ class PanelPlacement {
       }
       out.set(i, fixed);
       heads.set(i, faces.getOrDefault(i, Map.of()));
+      props.set(i, things.getOrDefault(i, List.of()));
     }
-    return new Spots(out, heads);
+    return new Spots(out, heads, props);
   }
 
   /** 확인할 컷(0부터): 컷에 선 인물 가운데 누가 말하는 컷. 혼자 나오는 컷도 얼굴 위치를 보려고 묻는다. */
@@ -325,6 +357,50 @@ class PanelPlacement {
       out.put(i, distinct(faces));
     }
     return out;
+  }
+
+  /** 답에서 컷별 물건 상자. 그림 밖으로 나가거나 너무 크면(컷 절반 넘게 덮으면 배경이다) 뺀다. */
+  Map<Integer, List<Prop>> props(String answer, List<Integer> asked) {
+    Map<Integer, List<Prop>> out = new LinkedHashMap<>();
+    JsonNode root;
+    try {
+      root = json.readTree(answer);
+    } catch (RuntimeException e) {
+      return out;
+    }
+    for (JsonNode p : root.path("panels")) {
+      int i = p.path("panel").asInt(0) - 1;
+      if (!asked.contains(i)) {
+        continue;
+      }
+      List<Prop> found = new ArrayList<>();
+      for (JsonNode o : p.path("objects")) {
+        prop(o).ifPresent(found::add);
+        if (found.size() == MAX_PROPS) {
+          break;
+        }
+      }
+      out.put(i, List.copyOf(found));
+    }
+    return out;
+  }
+
+  /** 물건 상자 하나. 값이 없거나 0~100 밖이거나, 폭·높이가 1 미만이거나 넓이가 컷의 절반을 넘으면 없다. */
+  static Optional<Prop> prop(JsonNode o) {
+    for (String k : new String[] {"x", "y", "w", "h"}) {
+      if (!o.path(k).isNumber()) {
+        return Optional.empty();
+      }
+    }
+    double x = o.path("x").asDouble();
+    double y = o.path("y").asDouble();
+    double w = o.path("w").asDouble();
+    double h = o.path("h").asDouble();
+    if (x < 0 || y < 0 || w < 1 || h < 1 || x + w > 100.5 || y + h > 100.5 || w * h > 5000) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        new Prop(x / 100, y / 100, Math.min(w, 100 - x) / 100, Math.min(h, 100 - y) / 100));
   }
 
   /**

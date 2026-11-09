@@ -95,7 +95,15 @@ class LiveModeTest {
   @Test
   @DisplayName("FR-003: 컷 그림 한 장은 테두리까지 정사각형이고 말풍선이 들어간다")
   void livePanel() throws Exception {
-    byte[] png = new ComicComposer().livePanel(script, 0, fill(Color.WHITE), Map.of(), Map.of());
+    byte[] png =
+        new ComicComposer()
+            .livePanel(
+                script,
+                0,
+                fill(Color.WHITE),
+                Map.of(),
+                Map.of(),
+                List.of(new PanelPlacement.Prop(0.1, 0.1, 0.2, 0.2)));
     BufferedImage image = ImageIO.read(new ByteArrayInputStream(png));
     assertThat(image.getWidth()).isEqualTo(ComicComposer.LIVE_SIZE);
     assertThat(image.getHeight()).isEqualTo(ComicComposer.LIVE_SIZE);

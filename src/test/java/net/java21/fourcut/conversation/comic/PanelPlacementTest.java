@@ -158,6 +158,29 @@ class PanelPlacementTest {
   }
 
   @Test
+  @DisplayName("FR-007: 답에 가리면 안 되는 물건 상자가 있으면 컷별로 받고, 이상한 상자는 버리며 세 개까지만 쓴다")
+  void props() {
+    ComicScript s = script();
+    List<Map<String, Side>> planned = Staging.panels(s);
+    when(llm.available()).thenReturn(true);
+    when(llm.see(anyString(), anyString(), anyString(), anyString(), anyList()))
+        .thenReturn(
+            Optional.of(
+                "{\"panels\":[{\"panel\":1,\"people\":[{\"speaker\":\"A\",\"side\":\"right\"}],"
+                    + "\"objects\":[{\"x\":30,\"y\":55,\"w\":20,\"h\":10},"
+                    + "{\"x\":0,\"y\":0,\"w\":90,\"h\":90},{\"x\":80,\"y\":80,\"w\":40,\"h\":10},"
+                    + "{\"x\":1,\"y\":1,\"w\":5,\"h\":5},{\"x\":2,\"y\":2,\"w\":5,\"h\":5},"
+                    + "{\"x\":3,\"y\":3,\"w\":5,\"h\":5}]}]}"));
+    PanelPlacement.Spots spots = placement.locate(s, images(), planned);
+    assertThat(spots.props()).hasSize(4);
+    assertThat(spots.props().get(0)).hasSize(3);
+    assertThat(spots.props().get(0).get(0)).isEqualTo(new PanelPlacement.Prop(0.3, 0.55, 0.2, 0.1));
+    assertThat(spots.props().get(1)).isEmpty();
+    assertThat(PanelPlacement.fallback(planned).props()).isEmpty();
+    assertThat(new PanelPlacement.Spots(planned, List.of()).props()).isEmpty();
+  }
+
+  @Test
   @DisplayName("FR-007: 그림 밖 위치, 너무 작거나 큰 얼굴, 안 보인 인물은 얼굴로 쓰지 않는다")
   void headRange() {
     var m = JsonMapper.builder().build();
