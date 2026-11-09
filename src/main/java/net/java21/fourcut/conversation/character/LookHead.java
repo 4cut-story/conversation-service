@@ -437,8 +437,8 @@ public record LookHead(String animal, String gender, String age) {
 
   /**
    * 콘티 외모에서 머리·옷이 아닌 마디(소품: "brass telescope", "wooden sword"). 첫 마디(나이·성별)는 빼고, 캐릭터 모습에 이미 있는 마디도
-   * 뺀다. 아래옷("blue jeans")·신발("white sneakers") 마디는 캐릭터 모습에 그 부분이 없을 때만 붙인다. 모습 문구에 아래옷·신발이 없으면 컷마다
-   * 바지 색이 바뀌었다(회차 29). 없으면 빈 문자열.
+   * 뺀다. 아래옷("blue jeans") 마디는 캐릭터 모습에 아래옷이 없을 때만 붙이고, 신발 마디는 캐릭터 모습이 없을 때만 붙인다. 모습 문구에 아래옷·신발이 없으면
+   * 컷마다 바지 색이 바뀌었다(회차 29). 없으면 빈 문자열.
    */
   static String props(String scriptLook, String characterLook) {
     if (scriptLook == null) {
@@ -447,7 +447,8 @@ public record LookHead(String animal, String gender, String age) {
     String c = characterLook == null ? "" : characterLook.toLowerCase(Locale.ROOT);
     Set<String> own = Set.copyOf(Arrays.asList(words(c)));
     boolean hasBottom = own.stream().anyMatch(w -> BOTTOM.contains(w) || ONE_PIECE.contains(w));
-    boolean hasShoes = own.stream().anyMatch(SHOES::contains);
+    // 참조 그림이 있는 인물은 신발을 그림이 정하게 둔다. 콘티 신발 글과 참조 그림 신발이 달라 컷마다 신발이 바뀌었다(회차 29 콘티 5판).
+    boolean hasShoes = !c.isBlank() || own.stream().anyMatch(SHOES::contains);
     String[] parts = scriptLook.split(",");
     return Arrays.stream(parts, 1, parts.length)
         .map(String::strip)

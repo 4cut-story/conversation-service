@@ -143,13 +143,13 @@ class LookHeadTest {
   }
 
   @Test
-  @DisplayName("FR-006: 콘티의 아래옷·신발은 캐릭터 모습에 그 부분이 없을 때만 그림 외모에 붙인다")
+  @DisplayName("FR-006: 콘티의 아래옷은 캐릭터 모습에 아래옷이 없을 때만 붙이고, 신발은 참조 그림이 정하게 둔다")
   void drawLookAddsBottomAndShoes() {
     assertThat(
             CharacterLibrary.drawLook(
                 "young man, black short hair, navy sweater",
                 "young man, short hair, navy sweater, gray jeans, white sneakers"))
-        .isEqualTo("young man, black short hair, navy sweater, gray jeans, white sneakers");
+        .isEqualTo("young man, black short hair, navy sweater, gray jeans");
     assertThat(
             CharacterLibrary.drawLook(
                 "brown bear, white shirt, long orange overall pants",
@@ -166,7 +166,7 @@ class LookHeadTest {
             CharacterLibrary.drawLook(
                 "brown bear, white shirt, orange overalls",
                 "fox, orange scarf, blue jeans, white sneakers"))
-        .isEqualTo("brown bear, white shirt, orange overalls, white sneakers");
+        .isEqualTo("brown bear, white shirt, orange overalls");
   }
 
   @Test

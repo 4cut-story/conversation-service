@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.5";
+  static final String VERSION = "2026-11-09.6";
 
   private Prompts() {}
 
@@ -141,7 +141,8 @@ final class Prompts {
       소품 (props, 0~4개, 한 번만 정한다)
       - 이야기의 핵심 물건과 중심 동물(반려동물 등). key는 짧은 한국어 이름(예: 줄넘기, 연, 강아지).
         draw는 그림용 영어 8단어 이내로 재질·색·크기·종까지 쓴다(예: "red plastic jump rope with wooden handles",
-        "small yellow diamond-shaped paper kite", "small old brown-and-white dog"). 비슷한 다른 물건(연 → 풍선, 노란 연 →
+        "small yellow diamond-shaped paper kite", "small old brown-and-white dog"). 반려동물 소품은 "on four legs, no
+        clothes"를 붙여 옷 입은 인물과 섞이지 않게 쓴다. 비슷한 다른 물건(연 → 풍선, 노란 연 →
         다른 색 연)으로 바뀌지 않게 구체적으로 쓴다.
       - 인물이 여러 컷에 들고 다니거나 몸에 지니는 물건(가방, 지팡이, 책, 휴대폰)도 props에 넣는다. props에 없는 물건은 컷마다
         다른 물건(배낭 → 손가방 → 바구니)으로 그려진다.
@@ -198,6 +199,8 @@ final class Prompts {
         한 컷에 여러 명이 나오면 그림 모델이 같은 사람을 둘로 그리거나 두 사람의 옷·얼굴을 섞는다.
         두 명 컷은 두 사람을 왼쪽과 오른쪽에 떨어뜨려 세우고, 몸이 겹치거나 손이 맞닿는 동작(안기, 손잡기, 악수, 함께 쥐기,
         귓속말)을 쓰지 않는다. 물건을 건넬 때도 물건을 사이에 두고 각자 한 손을 뻗는 모습으로 쓴다.
+        두 사람이 탁자·판·책상을 사이에 두고 마주 앉는 대칭 구도도 쓰지 않는다(같은 사람이 양쪽에 둘로 그려진다). 판 놀이나
+        식사처럼 마주 앉는 장면은 한 사람만 그리거나, 두 사람을 같은 쪽에 나란히 두고 같은 방향을 보게 쓴다.
       - action: 그림 모델용 영어 14단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
         (예: "{A} jumps over {줄넘기} swinging it with both hands", "{B} runs holding {연} string up high").
         물건을 쓰는 동작은 어느 손(손가락)이 물건의 어느 부분에 무엇을 하는지, 그 부분에 무엇이 보이는지까지 쓴다
@@ -208,6 +211,8 @@ final class Prompts {
         동작은 얼굴을 가려도 실루엣만으로 읽히는 큰 동작으로 고른다. 소매 당기기, 귓속말, 손가락 개수 세기, 윙크, 고개 끄덕이기
         처럼 작고 미묘한 동작은 그림에서 그냥 서 있는 모습으로 바뀌므로, 같은 뜻의 큰 동작(팔을 뻗어 가리키기, 두 손을 번쩍
         들기, 물건을 머리 위로 들기)으로 바꿔 쓴다. 한 동작에 물건은 하나만 쓴다.
+        두 팔이 서로 다른 일을 하는 동작(팔짱 끼고 가리키기, 한 손으로 들고 다른 손으로 가리키기)은 팔이 셋으로 그려지므로,
+        한 팔만 쓰거나 두 팔이 같은 일을 하는 동작으로 쓴다.
         그 컷 lines의 speaker는 모두 그 컷에 나오는 인물이다. 대사를 고를 때 컷에 나오는 사람의 말을 고르고, 두 사람의 말을
         주고받는 순간이면 두 명 컷으로 둔다(예: "{A} holds out {연} toward {B}", "{A} and {B} stand apart, both looking
         up at {자판기}"). 한 컷에 세 화자가 말하게 되면 대사를 두 화자로 줄인다.
