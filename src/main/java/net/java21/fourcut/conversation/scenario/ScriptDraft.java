@@ -120,7 +120,8 @@ final class ScriptDraft {
       if (SPEAKER.matcher(key).matches()) {
         return scene.contains("{" + key + "}")
             ? "looking at the other person"
-            : "looking off to the side at someone";
+            // "at someone"이면 그림 모델이 그 사람을 그려 넣었다. 참조가 한 명뿐이라 같은 사람이 둘 그려졌다(시험 30회).
+            : "looking off to the side";
       }
       // 그 컷 동작에 이미 나온 물건은 이름을 다시 쓰지 않는다. 같은 이름을 두 번 읽으면 물건을 두 번 그린다
       if (marked.contains("{" + key + "}")) {
