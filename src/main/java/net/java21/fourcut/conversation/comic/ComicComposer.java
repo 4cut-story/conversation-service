@@ -196,6 +196,9 @@ public class ComicComposer {
     List<Rectangle> faces = new ArrayList<>();
     heads.values().forEach(h -> faces.add(face(h, panelTop)));
     props.forEach(p -> faces.add(prop(p, panelTop)));
+    // 몸까지 피한 자리: 얼굴 아래 몸통은 가려도 읽히지만, 벽·하늘 같은 빈 곳이 있으면 그쪽이 낫다(로봇청소기 1·2컷)
+    List<Rectangle> bodyFree = new ArrayList<>(faces);
+    heads.values().forEach(h -> bodyFree.add(body(face(h, panelTop), panelTop)));
     List<Rectangle> taken = new ArrayList<>();
     for (int i = 0; i < lines.size(); i++) {
       ComicScript.Line line = lines.get(i);
@@ -213,22 +216,25 @@ public class ComicComposer {
       int y;
       if (head != null) {
         Rectangle face = face(head, panelTop);
-        Rectangle box = clear(face, w, h, panelTop, faces, taken);
-        // 넓은 말풍선이 들어갈 빈 자리가 없으면(얼굴이 크게 그려진 컷) 폭을 좁혀 줄을 늘린 말풍선으로 빈 자리를 다시 찾는다
-        for (int n = 0; box == null && n < NARROW.length; n++) {
-          int limit = (int) (PANEL * NARROW[n]);
-          if (limit >= w) {
-            continue;
-          }
-          List<String> narrow = wrap(text, fm, limit - 2 * BUBBLE_PAD);
-          int nw = narrow.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
-          int nh = narrow.size() * fm.getHeight() + 2 * BUBBLE_PAD;
-          Rectangle fit = clear(face, nw, nh, panelTop, faces, taken);
-          if (fit != null) {
-            rows = narrow;
-            w = nw;
-            h = nh;
-            box = fit;
+        // 얼굴·물건·몸을 모두 피한 자리, 없으면 몸은 가려도 되는 자리를 찾는다. 넓은 말풍선이 들어갈 자리가 없으면 폭을 좁혀 줄을 늘린 말풍선으로
+        // 다시 찾는다(얼굴이 크게 그려진 컷)
+        Rectangle box = null;
+        for (List<Rectangle> avoid : List.of(bodyFree, faces)) {
+          for (int n = -1; box == null && n < NARROW.length; n++) {
+            int limit = n < 0 ? max : (int) (PANEL * NARROW[n]);
+            if (n >= 0 && limit >= max) {
+              continue;
+            }
+            List<String> tried = wrap(text, fm, limit - 2 * BUBBLE_PAD);
+            int tw = tried.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
+            int th = tried.size() * fm.getHeight() + 2 * BUBBLE_PAD;
+            Rectangle fit = clear(face, tw, th, panelTop, avoid, taken);
+            if (fit != null) {
+              rows = tried;
+              w = tw;
+              h = th;
+              box = fit;
+            }
           }
         }
         if (box == null) {
@@ -291,7 +297,17 @@ public class ComicComposer {
     int cy = panelTop + (int) Math.round(head.y() * PANEL);
     int r = Math.max(32, (int) Math.round(head.size() * PANEL));
     int up = Math.min(r / 2, 48);
-    return new Rectangle(cx - r, cy - r - up, 2 * r, 2 * r + up);
+    // 머리는 높이보다 폭이 좁고 가로 위치는 덜 틀리므로 옆으로는 덜 넓힌다. 그래야 얼굴 옆 벽에 말풍선이 들어간다
+    int half = Math.max(24, (int) Math.round(r * 0.7));
+    return new Rectangle(cx - half, cy - r - up, 2 * half, 2 * r + up);
+  }
+
+  /** 얼굴 아래 몸 자리(합성 이미지 좌표): 얼굴 자리 폭의 1.3배로 얼굴 아래에서 컷 아래까지. */
+  static Rectangle body(Rectangle face, int panelTop) {
+    int w = (int) Math.round(face.width * 1.3);
+    int x = (int) Math.round(face.getCenterX() - w / 2.0);
+    int y = face.y + face.height;
+    return new Rectangle(x, y, w, Math.max(0, panelTop + PANEL - y));
   }
 
   /** 물건 자리(합성 이미지 좌표). 둘레를 조금 넓힌다. */
@@ -333,7 +349,7 @@ public class ComicComposer {
   }
 
   /** 좁힌 말풍선 폭(컷 폭에 대한 비율). 넓은 말풍선이 들어갈 빈 자리가 없을 때 차례로 써 본다. */
-  private static final double[] NARROW = {0.5, 0.38};
+  private static final double[] NARROW = {0.5, 0.38, 0.3};
 
   /**
    * 얼굴·물건·앞 말풍선을 하나도 가리지 않고 대사 순서대로 읽히는 자리. 정해 둔 후보(얼굴 위, 아래, 옆…)를 먼저 보고, 모두 걸리면 컷 전체를 훑어 화자 얼굴에 가장

@@ -180,7 +180,8 @@ class ComicComposerTest {
     int size = (int) Math.round(0.15 * panel);
     // 얼굴 가운데에서 위로 얼굴 높이보다 더 덮는다(답한 가운데가 입 쪽이어도 이마·머리카락까지)
     assertThat(cy - face.y).isGreaterThan(size);
-    assertThat(face.width).isGreaterThanOrEqualTo(2 * size);
+    assertThat(face.width).isGreaterThan(size);
+    assertThat(face.height).isGreaterThanOrEqualTo(2 * size);
     var above = ComicComposer.place(face, 400, 80, top, List.of(face), List.of());
     assertThat(above.y + above.height).isLessThan(face.y);
     // 얼굴 위 말풍선은 얼굴에서 떨어져 꼬리가 얼굴 안으로 들어가지 않는다
@@ -202,6 +203,22 @@ class ComicComposerTest {
     // 빈 자리가 없어도 place는 가장 덜 가리는 자리를 준다
     assertThat(ComicComposer.place(face, (int) (panel * 0.72), 160, top, List.of(face), List.of()))
         .isNotNull();
+  }
+
+  @Test
+  @DisplayName("FR-007: 얼굴 위에 자리가 없으면 몸을 덮는 얼굴 아래보다 얼굴 옆 빈 벽을 먼저 쓴다")
+  void prefersWallOverBody() {
+    int top = 100;
+    var face = ComicComposer.face(new PanelPlacement.Head(0.5, 0.3, 0.2), top);
+    var body = ComicComposer.body(face, top);
+    assertThat(body.y).isEqualTo(face.y + face.height);
+    assertThat(body.y + body.height).isEqualTo(top + ComicComposer.PANEL);
+    List<java.awt.Rectangle> avoid = List.of(face, body);
+    var box = ComicComposer.clear(face, 220, 150, top, avoid, List.of());
+    assertThat(box).isNotNull();
+    assertThat(box.intersects(face)).isFalse();
+    assertThat(box.intersects(body)).isFalse();
+    assertThat(box.y).isLessThan(face.y + face.height);
   }
 
   @Test
