@@ -32,7 +32,17 @@ public enum Ambient {
   DUST("sunbeam|sunbeams|sunlight|sunlit|light rays|dusty|attic", false),
   /** 촛불·등불·모닥불·네온 깜빡임. */
   FLICKER(
-      "candle|candles|candlelight|lantern|lanterns|neon|campfire|fireplace|torch|bonfire", false);
+      "candle|candles|candlelight|lantern|lanterns|neon|campfire|fireplace|torch|bonfire", false),
+  /** 별똥별이 하늘을 가로질러 떨어진다. */
+  METEOR(
+      "shooting star|shooting stars|falling star|falling stars|meteor|meteors|meteor shower",
+      false),
+  /** 불꽃놀이가 터진다. */
+  FIREWORKS("firework|fireworks", false),
+  /** 번개가 번쩍인다. */
+  LIGHTNING("lightning|thunder|thunderstorm", false),
+  /** 은은하게 떠다니는 빛 알갱이. 배경과 상관없이 어울려서, 다른 효과가 없는 컷에 코드가 넣는다. */
+  GLOW("", false);
 
   /** 한 컷에 겹치는 효과 최대 수. 많으면 그림이 가린다. */
   public static final int MAX_PER_PANEL = 2;
@@ -47,7 +57,7 @@ public enum Ambient {
   private final boolean outdoorOnly;
 
   Ambient(String background, boolean outdoorOnly) {
-    this.background = Pattern.compile("\\b(" + background + ")\\b");
+    this.background = background.isEmpty() ? null : Pattern.compile("\\b(" + background + ")\\b");
     this.outdoorOnly = outdoorOnly;
   }
 
@@ -67,6 +77,9 @@ public enum Ambient {
 
   /** 이 효과의 배경이 그 컷 장면·배경 문구에 그려지는지. 실내 비·눈은 아니다. */
   public boolean fits(String sceneAndSetting) {
+    if (background == null) {
+      return true;
+    }
     if (sceneAndSetting == null || sceneAndSetting.isBlank()) {
       return false;
     }
@@ -93,5 +106,17 @@ public enum Ambient {
       }
     }
     return out;
+  }
+
+  /**
+   * 효과가 하나도 남지 않은 컷의 효과 (marco: 한 컷만 움직이지 않고 모든 컷에 움직임이 있게). 배경 문구에 근거 낱말이 있는 첫 효과를 쓰고, 없으면 {@link
+   * #GLOW}다.
+   */
+  public static List<String> fallback(String sceneAndSetting) {
+    return Arrays.stream(values())
+        .filter(a -> a != GLOW && a.fits(sceneAndSetting))
+        .findFirst()
+        .map(a -> List.of(a.code()))
+        .orElse(List.of(GLOW.code()));
   }
 }
