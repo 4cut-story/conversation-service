@@ -105,6 +105,7 @@ comic:
   production-backfill: ${COMIC_PRODUCTION_BACKFILL:false}
   cast-portrait-backfill: ${COMIC_CAST_PORTRAIT_BACKFILL:false}
   summary-backfill: ${COMIC_SUMMARY_BACKFILL:false}
+  live-backfill: ${COMIC_LIVE_BACKFILL:false}
 
 # 캐릭터 DB (REQ-018). 콘티 인물을 이름이나 설명 임베딩(pgvector, BGE-M3 1024차원)으로 찾아 IP-Adapter 참조로 그린다
 characters:
