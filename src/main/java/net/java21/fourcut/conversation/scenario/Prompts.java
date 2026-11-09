@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.3";
+  static final String VERSION = "2026-11-09.4";
 
   private Prompts() {}
 
@@ -148,7 +148,11 @@ final class Prompts {
         pieces standing on it", "one tall red vending machine with rows of drink cans behind glass").
         작은 조각을 집는 동작은 크기를 함께 쓴다(예: "{A} lifts one tiny white chess piece with two fingers").
       - 그림 모델은 글자를 제대로 못 쓰고 가짜 글자를 그린다. 글자가 보이는 물건(간판, 팻말, 문자 메시지, 책 표지)은 글자 없이
-        모양과 색으로 쓴다(예: "blank wooden shop sign", "phone with glowing green screen").
+        모양과 색으로 쓴다(예: "blank wooden shop sign", "phone with glowing green screen"). 병풍·족자·액자·칠판·화면처럼
+        글씨나 그림이 들어가기 쉬운 면은 "plain"을 붙여 무늬 없이 쓰고, 화면에 보여야 할 것은 글자 대신 그림 하나로 쓴다
+        (예: "screen showing a big burger picture").
+      - 인물마다 들고 다니는 물건은 하나까지만 둔다. 모양이 비슷한 물건(지팡이와 목검, 단검과 칼)을 두 인물에게 나눠 주지
+        않는다. 서로 바뀌어 그려진다.
 
       장소 (places, 1~3개, 한 번만 정한다)
       - key는 짧은 한국어 이름(예: 놀이터, 세탁실). draw는 그림용 영어 14단어 이내로 장소 이름을 먼저 쓰고, 한눈에 그 장소인 걸
@@ -182,16 +186,27 @@ final class Prompts {
       - shot: wide, medium, close-up 중 하나. wide는 온몸과 장소가 보이는 컷, medium은 허리 위, close-up은 가슴 위 얼굴이
         크게 보이는 컷이다. 기는 보통 wide, 전은 보통 close-up이고, wide는 전체 컷의 절반을 넘지 않는다. close-up은 한
         사람만 나오는 컷에 쓴다. 같은 구도가 두 컷 넘게 이어지지 않게 섞는다.
-      - action: 그림 모델용 영어 16단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
+        shot은 action과 맞아야 그림에 그대로 나온다. 걷기·달리기·뛰기·앉기·무릎 꿇기·웅크리기·눕기처럼 다리가 보여야 하는
+        동작은 wide에만 쓴다. medium·close-up 컷의 action은 손·팔·얼굴만 쓰는 동작이다(가리키기, 들어 올리기, 누르기,
+        감싸 쥐기, 두 손으로 볼 감싸기).
+      - 컷에 나오는 사람: 한 컷은 그 컷의 주인공 한 명을 기본으로 그린다. 두 사람이 몸으로 함께 하는 일(물건 건네기, 같은
+        물건 함께 보기)이 장면의 핵심일 때만 두 명을 넣고, 두 명 컷은 전체 컷의 절반을 넘지 않는다. 세 명 이상은 넣지 않는다.
+        한 컷에 여러 명이 나오면 그림 모델이 같은 사람을 둘로 그리거나 두 사람의 옷·얼굴을 섞는다.
+        두 명 컷은 두 사람을 왼쪽과 오른쪽에 떨어뜨려 세우고, 몸이 겹치거나 손이 맞닿는 동작(안기, 손잡기, 악수, 함께 쥐기,
+        귓속말)을 쓰지 않는다. 물건을 건넬 때도 물건을 사이에 두고 각자 한 손을 뻗는 모습으로 쓴다.
+      - action: 그림 모델용 영어 14단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
         (예: "{A} jumps over {줄넘기} swinging it with both hands", "{B} runs holding {연} string up high").
         물건을 쓰는 동작은 어느 손(손가락)이 물건의 어느 부분에 무엇을 하는지, 그 부분에 무엇이 보이는지까지 쓴다
         (예: "{B} presses a drink button on {자판기} with one finger", "{A} pours water from {주전자} into
         a cup", "{A} holds {휴대폰} up to {B}, screen showing a photo").
         이야기의 핵심 물건은 두 컷 이상에 나온다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는
         모습만 쓰지 않는다. 동작은 손·팔·몸이 무엇을 하는지 보이게 쓴다.
-        그 컷 lines의 speaker는 모두 action에 넣는다. 말하는 사람이 컷에 없으면 독자가 누가 말하는지 모른다. 두 사람이 말하는
-        컷은 두 사람이 함께 하는 동작 하나로 쓴다(예: "{A} hands {연} to {B}", "{A} and {B} stare at {자판기} glass").
-        세 명 이상은 넣지 않는다. 한 컷에 세 화자가 말하게 되면 대사를 두 화자로 줄인다.
+        동작은 얼굴을 가려도 실루엣만으로 읽히는 큰 동작으로 고른다. 소매 당기기, 귓속말, 손가락 개수 세기, 윙크, 고개 끄덕이기
+        처럼 작고 미묘한 동작은 그림에서 그냥 서 있는 모습으로 바뀌므로, 같은 뜻의 큰 동작(팔을 뻗어 가리키기, 두 손을 번쩍
+        들기, 물건을 머리 위로 들기)으로 바꿔 쓴다. 한 동작에 물건은 하나만 쓴다.
+        그 컷 lines의 speaker는 모두 그 컷에 나오는 인물이다. 대사를 고를 때 컷에 나오는 사람의 말을 고르고, 두 사람의 말을
+        주고받는 순간이면 두 명 컷으로 둔다(예: "{A} holds out {연} toward {B}", "{A} and {B} stand apart, both looking
+        up at {자판기}"). 한 컷에 세 화자가 말하게 되면 대사를 두 화자로 줄인다.
       - place: places의 key 하나. 장소는 key로만 고른다.
       - setting: 그 컷의 때와 분위기를 보여 주는 배경 한 마디와, 더 보여야 할 배경 물건 0~1개를 그림 모델용 영어 10단어
         이내로 쓴다. 장소 이름과 인물·표정은 쓰지 않는다. 때·하늘·날씨·빛은 눈에 보이는 모습으로 쓴다(예: 밤 "night, deep
@@ -203,7 +218,7 @@ final class Prompts {
         흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.
       - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
         쓴다(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로
-        두지 않는다. 성격·외모·이름은 쓰지 않는다. lookAt은 그 인물이 보는 곳이다: 말을 거는 상대의 자리표({B}), 대사가 가리키는
+        두지 않는다. 성격·외모·이름과 안경·모자·머리 같은 몸에 지닌 것은 쓰지 않는다(다른 인물에게 옮겨 그려진다). lookAt은 그 인물이 보는 곳이다: 말을 거는 상대의 자리표({B}), 대사가 가리키는
         물건의 자리표({휴대폰}), 또는 "viewer"·"sky"·"down" 같은 영어 한 낱말. 말하는 사람과 듣는 사람이 엉뚱한 곳을 보지 않게 한다.
       - lines: 컷당 1~2개(대사 없는 컷은 만들지 않는다), 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간 순서대로 쓴다(1컷 대사가 가장 먼저 한
         말, 마지막 컷이 가장 나중). 앞뒤 대화는 상황 이해에만 쓴다. 대화의 말을 고쳐 쓰지 말고 그대로 옮기되,
