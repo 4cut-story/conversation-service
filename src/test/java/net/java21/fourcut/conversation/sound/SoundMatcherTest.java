@@ -169,4 +169,17 @@ class SoundMatcherTest {
     assertThat(new SoundMatcher((q, n) -> List.of()).effects(List.of("알람")))
         .containsExactly(Optional.empty());
   }
+
+  @Test
+  @DisplayName("FR-019: 효과음은 사건 소리의 끝 낱말(중심)이 제목에 있는 후보를 먼저 고른다 (휴대폰 알람 → 진동이 아니라 알람)")
+  void effectHead() {
+    var vibrate = described("aaaaaaaaaaaaaaaaaaaaa", "휴대폰 진동", "");
+    var alarm = described("bbbbbbbbbbbbbbbbbbbbb", "전자 알람시계", "");
+    SoundMatcher matcher = new SoundMatcher((q, n) -> List.of(), (q, n) -> List.of(vibrate, alarm));
+
+    assertThat(matcher.effects(List.of("휴대폰 알람 소리")).get(0))
+        .map(SoundMatcher.Picked::publicId)
+        .contains("bbbbbbbbbbbbbbbbbbbbb");
+    assertThat(SoundMatcher.headFirst("초인종", List.of(vibrate, alarm))).isSameAs(vibrate);
+  }
 }
