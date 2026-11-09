@@ -44,10 +44,10 @@ final class SafeUrl {
     try {
       uri = new URI(raw.strip()).normalize();
     } catch (URISyntaxException e) {
-      throw blocked("형식");
+      throw new ArticleException(ArticleException.Reason.BLOCKED_URL, "형식", e);
     }
     String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
-    if (!scheme.equals("http") && !scheme.equals("https")) {
+    if (!"http".equals(scheme) && !"https".equals(scheme)) {
       throw blocked("scheme");
     }
     if (uri.getRawUserInfo() != null) {
@@ -73,7 +73,7 @@ final class SafeUrl {
       // IP 주소를 바로 넣었으면 이름 풀기 없이 그 주소를 검사한다
       addresses = literal(host) ? List.of(InetAddress.getByName(host)) : resolver.resolve(host);
     } catch (UnknownHostException e) {
-      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "dns");
+      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "dns", e);
     }
     if (addresses.isEmpty()) {
       throw new ArticleException(ArticleException.Reason.UNREACHABLE, "dns");
@@ -94,7 +94,7 @@ final class SafeUrl {
     if (host.indexOf('.') < 0 && host.indexOf(':') < 0) {
       return true;
     }
-    return host.equals("localhost")
+    return "localhost".equals(host)
         || host.endsWith(".localhost")
         || host.endsWith(".local")
         || host.endsWith(".internal")

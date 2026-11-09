@@ -126,7 +126,7 @@ class ArticleFlowTest {
                             + base
                             + "/news/1\",\"manualLlm\":true,\"concept\":\"NEWSPAPER\"}"))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.status").value("QUEUED"))
+            .andExpect(jsonPath("$.status").value("TRANSCRIBING"))
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -134,7 +134,7 @@ class ArticleFlowTest {
 
     mvc.perform(as(get("/api/v1/conversations/{id}", id), owner))
         .andExpect(jsonPath("$.source").value("ARTICLE"))
-        .andExpect(jsonPath("$.status").value("TRANSCRIBING"))
+        .andExpect(jsonPath("$.stage").value("TRANSCRIBING"))
         .andExpect(jsonPath("$.sourceUrl").value(base + "/news/1"))
         .andExpect(jsonPath("$.sourceTitle").value("30년 떡집의 마지막 날"))
         .andExpect(jsonPath("$.language").value("ko"));
@@ -156,7 +156,7 @@ class ArticleFlowTest {
     String next = body(as(get("/api/v1/conversations/{id}/llm-jobs", id), owner));
     assertThat((String) JsonPath.read(next, "$[0].step")).isEqualTo("EXTRACT");
     mvc.perform(as(get("/api/v1/conversations/{id}", id), owner))
-        .andExpect(jsonPath("$.status").value("SELECTING"));
+        .andExpect(jsonPath("$.stage").value("SELECTING"));
 
     Long internal =
         jdbc.queryForObject("select id from conversations where public_id = ?", Long.class, id);

@@ -37,17 +37,17 @@ public class ArticleReader {
       return work.get(properties.timeout().toMillis() + 5_000, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
       work.cancel(true);
-      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "timeout");
+      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "timeout", e);
     } catch (ExecutionException e) {
       if (e.getCause() instanceof ArticleException a) {
         log.info("기사를 읽지 못했다: reason={} {}", a.reason(), a.getMessage());
-        throw a;
+        throw new ArticleException(a.reason(), null, e);
       }
       log.warn("기사 읽기 오류", e.getCause());
-      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "error");
+      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "error", e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "interrupted");
+      throw new ArticleException(ArticleException.Reason.UNREACHABLE, "interrupted", e);
     }
   }
 

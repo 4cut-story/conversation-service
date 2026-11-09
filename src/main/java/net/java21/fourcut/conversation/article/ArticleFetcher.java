@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,6 +28,7 @@ class ArticleFetcher {
   private final SafeUrl.Resolver resolver;
   private final HttpClient client;
 
+  @Autowired
   ArticleFetcher(ArticleProperties properties) {
     this(properties, SafeUrl.Resolver.SYSTEM);
   }
@@ -48,28 +50,32 @@ class ArticleFetcher {
       SafeUrl.Checked checked = SafeUrl.check(next, resolver, properties.allowPrivate());
       HttpResponse<InputStream> response = send(checked.uri());
       int status = response.statusCode();
-      if (status >= 300 && status < 400) {
-        String location = response.headers().firstValue("Location").orElse(null);
-        close(response);
-        if (location == null) {
-          throw unreachable("redirect");
-        }
-        next = checked.uri().resolve(location.strip()).toString();
-        continue;
+      if (status < 300 || status >= 400) {
+        return page(checked, response);
       }
-      if (status != 200) {
-        close(response);
-        throw unreachable("HTTP " + status);
+      String location = response.headers().firstValue("Location").orElse(null);
+      close(response);
+      if (location == null) {
+        throw unreachable("redirect");
       }
-      String type = response.headers().firstValue("Content-Type").orElse("text/html");
-      String lower = type.toLowerCase(Locale.ROOT);
-      if (!lower.contains("html")) {
-        close(response);
-        throw new ArticleException(ArticleException.Reason.NOT_HTML, type);
-      }
-      return new Page(checked.uri(), type, read(response));
+      next = checked.uri().resolve(location.strip()).toString();
     }
     throw unreachable("redirects");
+  }
+
+  /** 넘겨주기가 아닌 응답: 200 HTML이면 본문을 읽는다. */
+  private Page page(SafeUrl.Checked checked, HttpResponse<InputStream> response) {
+    int status = response.statusCode();
+    if (status != 200) {
+      close(response);
+      throw unreachable("HTTP " + status);
+    }
+    String type = response.headers().firstValue("Content-Type").orElse("text/html");
+    if (!type.toLowerCase(Locale.ROOT).contains("html")) {
+      close(response);
+      throw new ArticleException(ArticleException.Reason.NOT_HTML, type);
+    }
+    return new Page(checked.uri(), type, read(response));
   }
 
   private HttpResponse<InputStream> send(URI uri) {
@@ -84,10 +90,10 @@ class ArticleFetcher {
     try {
       return client.send(request, HttpResponse.BodyHandlers.ofInputStream());
     } catch (IOException e) {
-      throw unreachable(e.getClass().getSimpleName());
+      throw unreachable(e.getClass().getSimpleName(), e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw unreachable("interrupted");
+      throw unreachable("interrupted", e);
     }
   }
 
@@ -96,7 +102,7 @@ class ArticleFetcher {
     try (InputStream in = response.body()) {
       return in.readNBytes(properties.maxBytes());
     } catch (IOException e) {
-      throw unreachable("read");
+      throw unreachable("read", e);
     }
   }
 
@@ -109,6 +115,10 @@ class ArticleFetcher {
   }
 
   private static ArticleException unreachable(String detail) {
-    return new ArticleException(ArticleException.Reason.UNREACHABLE, detail);
+    return unreachable(detail, null);
+  }
+
+  private static ArticleException unreachable(String detail, Throwable cause) {
+    return new ArticleException(ArticleException.Reason.UNREACHABLE, detail, cause);
   }
 }

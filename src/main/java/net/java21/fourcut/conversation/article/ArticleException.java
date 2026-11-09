@@ -28,7 +28,11 @@ public class ArticleException extends RuntimeException {
   private final Reason reason;
 
   public ArticleException(Reason reason, String detail) {
-    super(reason.message() + (detail == null ? "" : " (" + detail + ")"));
+    this(reason, detail, null);
+  }
+
+  public ArticleException(Reason reason, String detail, Throwable cause) {
+    super(reason.message() + (detail == null ? "" : " (" + detail + ")"), cause);
     this.reason = reason;
   }
 

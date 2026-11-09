@@ -101,7 +101,7 @@ final class ArticleExtractor {
     try {
       doc = Jsoup.parse(new ByteArrayInputStream(html), null, url);
     } catch (IOException e) {
-      throw new ArticleException(ArticleException.Reason.NOT_HTML, "parse");
+      throw new ArticleException(ArticleException.Reason.NOT_HTML, "parse", e);
     }
     String site = firstNonBlank(meta(doc, "og:site_name"), host.replaceFirst("^www\\.", ""));
     String title =
@@ -125,7 +125,7 @@ final class ArticleExtractor {
     doc.select(JUNK_TAGS).remove();
     List<Element> junk = new ArrayList<>();
     for (Element e : doc.getAllElements()) {
-      if (e == doc.body() || e.tagName().equals("html") || e.tagName().equals("article")) {
+      if (e.equals(doc.body()) || "html".equals(e.tagName()) || "article".equals(e.tagName())) {
         continue;
       }
       String names = e.id() + " " + e.className();
@@ -135,7 +135,7 @@ final class ArticleExtractor {
           && e.selectFirst("[itemprop=articleBody]") == null) {
         junk.add(e);
       }
-      if (e.hasAttr("hidden") || e.attr("aria-hidden").equals("true")) {
+      if (e.hasAttr("hidden") || "true".equals(e.attr("aria-hidden"))) {
         junk.add(e);
       }
     }
@@ -159,12 +159,12 @@ final class ArticleExtractor {
   private static Element densest(Document doc) {
     Map<Element, Integer> scores = new HashMap<>();
     for (Element p : doc.select("p, div > br")) {
-      Element block = p.tagName().equals("br") ? p.parent() : p;
+      Element block = "br".equals(p.tagName()) ? p.parent() : p;
       int length = block.ownText().length();
       if (length < 40) {
         continue;
       }
-      Element parent = p.tagName().equals("br") ? block : block.parent();
+      Element parent = "br".equals(p.tagName()) ? block : block.parent();
       if (parent != null) {
         scores.merge(parent, length, Integer::sum);
         if (parent.parent() != null) {

@@ -47,7 +47,7 @@ class ConversationController {
     try {
       return articles.read(url);
     } catch (ArticleException e) {
-      throw new ApiException(ErrorCode.ARTICLE_UNREADABLE, e.userMessage());
+      throw new ApiException(ErrorCode.ARTICLE_UNREADABLE, e.userMessage(), e);
     }
   }
 
