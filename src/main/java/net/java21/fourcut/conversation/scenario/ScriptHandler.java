@@ -153,7 +153,8 @@ class ScriptHandler implements StepHandler {
             .withRoleCalls()
             .withCleanSummary()
             .withConcept(concept)
-            .withMotionLimits();
+            .withMotionLimits()
+            .withAmbientLimits();
     if (concept == Concept.ANIMALS) {
       script = script.withAnimals(animals(transcript.seed()));
     }

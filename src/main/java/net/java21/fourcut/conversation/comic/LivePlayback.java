@@ -108,6 +108,10 @@ final class LivePlayback {
       } else {
         panel.putNull("effect");
       }
+      ArrayNode ambient = panel.putArray("ambient");
+      if (p.ambient() != null) {
+        p.ambient().forEach(ambient::add);
+      }
       Optional<Motion> motion = p.liveMotion();
       if (motion.isPresent() && i < moving.size() && Boolean.TRUE.equals(moving.get(i))) {
         ObjectNode m = panel.putObject("motion");

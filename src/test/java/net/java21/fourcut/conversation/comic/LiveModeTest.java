@@ -191,6 +191,38 @@ class LiveModeTest {
   }
 
   @Test
+  @DisplayName("FR-042: 컷마다 화면 효과 층 목록을 담고, 없는 컷은 빈 배열이다")
+  void ambient() {
+    var script =
+        new ComicScript(
+            "t",
+            List.of(new ComicScript.Character("A", "민지", "", "girl")),
+            List.of(
+                new ComicScript.Panel(
+                    "기",
+                    "wide",
+                    "{A} looks up",
+                    List.of(),
+                    "campsite, campfire, stars",
+                    List.of(),
+                    null,
+                    null,
+                    null,
+                    List.of("flicker", "twinkle")),
+                new ComicScript.Panel("결", "wide", "{A} smiles", List.of())),
+            true,
+            List.of());
+
+    var live = LivePlayback.build(json, script, List.of(), List.of(false, false));
+
+    var first = live.path("panels").get(0).path("ambient");
+    assertThat(first.size()).isEqualTo(2);
+    assertThat(first.get(0).asString()).isEqualTo("flicker");
+    assertThat(live.path("panels").get(1).path("ambient").isArray()).isTrue();
+    assertThat(live.path("panels").get(1).path("ambient").size()).isZero();
+  }
+
+  @Test
   @DisplayName("FR-022: 소리 크기는 바탕 배경음(장소 소리·배경음악) 60%, 효과음 100%이고, 점수가 있으면 남긴다")
   void volumes() {
     var place =

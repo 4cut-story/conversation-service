@@ -113,6 +113,8 @@ public record ComicScript(
    * @param motion 라이브 모드 두 장 움직임({@link Motion} 코드). 없으면 null 또는 "none". 그림의 첫 프롬프트에는 쓰지 않는다
    * @param effect 라이브 모드 사건 소리 한 줄(한국어, 예: "휴대폰 알람 소리"). 그 컷에서 실제로 나는 소리만 쓰고 없으면 빈 값이다. 컷 시작 때 배경음
    *     위에 한 번 트는 효과음을 고르는 질의가 된다. 예전 콘티에는 없다
+   * @param ambient 라이브 모드 화면 효과 층({@link Ambient} 코드, 많아야 {@link Ambient#MAX_PER_PANEL}개). 예전 콘티에는
+   *     없다
    */
   public record Panel(
       String role,
@@ -123,7 +125,21 @@ public record ComicScript(
       List<Face> faces,
       String sound,
       String motion,
-      String effect) {
+      String effect,
+      List<String> ambient) {
+
+    public Panel(
+        String role,
+        String shot,
+        String scene,
+        List<Line> lines,
+        String setting,
+        List<Face> faces,
+        String sound,
+        String motion,
+        String effect) {
+      this(role, shot, scene, lines, setting, faces, sound, motion, effect, null);
+    }
 
     public Panel(
         String role,
@@ -153,23 +169,54 @@ public record ComicScript(
 
     /** 대사만 바꾼 컷. */
     public Panel withLines(List<Line> next) {
-      return new Panel(role, shot, scene, next, setting, faces, sound, motion, effect);
+      return new Panel(role, shot, scene, next, setting, faces, sound, motion, effect, ambient);
     }
 
     /** 장면만 바꾼 컷. */
     public Panel withScene(String next) {
-      return new Panel(role, shot, next, lines, setting, faces, sound, motion, effect);
+      return new Panel(role, shot, next, lines, setting, faces, sound, motion, effect, ambient);
     }
 
     /** 움직임만 바꾼 컷. */
     public Panel withMotion(String next) {
-      return new Panel(role, shot, scene, lines, setting, faces, sound, next, effect);
+      return new Panel(role, shot, scene, lines, setting, faces, sound, next, effect, ambient);
+    }
+
+    /** 화면 효과 층만 바꾼 컷. */
+    public Panel withAmbient(List<String> next) {
+      return new Panel(role, shot, scene, lines, setting, faces, sound, motion, effect, next);
     }
 
     /** 걸러진 움직임. 없거나 목록 밖이면 빈 값. */
     public java.util.Optional<Motion> liveMotion() {
       return Motion.parse(motion);
     }
+  }
+
+  /**
+   * 라이브 모드 화면 효과 층을 거른다: 목록 밖 값, 그 배경 낱말이 컷 장면·배경에 없는 값, 실내 비·눈은 지우고 한 컷에 {@link
+   * Ambient#MAX_PER_PANEL}개까지 남긴다. 예전 콘티(효과 없음)는 그대로다.
+   */
+  public ComicScript withAmbientLimits() {
+    if (panels == null) {
+      return this;
+    }
+    List<Panel> out = new java.util.ArrayList<>();
+    for (Panel p : panels) {
+      if (p.ambient() == null) {
+        out.add(p);
+        continue;
+      }
+      String background =
+          java.util.Objects.toString(p.scene(), "")
+              + ", "
+              + java.util.Objects.toString(p.setting(), "");
+      List<String> kept = Ambient.filter(p.ambient(), background);
+      out.add(kept.equals(p.ambient()) ? p : p.withAmbient(kept));
+    }
+    return out.equals(panels)
+        ? this
+        : new ComicScript(title, characters, out, reviewed, nameWarnings, concept, summary);
   }
 
   /**
