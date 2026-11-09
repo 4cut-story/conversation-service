@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.1";
+  static final String VERSION = "2026-11-09.2";
 
   private Prompts() {}
 
@@ -141,6 +141,10 @@ final class Prompts {
         draw는 그림용 영어 8단어 이내로 재질·색·크기·종까지 쓴다(예: "light brown wooden practice sword",
         "small navy folding umbrella", "small old brown-and-white dog"). 비슷한 다른 물건(목검 → 쇠칼, 남색 우산 → 다른 색
         우산)으로 바뀌지 않게 구체적으로 쓴다.
+      - 인물이 여러 컷에 들고 다니거나 몸에 지니는 물건(지팡이, 가방, 칼, 휴대폰)도 props에 넣는다. props에 없는 물건은 컷마다
+        다른 물건(지팡이 → 칼 → 창)으로 그려진다.
+      - 모양이 헷갈리기 쉬운 물건(바둑돌, 전, 키오스크)은 그림 모델이 알아보게 모양을 쓴다(예: "round flat black and white
+        go stones on a wooden board", "one tall white self-order kiosk with a touch screen").
       - 그림 모델은 글자를 제대로 못 쓰고 가짜 글자를 그린다. 글자가 보이는 물건(간판, 팻말, 문자 메시지, 책 표지)은 글자 없이
         모양과 색으로 쓴다(예: "blank wooden name sign", "phone with glowing green screen").
 
@@ -171,19 +175,22 @@ final class Prompts {
         4컷이면 기·승·전·결 한 컷씩, 더 많으면 승과 전을 여러 컷으로 늘린다(기는 두 컷까지). 예: 6컷 기·승·승·전·전·결,
         8컷 기·승·승·승·전·전·전·결.
       - 모든 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.
-      - shot: wide, medium, close-up 중 하나. 기는 보통 wide, 전은 보통 close-up. 모든 컷이 같으면 안 되고, 컷이 많으면 같은 구도가
-        세 컷 넘게 이어지지 않게 섞는다.
+      - shot: wide, medium, close-up 중 하나. wide는 온몸과 장소가 보이는 컷, medium은 허리 위, close-up은 가슴 위 얼굴이
+        크게 보이는 컷이다. 기는 보통 wide, 전은 보통 close-up이고, wide는 전체 컷의 절반을 넘지 않는다. close-up은 한
+        사람만 나오는 컷에 쓴다. 같은 구도가 두 컷 넘게 이어지지 않게 섞는다.
       - action: 그림 모델용 영어 12단어 이내. 그 컷에서 눈에 보이는 몸동작 하나를 "누가 + 동작 + 무엇을" 순서로 쓴다
         (예: "{A} swings {목검} at a straw dummy", "{B} holds {우산} over {A}", "{A} points at {키오스크} screen").
         이야기의 핵심 물건은 두 컷 이상에 나온다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는
         모습만 쓰지 않는다. 동작은 손·팔·몸이 무엇을 하는지 보이게 쓴다.
-        action에는 그 컷의 주인공 한 명만 넣는다(보통 그 컷의 핵심 말을 하거나 가장 크게 반응하는 사람). 두 사람이 함께
-        보여야 순간이 읽히는 컷(물건을 건넴, 둘이 같이 놀람, 마주 보고 다툼)에만 두 명을 넣고, 이런 컷은 전체 컷의 절반을
-        넘지 않게 한다. action에 없는 인물의 대사는 컷 밖 말풍선으로 들어가므로 대사는 그대로 둔다. 세 명 이상은 넣지 않는다.
+        그 컷 lines의 speaker는 모두 action에 넣는다. 말하는 사람이 컷에 없으면 독자가 누가 말하는지 모른다. 두 사람이 말하는
+        컷은 두 사람이 함께 하는 동작 하나로 쓴다(예: "{A} hands {우산} to {B}", "{A} and {B} stare at {키오스크} screen").
+        세 명 이상은 넣지 않는다. 한 컷에 세 화자가 말하게 되면 대사를 두 화자로 줄인다.
       - place: places의 key 하나. 장소는 key로만 고른다.
       - setting: 그 컷에 더 보여야 할 배경 물건 1~2개를 그림 모델용 영어 6단어 이내로 쓴다(예: "trays of burgers",
         "rainy window"). 장소 이름과 인물·표정은 쓰지 않는다. 밤·새벽·저녁이거나 비·눈이 오면 그 때와 하늘을 꼭 넣고,
         대사에 나오는 별·달·노을도 눈에 보이게 쓴다(예: "night, dark sky full of stars").
+        실내 컷에는 비·눈을 쓰지 않는다. 밖에 비가 오면 "rain on the window"처럼 창밖으로만 보이게 쓴다. 이야기 안에서 시간이
+        흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.
       - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
         쓴다(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로
         두지 않는다. 성격·외모·이름은 쓰지 않는다. lookAt은 그 인물이 보는 곳이다: 말을 거는 상대의 자리표({B}), 대사가 가리키는

@@ -162,6 +162,10 @@ class DrawHandler implements StepHandler {
         looks.put(c.speaker(), c.look().strip());
       }
     }
+    // 두 명 이상인 close-up은 한 사람 얼굴만 크게 그려 나머지가 빠지고 두 외모가 한 사람에 섞였다(mystery-02 3컷 등).
+    // 여럿이 나오는 컷은 medium으로 그린다.
+    String kind = people >= 2 && "close-up".equals(panel.shot()) ? "medium" : panel.shot();
+    looks.replaceAll((k, v) -> LookHead.framed(v, kind));
     String lineup = "";
     Map<String, String> names = new java.util.HashMap<>();
     if (people >= 2 && stage.size() >= 2) {
@@ -177,10 +181,8 @@ class DrawHandler implements StepHandler {
     }
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
-    // 두 명 이상인 close-up은 한 사람 얼굴만 크게 그려 나머지가 빠지고 두 외모가 한 사람에 섞였다(mystery-02 3컷 등).
-    // 여럿이 나오는 컷은 medium으로 그린다.
-    String kind = people >= 2 && "close-up".equals(panel.shot()) ? "medium" : panel.shot();
-    String shot = kind == null ? "" : kind.replace('-', ' ') + " shot, ";
+    String shot =
+        kind == null ? "" : SHOTS.getOrDefault(kind, kind.replace('-', ' ') + " shot") + ", ";
     String who = people >= 2 && stage.size() >= 2 ? who(stage, looks, concept) : null;
     String count =
         people >= 2
@@ -837,6 +839,12 @@ class DrawHandler implements StepHandler {
    * 여럿이 나오는 컷의 구도 말. 두 사람이 말하는 컷에 한 사람만 그려져 말풍선 자리(왼쪽·오른쪽)와 그림이 어긋났다(그림책 '밤마다 그려진 담벼락 그림의 비밀'
    * 2·4컷). Lightning(guidance 0)은 negative를 읽지 않아 구도는 이 말로만 잡는다.
    */
+  /** 구도 말. "close up shot"만 쓰면 거의 모든 컷이 온몸 구도로 그려졌다(회차 29 구조화 콘티 판). 어디까지 보이는지를 적는다. */
+  static final Map<String, String> SHOTS =
+      Map.of(
+          "close-up", "close-up shot, head and shoulders filling the frame",
+          "medium", "medium shot from the waist up");
+
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
 
   /** 콘티 내용(제목과 컷 장면)으로 정한 그림 시드. 같은 콘티면 대화 ID가 달라도 같은 시드로 그려 고정 시험 세트로 수정 전후를 비교할 수 있다. */

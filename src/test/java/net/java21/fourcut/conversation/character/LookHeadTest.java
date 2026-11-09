@@ -127,6 +127,17 @@ class LookHeadTest {
   }
 
   @Test
+  @DisplayName("FR-006: medium은 신발을, close-up은 아래옷과 신발을 외모에서 뺀다")
+  void framedDropsHiddenParts() {
+    String look = "young man, short hair, navy sweater, gray jeans, white sneakers";
+    assertThat(LookHead.framed(look, "wide")).isEqualTo(look);
+    assertThat(LookHead.framed(look, "medium"))
+        .isEqualTo("young man, short hair, navy sweater, gray jeans");
+    assertThat(LookHead.framed(look, "close-up")).isEqualTo("young man, short hair, navy sweater");
+    assertThat(LookHead.framed(null, "close-up")).isNull();
+  }
+
+  @Test
   @DisplayName("FR-006: 콘티의 아래옷·신발은 캐릭터 모습에 그 부분이 없을 때만 그림 외모에 붙인다")
   void drawLookAddsBottomAndShoes() {
     assertThat(

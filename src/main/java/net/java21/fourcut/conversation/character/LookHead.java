@@ -445,6 +445,29 @@ public record LookHead(String animal, String gender, String age) {
         .collect(Collectors.joining(", "));
   }
 
+  /**
+   * 구도에 보이지 않는 마디를 뺀 외모. medium(허리 위)은 신발 마디를, close-up(가슴 위)은 아래옷 마디도 뺀다. 외모 글에 신발·바지가 있으면
+   * close-up을 시켜도 온몸이 그려졌다(회차 29 구조화 콘티 판). 첫 마디(나이·성별)는 늘 남긴다.
+   */
+  public static String framed(String look, String shot) {
+    if (look == null || !("medium".equals(shot) || "close-up".equals(shot))) {
+      return look;
+    }
+    boolean close = "close-up".equals(shot);
+    String[] parts = look.split(",");
+    StringBuilder out = new StringBuilder(parts[0].strip());
+    for (int i = 1; i < parts.length; i++) {
+      String p = parts[i].strip();
+      List<String> w = Arrays.asList(words(p.toLowerCase(Locale.ROOT)));
+      boolean shoes = w.stream().anyMatch(SHOES::contains);
+      boolean bottom = w.stream().anyMatch(BOTTOM::contains);
+      if (!p.isEmpty() && !shoes && !(close && bottom)) {
+        out.append(", ").append(p);
+      }
+    }
+    return out.toString();
+  }
+
   private static String[] words(String text) {
     return text.split("[^\\p{L}\\p{N}-]+");
   }
