@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.4";
+  static final String VERSION = "2026-11-09.5";
 
   private Prompts() {}
 
@@ -133,6 +133,8 @@ final class Prompts {
       - bottom: 아래옷을 그림용 영어 4단어 이내로 색과 함께 쓴다(예: "blue jeans", "long navy skirt", "white trousers").
         한 벌 옷(dress, robe, overalls)이면 그 아래 보이는 것을 쓰고, 바지를 입지 않은 동물은 "bare fur legs".
       - shoes: 신발을 그림용 영어 3단어 이내로 색과 함께 쓴다(예: "white sneakers", "black cloth shoes"). 맨발이면 "bare feet".
+      - 동물 인물이 둘 이상이면 종·털색·몸집이 한눈에 다르게 고른다(회색 토끼와 회색 고양이처럼 비슷하면 한 인물로 섞여
+        그려진다). 동물 look에는 털색을 쓴다(예: "brown bear", "white rabbit").
       - look·bottom·shoes는 이 인물이 모든 컷에서 입는 한 벌이다. 컷마다 옷을 바꾸지 않는다. 가운·제복·승복 같은 직업 옷은
         이야기에 그 일을 하는 장면이 나올 때만 쓴다.
 
@@ -151,8 +153,10 @@ final class Prompts {
         모양과 색으로 쓴다(예: "blank wooden shop sign", "phone with glowing green screen"). 병풍·족자·액자·칠판·화면처럼
         글씨나 그림이 들어가기 쉬운 면은 "plain"을 붙여 무늬 없이 쓰고, 화면에 보여야 할 것은 글자 대신 그림 하나로 쓴다
         (예: "screen showing a big burger picture").
-      - 인물마다 들고 다니는 물건은 하나까지만 둔다. 모양이 비슷한 물건(지팡이와 목검, 단검과 칼)을 두 인물에게 나눠 주지
-        않는다. 서로 바뀌어 그려진다.
+      - 인물마다 들고 다니는 물건은 하나까지만 두고, 이야기에 꼭 필요할 때만 look에 넣는다. 길쭉한 물건(칼, 검, 지팡이, 막대,
+        부채)은 편 전체에서 한 인물에게만 준다. 비슷한 물건을 두 인물에게 나눠 주면 서로 바뀌어 그려진다.
+      - draw·action·setting에 그림 모델이 글자로 써 넣는 낱말(order, menu, sale, exit, open, number, sign 위 문구, 가게
+        이름)을 쓰지 않는다. "order kiosk" 대신 "touchscreen kiosk"처럼 생김새로 쓴다.
 
       장소 (places, 1~3개, 한 번만 정한다)
       - key는 짧은 한국어 이름(예: 놀이터, 세탁실). draw는 그림용 영어 14단어 이내로 장소 이름을 먼저 쓰고, 한눈에 그 장소인 걸
@@ -211,10 +215,11 @@ final class Prompts {
       - setting: 그 컷의 때와 분위기를 보여 주는 배경 한 마디와, 더 보여야 할 배경 물건 0~1개를 그림 모델용 영어 10단어
         이내로 쓴다. 장소 이름과 인물·표정은 쓰지 않는다. 때·하늘·날씨·빛은 눈에 보이는 모습으로 쓴다(예: 밤 "night, deep
         navy sky full of twinkling stars", 저녁 "orange sunset glow, long shadows", 낮 실내 "bright daylight from the
-        window", 비 "raindrops streaking the window"). 대사나 장면에 나오는 별·달·노을·눈·비는 꼭 쓴다.
+        window", 야외 비 "heavy rain falling on the street"). 대사나 장면에 나오는 별·달·노을·눈·비는 꼭 쓴다.
         체스말·구슬·동전처럼 작은 조각은 그것이 놓이는 자리(판 위, 그릇 안)와 함께만 쓰고, 바닥에 흩어진 모습("scattered
         stones")으로 쓰지 않는다. props에 있는 물건을 setting에 다시 쓰지 않는다.
-        실내 컷에는 비·눈을 쓰지 않는다. 밖에 비가 오면 "rain on the window"처럼 창밖으로만 보이게 쓴다. 이야기 안에서 시간이
+        실내 컷(place가 방·부엌·가게·현관처럼 지붕 아래인 컷)의 setting에는 rain·snow·raindrops 낱말을 아예 쓰지 않는다.
+        이 낱말이 있으면 방 안에 빗줄기가 그려진다. 비 오는 날 실내는 "dim gray light from the window"처럼 빛으로만 쓴다. 이야기 안에서 시간이
         흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.
       - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
         쓴다(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로

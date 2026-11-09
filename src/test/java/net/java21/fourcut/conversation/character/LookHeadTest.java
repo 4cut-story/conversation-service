@@ -124,6 +124,11 @@ class LookHeadTest {
         .isEqualTo("boy, curly brown hair, navy hoodie, wooden sword");
     assertThat(CharacterLibrary.drawLook("young man, gat", "young man, black gat, blue jeogori"))
         .isEqualTo("young man, gat");
+    assertThat(
+            CharacterLibrary.drawLook(
+                "young woman, blonde bob, round glasses, yellow hoodie",
+                "girl, black pigtails, yellow hoodie, blue jeans"))
+        .isEqualTo("young woman, blonde bob, round glasses, yellow hoodie, blue jeans");
   }
 
   @Test
