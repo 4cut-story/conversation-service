@@ -221,6 +221,8 @@ class DrawHandler implements StepHandler {
         + cast;
   }
 
+  private static final Pattern BOTH_HANDS = Pattern.compile("\\b(both|fists|hands|arms)\\b");
+
   private static final Pattern CARRIED =
       Pattern.compile(
           "\\b(sword|lantern|fan|staff|cane|umbrella|bag|backpack|book|basket|spear|bow|stick)\\b");
@@ -232,6 +234,10 @@ class DrawHandler implements StepHandler {
   static String carried(String look, String scene) {
     String lower = scene.toLowerCase(java.util.Locale.ROOT);
     StringBuilder out = new StringBuilder();
+    // 두 손을 쓰는 동작에 쥔 모습을 더하면 팔이 셋으로 그려진다
+    if (BOTH_HANDS.matcher(lower).find()) {
+      return "";
+    }
     String[] parts = look.split(",");
     for (int i = 1; i < parts.length; i++) {
       String part = parts[i].strip();

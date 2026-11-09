@@ -421,5 +421,9 @@ class DrawPromptTest {
             DrawHandler.carried(
                 "little boy swordsman, blue robe, wooden sword", "boy swings the wooden sword"))
         .isEmpty();
+    assertThat(
+            DrawHandler.carried(
+                "little girl swordswoman, pink robe, paper lantern", "girl raises both fists"))
+        .isEmpty();
   }
 }
