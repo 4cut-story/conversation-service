@@ -24,17 +24,14 @@ final class LivePlayback {
   static final int MAX_MS = 8000;
   static final int PER_CHAR_MS = 60;
 
-  /**
-   * 소리 크기 비율: 효과음(한 번, 또렷하게) 0.9 &gt; 장소·환경음 0.7 &gt; 바탕 배경음악 0.45. 음악은 장소 소리가 없을 때만 깔리고 대사·효과음을 덮지
-   * 않게 작게 둔다.
-   */
-  static final double VOLUME = 0.7;
+  /** 소리 크기 비율(marco): 바탕 배경음(장소 소리·배경음악) 60%, 효과음 100%. 바탕 소리가 대사·효과음을 덮지 않게 한다. */
+  static final double VOLUME = 0.6;
 
-  static final double MUSIC_VOLUME = 0.45;
+  static final double MUSIC_VOLUME = 0.6;
   static final int FADE_MS = 800;
 
   /** 사건 효과음은 배경음 위에 한 번, 조금 크게 바로 튼다. */
-  static final double EFFECT_VOLUME = 0.9;
+  static final double EFFECT_VOLUME = 1.0;
 
   private LivePlayback() {}
 

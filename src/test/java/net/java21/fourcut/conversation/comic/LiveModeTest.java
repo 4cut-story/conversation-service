@@ -191,7 +191,7 @@ class LiveModeTest {
   }
 
   @Test
-  @DisplayName("FR-022: 소리 크기는 효과음 > 장소 소리 > 바탕 배경음악이고, 점수가 있으면 남긴다")
+  @DisplayName("FR-022: 소리 크기는 바탕 배경음(장소 소리·배경음악) 60%, 효과음 100%이고, 점수가 있으면 남긴다")
   void volumes() {
     var place =
         new SoundMatcher.Picked(
@@ -214,8 +214,9 @@ class LiveModeTest {
     var second = live.path("panels").get(1);
     assertThat(first.path("effect").path("volume").asDouble())
         .isGreaterThan(first.path("sound").path("volume").asDouble());
-    assertThat(first.path("sound").path("volume").asDouble())
-        .isGreaterThan(second.path("sound").path("volume").asDouble());
+    assertThat(first.path("effect").path("volume").asDouble()).isEqualTo(1.0);
+    assertThat(first.path("sound").path("volume").asDouble()).isEqualTo(0.6);
+    assertThat(second.path("sound").path("volume").asDouble()).isEqualTo(0.6);
     assertThat(first.path("sound").path("score").asDouble()).isEqualTo(0.72);
     assertThat(first.path("effect").has("score")).isFalse();
   }
