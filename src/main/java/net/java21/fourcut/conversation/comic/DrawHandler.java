@@ -242,8 +242,24 @@ class DrawHandler implements StepHandler {
       return "";
     }
     String head = m.group(1).strip();
-    return ", only one " + head.substring(head.lastIndexOf(' ') + 1) + " in the whole picture";
+    String noun = head.substring(head.lastIndexOf(' ') + 1);
+    String only = ", only one " + noun + " in the whole picture";
+    Matcher on = STANDS_ON.matcher(scene.substring(m.end()));
+    if (on.lookingAt()) {
+      // 받침 위 물건을 손에도 하나 더 쥐여 그렸다(회차 29 콘티 23판 mystery-08 5컷 삼각대 망원경 + 손에 든 망원경)
+      return only
+          + ", the "
+          + noun
+          + " stands on its "
+          + on.group(1)
+          + ", nothing held in the hands";
+    }
+    return only;
   }
+
+  private static final Pattern STANDS_ON =
+      Pattern.compile(
+          "(?: with [^,]*?)? on (?:a |an |the |its )?(tripod|stand|table|desk|counter|shelf|easel)\\b");
 
   /**
    * 쉼표로 나뉜 말 가운데 앞에 이미 나온 말을 뺀다. 장소·빛이 두세 번씩 들어가 있었고, 그림 모델은 같은 말을 두 번 읽으면 그것을 두 번 그린다(회차 29 콘티 19판

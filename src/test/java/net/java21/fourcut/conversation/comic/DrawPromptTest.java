@@ -602,7 +602,9 @@ class DrawPromptTest {
     assertThat(
             DrawHandler.onlyOne(
                 "boy peers into the eyepiece of single brass telescope with one eyepiece on tripod"))
-        .isEqualTo(", only one telescope in the whole picture");
+        .isEqualTo(
+            ", only one telescope in the whole picture, the telescope stands on its tripod,"
+                + " nothing held in the hands");
     assertThat(DrawHandler.onlyOne("girl waves, park")).isEmpty();
   }
 
