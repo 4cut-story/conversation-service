@@ -35,7 +35,7 @@ class MotionTest {
   }
 
   @Test
-  @DisplayName("FR-013: 콘티 움직임은 맞지 않는 값을 지우고 한 만화에 2컷까지만 남긴다")
+  @DisplayName("FR-013·049: 콘티 움직임은 맞지 않는 값을 breeze로 바꾸고 모든 컷이 움직인다")
   void limits() {
     ComicScript script =
         new ComicScript(
@@ -53,7 +53,9 @@ class MotionTest {
     List<String> motions =
         script.withMotionLimits().panels().stream().map(ComicScript.Panel::motion).toList();
 
-    assertThat(motions).containsExactly("twinkle", null, "twinkle", null, null);
+    assertThat(motions).containsExactly("twinkle", "breeze", "twinkle", "rain", "breeze");
+    assertThat(Motion.BREEZE.fits("")).isFalse();
+    assertThat(Motion.BREEZE.last()).isNotBlank();
   }
 
   @Test

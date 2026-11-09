@@ -66,6 +66,39 @@ class LiveModeTest {
   }
 
   @Test
+  @DisplayName("FR-049: 네 번째 그림까지 있는 움직임 컷은 그림 네 장을 차례로 담는다")
+  void fourthFrame() {
+    var live =
+        LivePlayback.build(
+            json,
+            script,
+            List.of(),
+            List.of(),
+            List.of(true, true),
+            List.of(true, true),
+            List.of(true, false),
+            List.of(),
+            List.of(true, true));
+
+    var frames = live.path("panels").get(0).path("motion").path("frames");
+    assertThat(frames.size()).isEqualTo(4);
+    assertThat(frames.get(3).asString()).isEqualTo("panels/1-d.png");
+    // 세 번째 그림이 없으면 네 번째도 쓰지 않는다
+    var noThird =
+        LivePlayback.build(
+            json,
+            script,
+            List.of(),
+            List.of(),
+            List.of(true, false),
+            List.of(true, true),
+            List.of(false, false),
+            List.of(),
+            List.of(true, false));
+    assertThat(noThird.path("panels").get(0).path("motion").path("frames").size()).isEqualTo(2);
+  }
+
+  @Test
   @DisplayName("FR-044: 세 번째 그림이 있는 움직임 컷은 그림 세 장을 차례로 담는다")
   void thirdFrame() {
     var live =

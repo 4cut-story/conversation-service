@@ -239,7 +239,8 @@ public record ComicScript(
 
   /**
    * 라이브 모드 움직임을 거른다: 목록 밖 값, 그 배경 낱말이 컷 장면·배경에 없는 값, 실내 비·눈은 지우고, 한 만화에 {@link
-   * Motion#MAX_PER_COMIC}컷까지만(앞에서부터) 남긴다. 남긴 값은 소문자 코드로 맞춘다. 예전 콘티(움직임 없음)는 그대로다.
+   * Motion#MAX_PER_COMIC}컷까지만(앞에서부터) 남긴다. 맞는 움직임이 없는 컷은 {@link Motion#BREEZE}로 채운다. 남긴 값은 소문자 코드로
+   * 맞춘다. 예전 콘티(움직임 없음)는 그대로다.
    */
   public ComicScript withMotionLimits() {
     if (panels == null) {
@@ -256,6 +257,12 @@ public record ComicScript(
       if (m.isPresent() && kept < Motion.MAX_PER_COMIC && m.get().fits(background)) {
         kept++;
         out.add(p.motion().equals(m.get().code()) ? p : p.withMotion(m.get().code()));
+      } else if (p.motion() != null
+          && kept < Motion.MAX_PER_COMIC
+          && Motion.BREEZE.fits(background)) {
+        // 맞는 움직임이 없는 컷도 배경이 가볍게 움직이게 한다(FR-049). 움직임 필드가 없는 예전 콘티는 그대로다
+        kept++;
+        out.add(Motion.BREEZE.code().equals(p.motion()) ? p : p.withMotion(Motion.BREEZE.code()));
       } else {
         out.add(p.motion() == null ? p : p.withMotion(null));
       }

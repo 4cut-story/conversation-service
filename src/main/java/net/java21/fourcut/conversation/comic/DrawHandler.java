@@ -797,8 +797,8 @@ class DrawHandler implements StepHandler {
   }
 
   /**
-   * 라이브 모드 움직임 컷의 두 번째 그림 요청({type, prompt, uploadPutKey, next: {prompt, uploadPutKey}}). next는 세
-   * 번째 그림이다. 움직임이 없는 컷은 null. 참조 그림을 그대로 받는 그림 모델(2단 그리기를 켠 모델)에서만 부른다.
+   * 라이브 모드 움직임 컷의 두 번째 그림 요청({type, prompt, uploadPutKey, next: {prompt, uploadPutKey, next}}).
+   * next는 세 번째, next.next는 네 번째 그림이다. 움직임이 없는 컷은 null. 참조 그림을 그대로 받는 그림 모델(2단 그리기를 켠 모델)에서만 부른다.
    */
   ObjectNode motion(String style, String conversationId, int index, ComicScript.Panel panel) {
     return panel
@@ -813,6 +813,10 @@ class DrawHandler implements StepHandler {
               ObjectNode next = node.putObject("next");
               next.put("prompt", motionPrompt(style, m.next()));
               next.put("uploadPutKey", WorkKeys.panelC(conversationId, index + 1));
+              // 네 번째 그림(FR-049): 넓은 그림 컷만 워커가 그린다
+              ObjectNode last = next.putObject("next");
+              last.put("prompt", motionPrompt(style, m.last()));
+              last.put("uploadPutKey", WorkKeys.panelD(conversationId, index + 1));
               return node;
             })
         .orElse(null);
