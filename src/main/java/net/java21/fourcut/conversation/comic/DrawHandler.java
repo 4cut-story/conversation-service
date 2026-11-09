@@ -870,7 +870,9 @@ class DrawHandler implements StepHandler {
                                 f.speaker(),
                                 f.face()
                                     .replaceAll(
-                                        "looking at the (?:lone )?" + Pattern.quote(head) + "[^,]*",
+                                        "looking at (?:it\\b|the (?:lone )?"
+                                            + Pattern.quote(head)
+                                            + ")[^,]*",
                                         "looking down at the hands")))
                 .toList();
     return new Hold(
