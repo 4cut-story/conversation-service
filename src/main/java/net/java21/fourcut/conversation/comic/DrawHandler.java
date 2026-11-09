@@ -981,11 +981,14 @@ class DrawHandler implements StepHandler {
     String pose = tail.find(0) ? before.substring(0, tail.start()) : before;
     String empty = pose.stripTrailing() + ", hands empty" + scene.substring(end);
     String object = scene.substring(m.start(1), end).strip();
-    String last = pose.strip().substring(pose.strip().lastIndexOf(' ') + 1);
-    verb = (last.endsWith("ing") ? last + " " : "") + verb;
-    String its = verb.replaceAll("\\bthe ([a-z]+) of$", "its $1");
+    // 2차에 "the character peering into its eyepiece"라고 쓰면 손에 망원경을 하나 더 쥐여 줬다(25b판). 자세는 1차 그대로 두고
+    // 물건만
+    // 눈높이에 세운다
     String place =
-        "in front of the character, the character " + (its.equals(verb) ? verb + " it" : its);
+        "standing on its "
+            + on.group(1)
+            + " right in front of the character's face, its eyepiece at the character's eye, the"
+            + " character's hands stay empty and nothing is held";
     List<ComicScript.Face> faces =
         panel.faces() == null
             ? null

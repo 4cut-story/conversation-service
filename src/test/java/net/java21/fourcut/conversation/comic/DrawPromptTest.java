@@ -626,8 +626,8 @@ class DrawPromptTest {
     assertThat(h.emptyPanel().faces().get(0).face()).isEqualTo("awestruck, looking ahead");
     assertThat(DrawHandler.holdPrompt("ink", h))
         .contains(
-            "add exactly one brass telescope with one eyepiece on tripod in front of the"
-                + " character, the character peering into its eyepiece")
+            "add exactly one brass telescope with one eyepiece on tripod standing on its tripod"
+                + " right in front of the character's face, its eyepiece at the character's eye")
         .doesNotContain("hands at the chest");
     ComicScript.Panel rest =
         new ComicScript.Panel(
