@@ -182,4 +182,26 @@ class SoundMatcherTest {
         .contains("bbbbbbbbbbbbbbbbbbbbb");
     assertThat(SoundMatcher.headFirst("초인종", List.of(vibrate, alarm))).isSameAs(vibrate);
   }
+
+  @Test
+  @DisplayName("FR-008: 거리가 사실상 같은 배경음 후보는 만화(seed)마다 다르게 고르고, 먼 후보는 고르지 않는다")
+  void tiedPicksVary() {
+    SoundMatcher matcher =
+        SoundMatcher.scored(
+            (q, n) ->
+                List.of(
+                    new SoundMatcher.Scored(sound("aaaaaaaaaaaaaaaaaaaaa"), 0.10),
+                    new SoundMatcher.Scored(sound("bbbbbbbbbbbbbbbbbbbbb"), 0.11),
+                    new SoundMatcher.Scored(sound("ccccccccccccccccccccc"), 0.30)));
+    var query = List.of(new SoundMatcher.Query("조용한 방, 시계 소리", "room", ""));
+
+    var seen = new java.util.HashSet<String>();
+    for (long seed = 0; seed < 6; seed++) {
+      seen.add(matcher.match(query, seed).get(0).orElseThrow().publicId());
+    }
+
+    assertThat(seen).containsExactlyInAnyOrder("aaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbb");
+    assertThat(matcher.match(query).get(0).orElseThrow().publicId())
+        .isEqualTo(matcher.match(query).get(0).orElseThrow().publicId());
+  }
 }

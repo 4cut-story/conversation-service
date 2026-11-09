@@ -178,7 +178,7 @@ class ComposeHandler implements StepHandler {
           LivePlayback.build(
               json,
               script,
-              sounds.match(queries(script)),
+              sounds.match(queries(script), DrawHandler.seedOf(script)),
               sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
               moving);
       storage.put(
