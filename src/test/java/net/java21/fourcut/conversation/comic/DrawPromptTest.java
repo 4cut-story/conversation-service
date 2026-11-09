@@ -686,6 +686,9 @@ class DrawPromptTest {
         .contains("exactly one character, alone in the frame, drawn only once");
     assertThat(DrawHandler.frame(3)).contains("exactly three characters, each drawn only once");
     assertThat(DrawHandler.frame(9)).contains("exactly four characters");
+    assertThat(DrawHandler.frame(1, true))
+        .contains("exactly one character drawn only once and one small pet")
+        .doesNotContain("alone");
   }
 
   @Test
