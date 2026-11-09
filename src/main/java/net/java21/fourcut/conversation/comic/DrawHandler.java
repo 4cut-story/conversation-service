@@ -205,11 +205,31 @@ class DrawHandler implements StepHandler {
         + ", "
         + SINGLE
         + ", "
+        + frame(legacy ? 0 : people)
+        + ", "
         + shot
         + keyObject(panel)
         + scene
         + detail
         + cast;
+  }
+
+  /**
+   * 한 순간·인물 수·같은 옷과 소품을 거는 말. 컷 안이 격자로 나뉘거나 같은 사람이 한 컷에 둘 그려지고, 컷마다 옷·소품이 바뀌었다(회차 29 klein 참조판
+   * 92.7점 → 이 말을 넣어 93.2점).
+   */
+  static String frame(int people) {
+    String count =
+        people <= 0
+            ? ""
+            : people == 1
+                ? "exactly one character, alone in the frame, drawn only once, "
+                : "exactly "
+                    + COUNTS.get(Math.min(people, COUNTS.size()) - 1)
+                    + " characters, each drawn only once, ";
+    return "one full-frame illustration of a single moment, "
+        + count
+        + "same outfit and same props in every panel";
   }
 
   /**
