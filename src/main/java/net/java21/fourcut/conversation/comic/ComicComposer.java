@@ -309,9 +309,8 @@ public class ComicComposer {
    */
   static Rectangle place(
       Rectangle face, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
-    List<Rectangle> options = options(face, w, h, panelTop, taken);
     Rectangle free = clear(face, w, h, panelTop, faces, taken);
-    return free != null ? free : pick(options, faces, taken);
+    return free != null ? free : pick(options(face, w, h, panelTop, taken), faces, taken);
   }
 
   /** 얼굴 쪽 말풍선 후보 자리: 얼굴 위, 아래, 바깥 옆, 안쪽 옆, 앞 말풍선 아래. */
@@ -323,16 +322,14 @@ public class ComicComposer {
     boolean leftHalf = cx < MARGIN + PANEL / 2;
     int outX = leftHalf ? face.x - FACE_GAP - w : face.x + face.width + FACE_GAP;
     int inX = leftHalf ? face.x + face.width + FACE_GAP : face.x - FACE_GAP - w;
-    List<Rectangle> options =
-        List.of(
-            new Rectangle(x, clampY(face.y - ABOVE_GAP - h, h, panelTop), w, h),
-            new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
-            new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
-            new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h),
-            belowLast(x, w, h, panelTop, taken),
-            belowLast(MARGIN + 16, w, h, panelTop, taken),
-            belowLast(MARGIN + PANEL - 16 - w, w, h, panelTop, taken));
-    return options;
+    return List.of(
+        new Rectangle(x, clampY(face.y - ABOVE_GAP - h, h, panelTop), w, h),
+        new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
+        new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
+        new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h),
+        belowLast(x, w, h, panelTop, taken),
+        belowLast(MARGIN + 16, w, h, panelTop, taken),
+        belowLast(MARGIN + PANEL - 16 - w, w, h, panelTop, taken));
   }
 
   /** 좁힌 말풍선 폭(컷 폭에 대한 비율). 넓은 말풍선이 들어갈 빈 자리가 없을 때 차례로 써 본다. */
