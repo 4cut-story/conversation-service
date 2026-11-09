@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.18";
+  static final String VERSION = "2026-11-09.19";
 
   private Prompts() {}
 
@@ -275,6 +275,13 @@ final class Prompts {
         동작으로 쓴다.
         두 팔이 서로 다른 일을 하는 동작(팔짱 끼고 가리키기, 한 손으로 들고 다른 손으로 가리키기)은 팔이 셋으로 그려지므로,
         한 팔만 쓰거나 두 팔이 같은 일을 하는 동작으로 쓴다.
+        한 컷은 멈춘 한 순간이다. 처음과 끝이 있는 동작(내려놓기, 집어 들기, 넣기, 꺼내기, 앉기)은 그 사이 두 모습이 한 컷에
+        함께 그려져 사람이 둘로 나온다. 그 동작이 끝난 뒤 멈춘 모습으로 쓴다(예: "puts {청소기} down"이 아니라 "stands next to
+        {청소기} on the floor", "picks up {양말}"이 아니라 "holds up {양말} at the chest").
+        동물 인물의 귀·꼬리·날개는 action과 face에 쓰지 않는다("ears flopping down", "tail wagging"). 귀를 다시 그리라는 말로
+        읽혀 귀가 넷, 꼬리가 둘로 그려진다. 감정은 고개 숙이기, 두 주먹 들기 같은 몸 전체 동작과 표정으로 쓴다.
+        소품 자리표 바로 뒤에 이름씨를 붙이지 않는다("{망원경} tube", "{봉투} bag"). draw 뒤에 같은 물건 이름이 한 번 더 붙어
+        물건이 둘로 그려진다.
         그 컷 lines의 speaker는 그 컷에 나오는 사람이다(두 사람 컷은 앞사람). 대사를 고를 때 그 컷 주인공의 말을 고르고, 상대의 대답은 상대가
         나오는 다음 컷에 둔다.
       - place: places의 key 하나. 장소는 key로만 고른다.

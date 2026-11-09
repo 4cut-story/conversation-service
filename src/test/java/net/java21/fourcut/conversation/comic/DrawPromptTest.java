@@ -283,7 +283,9 @@ class DrawPromptTest {
     assertThat(s.front()).isEqualTo("A");
     assertThat(s.back()).isEqualTo("B");
     assertThat(s.frontPanel().scene())
-        .isEqualTo("{A} walks tilting navy umbrella, shoulder soaked, city sidewalk");
+        .isEqualTo(
+            "{A} walks tilting navy umbrella, shoulder soaked, city sidewalk, on the left side of the picture,"
+                + " open space on the right side");
     assertThat(s.frontPanel().faces())
         .extracting(ComicScript.Face::face)
         .containsExactly("easy grin, looking to the side");
@@ -299,7 +301,10 @@ class DrawPromptTest {
             faces);
     var h = DrawHandler.split(hold);
     assertThat(h.front()).isEqualTo("B");
-    assertThat(h.frontPanel().scene()).isEqualTo("{B} holds up {연} at the chest, park");
+    assertThat(h.frontPanel().scene())
+        .isEqualTo(
+            "{B} holds up {연} at the chest, park, on the left side of the picture, open space on the"
+                + " right side");
     var script =
         new ComicScript(
             "t",
@@ -313,7 +318,9 @@ class DrawPromptTest {
         .startsWith("s, edit this picture")
         .contains(
             "(young man, navy sweater), the young man watching, easy grin, looking at the first")
-        .endsWith("exactly two characters, each drawn only once");
+        .contains("keep the young woman on the left exactly as drawn")
+        .endsWith(
+            "the young woman still on the left, exactly two characters, each drawn only once");
     // 한 사람 컷은 나누지 않는다
     assertThat(DrawHandler.split(new ComicScript.Panel("기", "wide", "{A} runs, park", List.of())))
         .isNull();

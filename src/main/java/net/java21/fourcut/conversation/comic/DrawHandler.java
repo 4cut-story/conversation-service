@@ -711,7 +711,11 @@ class DrawHandler implements StepHandler {
     if (clause == null) {
       return null;
     }
-    String frontScene = IN_FRONT.matcher(String.join(", ", kept)).replaceAll("");
+    // 앞사람을 왼쪽에 두어 2차에 뒷사람이 들어설 빈자리를 남긴다. 앞사람이 가운데·오른쪽에 있으면 2차가 앞사람을 뒷사람으로 바꿔 그렸다(17판 두 사람 컷 9개 중
+    // 3개).
+    String frontScene =
+        IN_FRONT.matcher(String.join(", ", kept)).replaceAll("")
+            + ", on the left side of the picture, open space on the right side";
     List<ComicScript.Face> faces =
         panel.faces() == null
             ? null
@@ -755,15 +759,25 @@ class DrawHandler implements StepHandler {
                 .map(f -> ", " + aside(f.face().strip(), "looking at the first character"))
                 .findFirst()
                 .orElse("");
+    String first =
+        script.characters().stream()
+            .filter(c -> split.front().equals(c.speaker()))
+            .map(c -> c.look().strip().split(",", 2)[0].strip())
+            .findFirst()
+            .orElse("character");
     return style
-        + ", edit this picture: keep the character, the objects, the background, the light and the"
-        + " drawing style exactly the same, and add one more character in the middle distance on the"
-        + " right side: ("
+        + ", edit this picture: keep the "
+        + first
+        + " on the left exactly as drawn, with the same face, clothes, pose and place, keep the"
+        + " objects, the background, the light and the drawing style exactly the same, and add one"
+        + " more character in the open space in the middle distance on the right side: ("
         + look
         + "), "
         + pose
         + face
-        + ", exactly two characters, each drawn only once";
+        + ", the "
+        + first
+        + " still on the left, exactly two characters, each drawn only once";
   }
 
   /**
