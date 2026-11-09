@@ -377,7 +377,8 @@ class DrawHandler implements StepHandler {
 
   /**
    * 한 순간·인물 수·같은 옷과 소품을 거는 말. 컷 안이 격자로 나뉘거나 같은 사람이 한 컷에 둘 그려지고, 컷마다 옷·소품이 바뀌었다(회차 29 klein 참조판
-   * 92.7점 → 이 말을 넣어 93.2점).
+   * 92.7점 → 이 말을 넣어 93.2점). 얼굴·머리·장신구도 함께 건다. 참조 그림의 안경이 컷마다 있다 없다 했다(시험 31회 funny-03 할머니, love-07
+   * 단짝).
    */
   static String frame(int people) {
     return frame(people, false);
@@ -397,7 +398,7 @@ class DrawHandler implements StepHandler {
                         + " characters, each drawn only once, ";
     return "one full-frame illustration of a single moment, "
         + count
-        + "same outfit and same props in every panel";
+        + "same face, hairstyle, outfit, accessories and props in every panel";
   }
 
   /** 반려동물 소품 draw(콘티 규칙: "tiny ... on four legs, no clothes"). */
