@@ -56,6 +56,11 @@ public final class WorkKeys {
     return work(conversationId, "panel-" + index + "-b.png");
   }
 
+  /** 라이브 모드 움직임 컷의 세 번째 그림(두 번째와 다르게 바꾼 그림, 워커가 올린다). */
+  public static String panelC(String conversationId, int index) {
+    return work(conversationId, "panel-" + index + "-c.png");
+  }
+
   /** 라이브 모드 전용 넓은 그림(16:9, 말풍선·글자 없음, 워커가 완성 컷을 바탕으로 넓혀 그린다). */
   public static String panelWide(String conversationId, int index) {
     return work(conversationId, "panel-" + index + "-w.png");
@@ -68,12 +73,22 @@ public final class WorkKeys {
 
   /** 라이브 모드 컷 그림의 만화 폴더 기준 상대 경로. second면 두 번째 그림. */
   public static String livePanelPath(int index, boolean second) {
-    return "panels/" + index + (second ? "-b" : "") + ".png";
+    return livePanelPath(index, second ? 1 : 0);
+  }
+
+  /** 라이브 모드 컷 그림의 만화 폴더 기준 상대 경로. frame 0은 첫 그림, 1은 두 번째(-b), 2는 세 번째(-c). */
+  public static String livePanelPath(int index, int frame) {
+    return "panels/" + index + (frame <= 0 ? "" : "-" + (char) ('a' + frame)) + ".png";
   }
 
   /** 라이브 모드 컷 그림(말풍선 포함). */
   public static String livePanel(String conversationId, int index, boolean second) {
     return comicPrefix(conversationId) + livePanelPath(index, second);
+  }
+
+  /** 라이브 모드 컷 그림. frame은 {@link #livePanelPath(int, int)}와 같다. */
+  public static String livePanel(String conversationId, int index, int frame) {
+    return comicPrefix(conversationId) + livePanelPath(index, frame);
   }
 
   /** 라이브 모드 재생 정보. */

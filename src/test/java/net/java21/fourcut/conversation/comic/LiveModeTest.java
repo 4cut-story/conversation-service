@@ -66,6 +66,29 @@ class LiveModeTest {
   }
 
   @Test
+  @DisplayName("FR-044: 세 번째 그림이 있는 움직임 컷은 그림 세 장을 차례로 담는다")
+  void thirdFrame() {
+    var live =
+        LivePlayback.build(
+            json,
+            script,
+            List.of(),
+            List.of(),
+            List.of(true, false),
+            List.of(true, true),
+            List.of(true, true));
+
+    var frames = live.path("panels").get(0).path("motion").path("frames");
+    assertThat(frames.size()).isEqualTo(3);
+    assertThat(frames.get(2).asString()).isEqualTo("panels/1-c.png");
+    assertThat(live.path("panels").get(1).path("motion").isNull()).isTrue();
+
+    var two =
+        LivePlayback.build(json, script, List.of(), List.of(), List.of(true, false), List.of());
+    assertThat(two.path("panels").get(0).path("motion").path("frames").size()).isEqualTo(2);
+  }
+
+  @Test
   @DisplayName("FR-020: 사건 효과음은 배경음 위에 한 번(반복 없음, 바로) 틀고, 없는 컷은 null이다")
   void effect() {
     var alarm =

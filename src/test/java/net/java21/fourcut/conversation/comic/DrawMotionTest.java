@@ -31,6 +31,24 @@ class DrawMotionTest {
   }
 
   @Test
+  @DisplayName("FR-044: 움직임 컷은 같은 바탕에서 다르게 바꾼 세 번째 그림도 요청한다")
+  void thirdFrame() {
+    var panel =
+        new ComicScript.Panel(
+            "기", "wide", "{A} sits", List.of(), "rainy street, rain", List.of(), "비", "rain");
+
+    var next = handler.motion("simple cartoon", "c1", 1, panel).path("next");
+
+    assertThat(next.path("uploadPutKey").asString()).isEqualTo("pipeline-work/c1/panel-2-c.png");
+    assertThat(next.path("prompt").asString())
+        .startsWith("simple cartoon, edit this picture: keep the characters")
+        .endsWith(Motion.RAIN.next());
+    for (Motion m : Motion.values()) {
+      assertThat(m.next()).isNotBlank().isNotEqualTo(m.change());
+    }
+  }
+
+  @Test
   @DisplayName("FR-017: 움직임이 없는 컷은 두 번째 그림을 요청하지 않는다(첫 그림 요청은 그대로)")
   void noMotion() {
     var plain = new ComicScript.Panel("기", "wide", "{A} sits", List.of());
