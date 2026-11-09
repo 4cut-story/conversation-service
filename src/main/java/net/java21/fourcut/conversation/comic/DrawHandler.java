@@ -253,14 +253,14 @@ class DrawHandler implements StepHandler {
     String head = m.group(1).strip();
     String noun = head.substring(head.lastIndexOf(' ') + 1);
     String only = ", only one " + noun + " in the whole picture";
-    Matcher on = STANDS_ON.matcher(scene.substring(m.end()));
-    if (on.lookingAt()) {
+    Stand on = standsOn(scene, m.end());
+    if (on != null) {
       // 받침 위 물건을 손에도 하나 더 쥐여 그렸다(회차 29 콘티 23판 mystery-08 5컷 삼각대 망원경 + 손에 든 망원경)
       return only
           + ", the "
           + noun
           + " stands on its "
-          + on.group(1)
+          + on.support()
           + ", nothing held in the hands";
     }
     return only;
@@ -276,11 +276,11 @@ class DrawHandler implements StepHandler {
     if (!m.find()) {
       return scene;
     }
-    Matcher on = STANDS_ON.matcher(scene.substring(m.end()));
-    if (!on.lookingAt()) {
+    Stand on = standsOn(scene, m.end());
+    if (on == null) {
       return scene;
     }
-    int end = m.end() + on.end();
+    int end = on.end();
     String object = "a single " + scene.substring(m.start(1), end).strip();
     String rest =
         (scene.substring(0, m.start()) + "it" + scene.substring(end))
@@ -288,9 +288,21 @@ class DrawHandler implements StepHandler {
     return object + " stands in the picture, " + rest.replaceAll("\\s{2,}", " ").strip();
   }
 
-  private static final Pattern STANDS_ON =
-      Pattern.compile(
-          "(?: with [^,]*?)? on (?:a |an |the |its )?(tripod|stand|table|desk|counter|shelf|easel)\\b");
+  private static final Pattern SUPPORT =
+      Pattern.compile(" on (?:a |an |the |its )?(tripod|stand|table|desk|counter|shelf|easel)\\b");
+
+  /** 물건 이름 뒤 받침 말(" with one eyepiece on tripod")의 끝과 받침 이름. 쉼표 앞까지만 본다. 없으면 null. */
+  record Stand(int end, String support) {}
+
+  static Stand standsOn(String scene, int from) {
+    int comma = scene.indexOf(',', from);
+    String segment = scene.substring(from, comma < 0 ? scene.length() : comma);
+    Matcher on = SUPPORT.matcher(segment);
+    if (!on.find() || (on.start() > 0 && !segment.startsWith(" with "))) {
+      return null;
+    }
+    return new Stand(from + on.end(), on.group(1));
+  }
 
   /**
    * 쉼표로 나뉜 말 가운데 앞에 이미 나온 말을 뺀다. 장소·빛이 두세 번씩 들어가 있었고, 그림 모델은 같은 말을 두 번 읽으면 그것을 두 번 그린다(회차 29 콘티 19판
@@ -926,14 +938,66 @@ class DrawHandler implements StepHandler {
   }
 
   /** 받침 위 물건 앞의 동작 말 꼬리("peering into the eyepiece of"). 1차 빈손 컷에서는 이 꼬리를 뗀다. */
-  private static final Pattern STAND_TAIL =
-      Pattern.compile(
-          "(?:\\s+(?:into|at|of|on|onto|toward|through|over|the [a-z]+ of|its [a-z]+ of))+\\s*$");
+  private static final Pattern TAIL_WORD =
+      Pattern.compile("\\s(?:into|at|of|on|onto|toward|through|over|(?:the|its) [a-z]+ of)$");
 
-  private static final Pattern HOLD =
-      Pattern.compile(
-          "\\b(?:holds up|holds out|holds|lifts) (?!the hands|both|fists|the (?:top|edge|side|end) of)(.+?)( by its [^,]+?)? at the chest"
-              + "((?:, screen showing [^,]+)?)");
+  /** 동작 말 끝의 꼬리가 시작하는 자리. 꼬리가 없으면 끝 자리. */
+  static int tailStart(String before) {
+    String rest = before.stripTrailing();
+    while (true) {
+      Matcher t = TAIL_WORD.matcher(rest);
+      if (!t.find()) {
+        return rest.length();
+      }
+      rest = rest.substring(0, t.start()).stripTrailing();
+    }
+  }
+
+  private static final Pattern HOLD_VERB =
+      Pattern.compile("\\b(?:holds up|holds out|holds|lifts) ");
+
+  private static final Pattern NOT_HELD =
+      Pattern.compile("^(?:the hands|both|fists|the (?:top|edge|side|end) of)");
+
+  private static final String AT_CHEST = " at the chest";
+
+  private static final String SCREEN = ", screen showing ";
+
+  /** 가슴 앞에 드는 말 하나: 동작 시작·끝 자리, 물건, 쥐는 곳("by its handle"), 화면 내용. */
+  record Held(int start, int end, String object, String grip, String state) {}
+
+  static Held held(String scene) {
+    Matcher v = HOLD_VERB.matcher(scene);
+    while (v.find()) {
+      int from = v.end();
+      int chest = scene.indexOf(AT_CHEST, from + 1);
+      if (chest < 0) {
+        return null;
+      }
+      if (NOT_HELD.matcher(scene.substring(from)).find()) {
+        continue;
+      }
+      String object = scene.substring(from, chest);
+      String grip = "";
+      int by = object.indexOf(" by its ", 1);
+      if (by > 0 && object.indexOf(',', by) < 0) {
+        grip = object.substring(by);
+        object = object.substring(0, by);
+      }
+      int end = chest + AT_CHEST.length();
+      String state = "";
+      if (scene.startsWith(SCREEN, end)) {
+        int next = scene.indexOf(',', end + SCREEN.length());
+        int stop = next < 0 ? scene.length() : next;
+        if (stop > end + SCREEN.length()) {
+          state = scene.substring(end, stop);
+          end = stop;
+        }
+      }
+      return new Held(v.start(), end, object, grip, state);
+    }
+    return null;
+  }
 
   /** 한 사람이 물건을 가슴 앞에 드는 컷이면 빈손 컷과 물건으로 나눈다. 아니면 null. */
   static Hold hold(ComicScript.Panel panel) {
@@ -953,12 +1017,12 @@ class DrawHandler implements StepHandler {
     if (stand != null) {
       return stand;
     }
-    Matcher m = HOLD.matcher(scene);
-    if (!m.find() || m.group(1).contains("{")) {
+    Held m = held(scene);
+    if (m == null || m.object().contains("{")) {
       return null;
     }
     // "holds {청소기} out in front at the chest"의 "out in front"는 물건 이름이 아니다
-    String object = m.group(1).strip().replaceFirst("\\s+(?:out in front|out|up|forward)$", "");
+    String object = m.object().strip().replaceFirst("\\s+(?:out in front|out|up|forward)$", "");
     String bare = object.replaceFirst("(?i)^(?:one lone |one |a single |an? |the )", "");
     // 시선 말에는 물건 이름의 앞부분만 있을 수 있다("looking at the round white robot vacuum"). 앞 세 낱말로 찾는다
     String[] words = bare.split(",", 2)[0].strip().split("\\s+");
@@ -988,8 +1052,8 @@ class DrawHandler implements StepHandler {
         new ComicScript.Panel(
             panel.role(), panel.shot(), empty, panel.lines(), panel.setting(), faces),
         object,
-        m.group(2) == null ? "" : m.group(2).strip(),
-        m.group(3).replaceFirst("^,\\s*", ""));
+        m.grip().strip(),
+        m.state().replaceFirst("^,\\s*", ""));
   }
 
   /**
@@ -1002,19 +1066,19 @@ class DrawHandler implements StepHandler {
     if (!m.find()) {
       return null;
     }
-    Matcher on = STANDS_ON.matcher(scene.substring(m.end()));
-    if (!on.lookingAt()) {
+    Stand on = standsOn(scene, m.end());
+    if (on == null) {
       return null;
     }
-    int end = m.end() + on.end();
+    int end = on.end();
     String before = scene.substring(0, m.start());
-    Matcher tail = STAND_TAIL.matcher(before);
-    String verb = tail.find() ? before.substring(tail.start()).strip() : "";
+    int cut = tailStart(before);
+    String verb = before.substring(cut).strip();
     if (!verb.matches(".*\\b(?:into|through|at)\\b.*")) {
       // 들여다보는 동작만 나눈다. 물건에 손을 얹는 동작("rests a fist on")은 한 번에 그린다
       return null;
     }
-    String pose = tail.find(0) ? before.substring(0, tail.start()) : before;
+    String pose = before.substring(0, cut);
     String empty = pose.stripTrailing() + ", hands empty" + scene.substring(end);
     String object = scene.substring(m.start(1), end).strip();
     // 2차에 "the character peering into its eyepiece"라고 쓰면 손에 망원경을 하나 더 쥐여 줬다(25b판). 자세는 1차 그대로 두고
@@ -1022,7 +1086,7 @@ class DrawHandler implements StepHandler {
     // 눈높이에 세운다
     String place =
         "standing on its "
-            + on.group(1)
+            + on.support()
             + " right in front of the character's face, its eyepiece at the character's eye, the"
             + " character's hands stay empty and nothing is held";
     List<ComicScript.Face> faces =
