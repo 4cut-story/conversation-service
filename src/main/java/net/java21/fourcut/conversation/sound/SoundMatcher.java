@@ -325,17 +325,13 @@ public class SoundMatcher {
     List<Scored> found = find(q);
     String scene = text(q.soundScene());
     String context = (scene + " " + text(q.place())).toLowerCase(Locale.ROOT);
-    List<Scored> fit = new ArrayList<>();
-    List<Scored> off = new ArrayList<>();
-    for (Scored s : close(found)) {
-      (conflicts(context, s.sound()) ? off : fit).add(s);
-    }
+    // 시간대·날씨가 어긋나는 소리는 쓰지 않는다(장면과 관계없는 소리보다 바탕 배경음악이 낫다)
+    List<Scored> fit = close(found).stream().filter(s -> !conflicts(context, s.sound())).toList();
     List<Scored> top = fit.subList(0, Math.min(PLACE_WINDOW, fit.size()));
     List<Scored> out = new ArrayList<>();
     top.stream().filter(s -> placeHit(scene, s.sound())).forEach(out::add);
     top.stream().filter(s -> !placeHit(scene, s.sound())).forEach(out::add);
     out.addAll(fit.subList(top.size(), fit.size()));
-    // 시간대·날씨가 어긋나는 소리는 쓰지 않는다(장면과 관계없는 소리보다 소리 없음이나 배경음악이 낫다)
     return out;
   }
 
