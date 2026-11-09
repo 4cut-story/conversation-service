@@ -496,6 +496,10 @@ public record LookHead(String animal, String gender, String age) {
         .map(String::strip)
         .filter(p -> !p.isEmpty() && !c.contains(p.toLowerCase(Locale.ROOT)))
         .filter(p -> fits(words(p.toLowerCase(Locale.ROOT)), hasBottom, hasShoes, hasTop))
+        // 성별·나이 마디("little girl")는 붙이지 않는다. 캐릭터 모습과 성별이 다른 콘티 마디가 붙어 한 컷에 남녀 아이가 둘
+        // 그려졌다(회차 29 콘티 14판 mystery-08).
+        .filter(
+            p -> Arrays.stream(words(p.toLowerCase(Locale.ROOT))).noneMatch(PERSON_WORDS::contains))
         .collect(Collectors.joining(", "));
   }
 
@@ -521,6 +525,11 @@ public record LookHead(String animal, String gender, String age) {
     }
     return out.toString();
   }
+
+  private static final Set<String> PERSON_WORDS =
+      java.util.stream.Stream.of(FEMALE, MALE, Set.of("child", "kid", "children"))
+          .flatMap(Set::stream)
+          .collect(Collectors.toUnmodifiableSet());
 
   private static String[] words(String text) {
     return text.split("[^\\p{L}\\p{N}-]+");

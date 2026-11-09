@@ -263,4 +263,16 @@ class LookHeadTest {
     assertThat(LookHead.agesWithDb("blue overalls", "YOUNG")).isTrue();
     assertThat(LookHead.agesWithDb("little girl", null)).isTrue();
   }
+
+  @Test
+  @DisplayName("FR-006: 콘티 외모의 성별·나이 마디는 캐릭터 모습에 붙이지 않는다")
+  void dropsPersonWords() {
+    assertThat(
+            CharacterLibrary.drawLook(
+                "little boy swordsman, child, blue robe, wooden sword",
+                "small child, little girl, red robe, straight-leg white trousers",
+                true))
+        .isEqualTo(
+            "little boy swordsman, child, blue robe, wooden sword, straight-leg white trousers");
+  }
 }

@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.15";
+  static final String VERSION = "2026-11-09.16";
 
   private Prompts() {}
 
@@ -156,6 +156,8 @@ final class Prompts {
         이야기의 핵심이면 사람이 들지 않는 한 더미로 써서 바닥이나 그 안에 둔다(예: "heap of socks spilling out of {강아지집}").
         draw에는 바뀌지 않는 생김새만 쓰고, 화면에 보이는 것·열림·켜짐 같은 상태는 그 컷 action에만 한 번 쓴다. 두 곳에 다르게
         쓰면 같은 물건이 두 개로 그려진다.
+        draw는 쉼표 없이 한 덩어리 말로 쓴다. 쉼표로 나눈 부분은 따로 그려진다("telescope, one eyepiece, tripod"는 손에 든
+        망원경과 삼각대 위 망원경 두 개로 그려졌다). 부분은 with·on으로 잇는다(예: "long brass telescope on a tripod").
         draw에는 그 물건 하나만 쓰고 담는 것·받치는 것·싸는 것(접시, 쟁반, 받침, 보자기, 포장지)을 함께 쓰지 않는다
         ("toast on a plate"는 손에 한 장, 접시에 한 장으로, "box wrapped in silk"는 상자 두 개로 그려진다).
         한 장소에 여러 대 놓일 법한 기계(키오스크, 자판기, 세탁기, 가스레인지)와 멀리 보이는 핵심 건물·불빛(산 위 오두막, 등대)은 draw를 "a single"로 시작한다(예: "a single tall
@@ -173,7 +175,7 @@ final class Prompts {
         팻말·표지판은 받침과 붙은 모양까지 쓰고, 팻말이 가리키는 것을 그림 하나로 보이게 쓴다(예: "small blank wooden board nailed
         to one stake, a painted red tomato on it, next to {토마토} plants"). 받침이 없으면 판이 떠 있게 그려진다.
       - 들고 다니는 물건이 나오는 컷인데 action이 그 물건을 쓰지 않으면, 쥔 모습을 action 끝에 짧게 붙인다(예: "holding
-        {등불} by its handle at her side", "{가방} on his shoulder"). 쥔 모습이 없으면 팔을 쭉 뻗어 매달거나 엉뚱하게 든다.
+        {등불} by its handle at the side", "{가방} on the shoulder"). 쥔 모습이 없으면 팔을 쭉 뻗어 매달거나 엉뚱하게 든다.
       - 인물마다 들고 다니는 물건은 하나까지만 두고, 이야기에 꼭 필요할 때만 look에 넣는다. 길쭉한 물건(칼, 검, 지팡이, 막대,
         부채)은 편 전체에서 한 인물에게만 준다. 비슷한 물건을 두 인물에게 나눠 주면 서로 바뀌어 그려진다.
       - draw·action·setting에 그림 모델이 글자로 써 넣는 낱말(order, menu, sale, exit, open, number, sign 위 문구, 가게
@@ -215,8 +217,16 @@ final class Prompts {
         동작은 wide에만 쓴다. medium·close-up 컷의 action은 손·팔·얼굴만 쓰는 동작이다(물건 들어 올리기,
         내밀기, 버튼 누르기, 볼 감싸기).
         침대·소파·의자에 앉거나 눕는 동작은 다리가 어디 있는지 쓴다(예: "{A} sits on the edge of {침대}, feet on the floor",
-        "{A} sits up in {침대}, blanket over her legs"). 다리 위치가 없으면 다리가 가구 속에 묻혀 그려진다. 침대·이불 속·방바닥처럼 신을 벗는 곳에서 발이 보이면 "bare feet" 또는
+        "{A} sits up in {침대}, blanket over the legs"). 다리 위치가 없으면 다리가 가구 속에 묻혀 그려진다. 침대·이불 속·방바닥처럼 신을 벗는 곳에서 발이 보이면 "bare feet" 또는
         "white socks"를 쓴다(쓰지 않으면 맨발과 양말 사이 어정쩡한 발로 그려진다).
+      - close-up 컷의 action은 얼굴·머리·목만 쓰는 동작이다(볼 붉히기, 입 가리기 없이 입 벌리기, 고개 숙이기). 물건을 쥐는 동작은
+        medium이나 wide에 쓴다. close-up에서 물건을 쥐면 물건이 잘려 손에 하나, 어깨에 하나처럼 두 개로 그려진다.
+      - action에 신발·옷 낱말을 쓰지 않는다. 신발·옷은 look·bottom·shoes에만 있다("sneakers hanging off the edge"는 신은 신발
+        말고 운동화 한 짝을 더 그렸다).
+      - 식물·나무에서 딴 것(열매, 꽃, 잎)을 드는 컷은 action에 그 식물 소품을 함께 쓰지 않고 든 것 하나만 쓴다(예: "{B} holds up
+        one long red pepper"). 식물 소품의 draw에는 열매를 여럿 쓰지 않는다. 함께 쓰면 손에 하나, 다른 손에 또 하나가 그려진다.
+      - action·face에 his·her·him·she·he 같은 대명사를 쓰지 않는다. 몸은 the로 쓴다(예: "{A} puts fists on the hips",
+        "holding {우산} by its handle at the chest"). 대명사가 인물 성별과 어긋나면 남자가 여자로, 여자가 남자로 그려진다.
       - 컷에 나오는 사람: 모든 컷은 그 컷의 주인공 한 명만 그린다. 한 컷에 두 명 이상을 그리면 그림 모델이 같은 사람을 둘로
         그리거나, 두 사람의 옷·얼굴·귀를 섞거나, 두 사람의 동작과 표정을 뒤바꾼다(자리를 정해도 바뀐다). 두 사람이 함께 하는
         순간(물건 건네기, 같은 것 보기, 주고받는 말)은 한 사람이 하는 컷과 다른 사람이 반응하는 컷으로 나눠 이어 그린다
@@ -264,7 +274,7 @@ final class Prompts {
         실내 컷(place가 방·부엌·가게·현관·정류장 지붕·처마 밑처럼 지붕 아래인 컷)의 setting에는 rain·snow·raindrops 낱말을 아예 쓰지 않는다.
         이 낱말이 있으면 방 안에 빗줄기가 그려진다. 비 오는 날 실내는 "dark gray sky in the window, dim room"처럼 창밖이 어둡고 방이 어둑하게 쓴다("light"만 쓰면 창이 밝게
         그려진다). 야외에서 비를 맞는 컷의 action에는 젖은 모습을 쓴다(예: "{A} stands in the rain, soaked hair and clothes";
-        우산이 props에 있으면 "holding {우산} by its handle over her head"). 이야기 안에서 시간이
+        우산이 props에 있으면 "holding {우산} by its handle over the head"). 이야기 안에서 시간이
         흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.
       - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓 하나를 그림 모델용 영어 4단어 이내로
         쓴다("then", "turns into"처럼 두 표정을 잇는 말은 쓰지 않는다. 컷 안에 작은 컷이 생긴다)(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로

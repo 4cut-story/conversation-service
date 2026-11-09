@@ -116,7 +116,13 @@ final class ScriptDraft {
             : "looking off to the side at someone";
       }
       String draw = props.getOrDefault(key.toLowerCase(Locale.ROOT), key);
-      return "looking at the " + draw.split(",", 2)[0].strip();
+      // draw 앞의 관사·"a single"은 뺀다("looking at the a single small wooden hut", 회차 29 콘티 14판
+      // mystery-08)
+      String name =
+          draw.split(",", 2)[0]
+              .strip()
+              .replaceFirst("(?i)^(?:(?:a|an|the|one)\\s+)?(?:single\\s+)?", "");
+      return "looking at the " + name;
     }
     String word = resolve(lookAt, props).toLowerCase(Locale.ROOT);
     if (word.startsWith("looking")) {

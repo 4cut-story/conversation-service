@@ -86,6 +86,17 @@ class ScriptDraftTest {
   }
 
   @Test
+  @DisplayName("FR-006: 소품 시선은 draw 앞의 관사와 a single을 빼고 쓴다")
+  void gazeSingle() {
+    assertThat(
+            ScriptDraft.gaze(
+                "{오두막}",
+                "{A} stands",
+                Map.of("오두막", "a single small wooden hut with glowing window")))
+        .isEqualTo("looking at the small wooden hut with glowing window");
+  }
+
+  @Test
   @DisplayName("FR-006: 칸을 나누지 않은 예전 콘티 응답은 그대로 둔다")
   void legacy() {
     JsonNode old =
