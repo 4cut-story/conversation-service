@@ -110,7 +110,9 @@ class LiveBackfill {
     List<Boolean> moving = new ArrayList<>();
     List<Boolean> wide = new ArrayList<>();
     List<Boolean> third = new ArrayList<>();
+    List<Boolean> depth = new ArrayList<>();
     for (JsonNode p : panels) {
+      depth.add(p.path("depth").isString());
       JsonNode motion = p.path("motion");
       boolean moves = motion.isObject();
       moving.add(moves);
@@ -124,7 +126,8 @@ class LiveBackfill {
         sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
         moving,
         wide,
-        third);
+        third,
+        depth);
   }
 
   private void mark(String id) {

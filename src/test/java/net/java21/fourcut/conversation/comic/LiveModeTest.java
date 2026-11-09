@@ -89,6 +89,28 @@ class LiveModeTest {
   }
 
   @Test
+  @DisplayName("FR-048: 깊이 지도가 있는 넓은 그림 컷은 depth 경로를 담고, 1:1 컷이나 깊이 지도가 없는 컷은 담지 않는다")
+  void depth() {
+    var live =
+        LivePlayback.build(
+            json,
+            script,
+            List.of(),
+            List.of(),
+            List.of(false, false),
+            List.of(true, false),
+            List.of(),
+            List.of(true, true));
+
+    assertThat(live.path("panels").get(0).path("depth").asString()).isEqualTo("panels/1-depth.png");
+    assertThat(live.path("panels").get(1).has("depth")).isFalse();
+    var flat =
+        LivePlayback.build(
+            json, script, List.of(), List.of(), List.of(false, false), List.of(true, true));
+    assertThat(flat.path("panels").get(0).has("depth")).isFalse();
+  }
+
+  @Test
   @DisplayName("FR-020: 사건 효과음은 배경음 위에 한 번(반복 없음, 바로) 틀고, 없는 컷은 null이다")
   void effect() {
     var alarm =

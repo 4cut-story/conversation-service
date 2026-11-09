@@ -71,6 +71,21 @@ public final class WorkKeys {
     return work(conversationId, "panel-" + index + "-w.png");
   }
 
+  /** 라이브 넓은 그림의 깊이 지도(같은 크기 흑백, 밝을수록 가깝다, FR-048). */
+  public static String panelDepth(String conversationId, int index) {
+    return work(conversationId, "panel-" + index + "-depth.png");
+  }
+
+  /** 라이브 깊이 지도의 만화 폴더 기준 상대 경로. */
+  public static String liveDepthPath(int index) {
+    return "panels/" + index + "-depth.png";
+  }
+
+  /** 라이브 깊이 지도. */
+  public static String liveDepth(String conversationId, int index) {
+    return comicPrefix(conversationId) + liveDepthPath(index);
+  }
+
   /** 만화 폴더 (원본·썸네일·컷 그림·재생 정보가 함께 있다). */
   public static String comicPrefix(String conversationId) {
     return "comics/" + conversationId + "/";

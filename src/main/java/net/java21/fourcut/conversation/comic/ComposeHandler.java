@@ -148,9 +148,11 @@ class ComposeHandler implements StepHandler {
       List<Boolean> moving = new ArrayList<>();
       List<Boolean> wide = new ArrayList<>();
       List<Boolean> third = new ArrayList<>();
+      List<Boolean> depth = new ArrayList<>();
       for (int i = 0; i < panels.size(); i++) {
         Optional<BufferedImage> w = wide(id, i + 1, gray);
         wide.add(w.isPresent());
+        depth.add(w.isPresent() && depth(id, i + 1, w.get()));
         if (w.isPresent()) {
           boolean move = wideMotion(id, i, script, w.get(), gray, 1);
           moving.add(move);
@@ -193,7 +195,8 @@ class ComposeHandler implements StepHandler {
               sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
               moving,
               wide,
-              third);
+              third,
+              depth);
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -220,6 +223,21 @@ class ComposeHandler implements StepHandler {
     image = gray ? gray(image) : image;
     storage.put(WorkKeys.livePanel(id, n, false), png(image), PNG);
     return Optional.of(image);
+  }
+
+  /** 넓은 그림의 깊이 지도(FR-048)를 만화 폴더에 둔다. 워커가 올리지 않았거나 크기가 다르면 false(평면으로 움직인다). */
+  private boolean depth(String id, int n, BufferedImage wide) {
+    Optional<byte[]> bytes = storage.get(WorkKeys.panelDepth(id, n));
+    if (bytes.isEmpty()) {
+      return false;
+    }
+    BufferedImage d = read(bytes.get());
+    if (d.getWidth() != wide.getWidth() || d.getHeight() != wide.getHeight()) {
+      log.info("깊이 지도 크기가 넓은 그림과 달라 뺀다: conversation={} panel={}", id, n);
+      return false;
+    }
+    storage.put(WorkKeys.liveDepth(id, n), bytes.get(), PNG);
+    return true;
   }
 
   /**
