@@ -609,6 +609,38 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 받침 위 하나뿐인 물건을 들여다보는 컷은 빈손 자세와 받침 위 물건 더하기로 나눠 그린다")
+  void standHold() {
+    ComicScript.Panel p =
+        new ComicScript.Panel(
+            "전",
+            "wide",
+            "{A} stands on tiptoe peering into the eyepiece of single brass telescope with one"
+                + " eyepiece on tripod, hilltop clearing",
+            List.of(),
+            "night",
+            List.of(new ComicScript.Face("A", "awestruck, looking at it")));
+    DrawHandler.Hold h = DrawHandler.hold(p);
+    assertThat(h.emptyPanel().scene())
+        .isEqualTo("{A} stands on tiptoe peering, hands empty, hilltop clearing");
+    assertThat(h.emptyPanel().faces().get(0).face()).isEqualTo("awestruck, looking ahead");
+    assertThat(DrawHandler.holdPrompt("ink", h))
+        .contains(
+            "add exactly one brass telescope with one eyepiece on tripod in front of the"
+                + " character, the character peering into its eyepiece")
+        .doesNotContain("hands at the chest");
+    ComicScript.Panel rest =
+        new ComicScript.Panel(
+            "전",
+            "medium",
+            "{C} rests a fist on single brass telescope with one eyepiece on tripod",
+            List.of(),
+            "day",
+            List.of());
+    assertThat(DrawHandler.hold(rest)).isNull();
+  }
+
+  @Test
   @DisplayName("FR-006: 받침 위에 선 하나뿐인 물건은 장면 맨 앞에 세우고 동작에서는 it으로 받는다")
   void standFirst() {
     assertThat(

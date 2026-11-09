@@ -882,7 +882,17 @@ class DrawHandler implements StepHandler {
    * 물건을 가슴 앞에 드는 컷을 나눠 그리는 차례. 1차는 빈손으로 같은 자세를 그리고, 2차는 그 그림에 물건 하나만 더한다. 한 번에 그리면 휴대폰 두 대, 양말 두 짝,
    * 머리 둘 달린 프라이팬처럼 든 물건이 겹쳐 그려졌다(회차 29 콘티 16판 심각 4편 중 3편).
    */
-  record Hold(ComicScript.Panel emptyPanel, String object, String grip, String state) {}
+  record Hold(
+      ComicScript.Panel emptyPanel, String object, String grip, String state, String place) {
+    Hold(ComicScript.Panel emptyPanel, String object, String grip, String state) {
+      this(emptyPanel, object, grip, state, null);
+    }
+  }
+
+  /** 받침 위 물건 앞의 동작 말 꼬리("peering into the eyepiece of"). 1차 빈손 컷에서는 이 꼬리를 뗀다. */
+  private static final Pattern STAND_TAIL =
+      Pattern.compile(
+          "(?:\\s+(?:into|at|of|on|onto|toward|through|over|the [a-z]+ of|its [a-z]+ of))+\\s*$");
 
   private static final Pattern HOLD =
       Pattern.compile(
@@ -900,8 +910,15 @@ class DrawHandler implements StepHandler {
     while (marks.find()) {
       people++;
     }
+    if (people != 1) {
+      return null;
+    }
+    Hold stand = stand(panel, scene);
+    if (stand != null) {
+      return stand;
+    }
     Matcher m = HOLD.matcher(scene);
-    if (people != 1 || !m.find() || m.group(1).contains("{")) {
+    if (!m.find() || m.group(1).contains("{")) {
       return null;
     }
     // "holds {청소기} out in front at the chest"의 "out in front"는 물건 이름이 아니다
@@ -939,6 +956,57 @@ class DrawHandler implements StepHandler {
         m.group(3).replaceFirst("^,\\s*", ""));
   }
 
+  /**
+   * 받침 위에 선 하나뿐인 물건을 들여다보는 컷("peering into the eyepiece of single brass telescope ... on tripod")도
+   * 나눠 그린다. 1차는 물건 없이 같은 자세를, 2차는 그 그림에 받침 위 물건 하나만 더한다. 한 번에 그리면 물건이 둘이거나(23판) 같은 인물이 둘로 그려졌다(회차
+   * 29 콘티 24·25판 mystery-08 5컷).
+   */
+  private static Hold stand(ComicScript.Panel panel, String scene) {
+    Matcher m = SINGLE_PROP.matcher(scene);
+    if (!m.find()) {
+      return null;
+    }
+    Matcher on = STANDS_ON.matcher(scene.substring(m.end()));
+    if (!on.lookingAt()) {
+      return null;
+    }
+    int end = m.end() + on.end();
+    String before = scene.substring(0, m.start());
+    Matcher tail = STAND_TAIL.matcher(before);
+    String verb = tail.find() ? before.substring(tail.start()).strip() : "";
+    if (!verb.matches(".*\\b(?:into|through|at)\\b.*")) {
+      // 들여다보는 동작만 나눈다. 물건에 손을 얹는 동작("rests a fist on")은 한 번에 그린다
+      return null;
+    }
+    String pose = tail.find(0) ? before.substring(0, tail.start()) : before;
+    String empty = pose.stripTrailing() + ", hands empty" + scene.substring(end);
+    String object = scene.substring(m.start(1), end).strip();
+    String last = pose.strip().substring(pose.strip().lastIndexOf(' ') + 1);
+    verb = (last.endsWith("ing") ? last + " " : "") + verb;
+    String its = verb.replaceAll("\\bthe ([a-z]+) of$", "its $1");
+    String place =
+        "in front of the character, the character " + (its.equals(verb) ? verb + " it" : its);
+    List<ComicScript.Face> faces =
+        panel.faces() == null
+            ? null
+            : panel.faces().stream()
+                .map(
+                    f ->
+                        f == null || f.face() == null
+                            ? f
+                            : new ComicScript.Face(
+                                f.speaker(),
+                                f.face().replaceAll("looking at it\\b[^,]*", "looking ahead")))
+                .toList();
+    return new Hold(
+        new ComicScript.Panel(
+            panel.role(), panel.shot(), empty, panel.lines(), panel.setting(), faces),
+        "a single " + object,
+        "",
+        "",
+        place);
+  }
+
   /** 2차 프롬프트: 1차 그림은 그대로 두고 손에 물건 하나만 쥐여 준다. */
   static String holdPrompt(String style, Hold hold) {
     String object = hold.object();
@@ -955,8 +1023,10 @@ class DrawHandler implements StepHandler {
         + count
         + bare
         + (hold.state().isEmpty() ? "" : ", " + hold.state())
-        + " in the character's hands at the chest"
-        + (hold.grip().isEmpty() ? "" : ", held " + hold.grip())
+        + (hold.place() != null
+            ? " " + hold.place()
+            : " in the character's hands at the chest"
+                + (hold.grip().isEmpty() ? "" : ", held " + hold.grip()))
         + ", only one "
         + noun
         + " in the whole picture";
