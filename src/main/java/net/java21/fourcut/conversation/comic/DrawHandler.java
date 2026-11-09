@@ -179,6 +179,9 @@ class DrawHandler implements StepHandler {
         scene = scene.replace("{" + e.getKey() + "}", e.getValue().split(",")[0].strip());
       }
     }
+    if (people == 1) {
+      scene = scene + carried(looks.values().iterator().next(), scene);
+    }
     String detail = faces(panel, looks.keySet(), names) + setting(panel);
     scene = UNKNOWN_MARK.matcher(scene).replaceAll(concept.friend());
     String shot =
@@ -214,6 +217,28 @@ class DrawHandler implements StepHandler {
         + scene
         + detail
         + cast;
+  }
+
+  private static final Pattern CARRIED =
+      Pattern.compile(
+          "\\b(sword|lantern|fan|staff|cane|umbrella|bag|backpack|book|basket|spear|bow|stick)\\b");
+
+  /**
+   * 외모에 든 들고 다니는 물건을 장면이 쓰지 않으면 쥔 모습을 붙인다(", holding paper lantern at the side"). 쥔 모습이 없으면 그 물건을
+   * 벽에 걸어 두고 다른 인물의 칼을 쥐었다(회차 29 콘티 14판 mystery-08 4컷). 콘티 LLM은 캐릭터 DB 외모를 보지 못해 action에 쓸 수 없다.
+   */
+  static String carried(String look, String scene) {
+    String lower = scene.toLowerCase(java.util.Locale.ROOT);
+    StringBuilder out = new StringBuilder();
+    String[] parts = look.split(",");
+    for (int i = 1; i < parts.length; i++) {
+      String part = parts[i].strip();
+      Matcher m = CARRIED.matcher(part.toLowerCase(java.util.Locale.ROOT));
+      if (m.find() && !lower.contains(m.group(1))) {
+        out.append(", holding ").append(part).append(" at the side");
+      }
+    }
+    return out.toString();
   }
 
   /**

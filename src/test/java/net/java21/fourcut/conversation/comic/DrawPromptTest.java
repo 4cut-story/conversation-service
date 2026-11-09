@@ -408,4 +408,18 @@ class DrawPromptTest {
     assertThat(DrawHandler.frame(3)).contains("exactly three characters, each drawn only once");
     assertThat(DrawHandler.frame(9)).contains("exactly four characters");
   }
+
+  @Test
+  @DisplayName("FR-006: 외모에 든 들고 다니는 물건을 장면이 쓰지 않으면 쥔 모습을 붙인다")
+  void carried() {
+    assertThat(
+            DrawHandler.carried(
+                "little girl swordswoman, child, pink robe, paper lantern",
+                "little girl swordswoman tiptoes toward a door"))
+        .isEqualTo(", holding paper lantern at the side");
+    assertThat(
+            DrawHandler.carried(
+                "little boy swordsman, blue robe, wooden sword", "boy swings the wooden sword"))
+        .isEmpty();
+  }
 }
