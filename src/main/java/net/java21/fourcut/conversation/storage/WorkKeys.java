@@ -56,6 +56,11 @@ public final class WorkKeys {
     return work(conversationId, "panel-" + index + "-b.png");
   }
 
+  /** 라이브 모드 전용 넓은 그림(16:9, 말풍선·글자 없음, 워커가 완성 컷을 바탕으로 넓혀 그린다). */
+  public static String panelWide(String conversationId, int index) {
+    return work(conversationId, "panel-" + index + "-w.png");
+  }
+
   /** 만화 폴더 (원본·썸네일·컷 그림·재생 정보가 함께 있다). */
   public static String comicPrefix(String conversationId) {
     return "comics/" + conversationId + "/";

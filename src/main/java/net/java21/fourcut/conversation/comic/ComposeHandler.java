@@ -146,7 +146,14 @@ class ComposeHandler implements StepHandler {
     try {
       boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
       List<Boolean> moving = new ArrayList<>();
+      List<Boolean> wide = new ArrayList<>();
       for (int i = 0; i < panels.size(); i++) {
+        Optional<BufferedImage> w = wide(id, i + 1, gray);
+        wide.add(w.isPresent());
+        if (w.isPresent()) {
+          moving.add(wideMotion(id, i, script, w.get(), gray));
+          continue;
+        }
         Map<String, Staging.Side> stage = at(spots.stages(), i);
         Map<String, PanelPlacement.Head> heads = at(spots.heads(), i);
         List<PanelPlacement.Prop> props =
@@ -180,7 +187,8 @@ class ComposeHandler implements StepHandler {
               script,
               sounds.match(queries(script), DrawHandler.seedOf(script)),
               sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
-              moving);
+              moving,
+              wide);
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -189,6 +197,55 @@ class ComposeHandler implements StepHandler {
     } catch (RuntimeException e) {
       log.warn("라이브 모드 정보를 만들지 못했다: conversation={} ({})", id, e.toString());
       return null;
+    }
+  }
+
+  /**
+   * 라이브 전용 넓은 그림(FR-030)을 말풍선 없이 컷 그림 자리에 저장한다. 워커가 올리지 않았거나 가로로 넓지 않으면 빈 값(v1 컷 그림을 쓴다, FR-033).
+   */
+  private Optional<BufferedImage> wide(String id, int n, boolean gray) {
+    Optional<byte[]> bytes = storage.get(WorkKeys.panelWide(id, n));
+    if (bytes.isEmpty()) {
+      return Optional.empty();
+    }
+    BufferedImage image = read(bytes.get());
+    if (image.getWidth() <= image.getHeight()) {
+      return Optional.empty();
+    }
+    image = gray ? gray(image) : image;
+    storage.put(WorkKeys.livePanel(id, n, false), png(image), PNG);
+    return Optional.of(image);
+  }
+
+  /** 넓은 그림 컷의 두 번째 그림(넓은 그림 바탕, FR-034). 같은 크기이고 어긋나지 않았을 때만 저장한다. */
+  private boolean wideMotion(
+      String id, int i, ComicScript script, BufferedImage first, boolean gray) {
+    if (script.panels().get(i).liveMotion().isEmpty()) {
+      return false;
+    }
+    Optional<byte[]> second = storage.get(WorkKeys.panelB(id, i + 1));
+    if (second.isEmpty()) {
+      return false;
+    }
+    BufferedImage b = read(second.get());
+    if (b.getWidth() != first.getWidth() || b.getHeight() != first.getHeight()) {
+      return false;
+    }
+    b = gray ? gray(b) : b;
+    if (!LiveFrames.aligned(first, b, Map.of())) {
+      log.info("두 그림이 어긋나 움직임을 뺀다: conversation={} panel={}", id, i + 1);
+      return false;
+    }
+    storage.put(WorkKeys.livePanel(id, i + 1, true), png(b), PNG);
+    return true;
+  }
+
+  private static byte[] png(BufferedImage image) {
+    try (java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+      ImageIO.write(image, "png", out);
+      return out.toByteArray();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 

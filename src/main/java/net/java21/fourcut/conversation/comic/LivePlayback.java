@@ -53,6 +53,27 @@ final class LivePlayback {
       List<Optional<SoundMatcher.Picked>> sounds,
       List<Optional<SoundMatcher.Picked>> effects,
       List<Boolean> moving) {
+    return build(json, script, sounds, effects, moving, List.of());
+  }
+
+  /** 카메라 움직임 순서. 앞뒤 컷이 같은 움직임이 되지 않게 돌아가며 쓴다(FR-035). */
+  static final List<String> CAMERAS = List.of("push_in", "pan_right", "pull_out", "pan_left");
+
+  /** 자막이 컷 시작보다 조금 늦게 나오고, 대사 사이에 쉬는 시간. */
+  static final int CAPTION_LEAD_MS = 300;
+
+  static final int CAPTION_GAP_MS = 150;
+
+  /**
+   * @param wide 컷별 라이브 전용 넓은 그림(16:9, 말풍선 없음)을 쓰는지. 쓰면 aspect 16:9와 대사 자막을 넣는다
+   */
+  static ObjectNode build(
+      JsonMapper json,
+      ComicScript script,
+      List<Optional<SoundMatcher.Picked>> sounds,
+      List<Optional<SoundMatcher.Picked>> effects,
+      List<Boolean> moving,
+      List<Boolean> wide) {
     ObjectNode root = json.createObjectNode();
     root.put("version", VERSION);
     ArrayNode panels = root.putArray("panels");
@@ -63,7 +84,15 @@ final class LivePlayback {
       panel.put("index", n);
       panel.put("role", p.role());
       panel.put("image", WorkKeys.livePanelPath(n, false));
-      panel.put("durationMs", durationMs(p));
+      int duration = durationMs(p);
+      panel.put("durationMs", duration);
+      if (i < wide.size() && Boolean.TRUE.equals(wide.get(i))) {
+        panel.put("aspect", "16:9");
+        captions(panel.putArray("captions"), p, script.callNames(), duration);
+      } else {
+        panel.put("aspect", "1:1");
+      }
+      panel.put("camera", CAMERAS.get(i % CAMERAS.size()));
       Optional<SoundMatcher.Picked> sound = i < sounds.size() ? sounds.get(i) : Optional.empty();
       if (sound.isPresent()) {
         panel.set("sound", sound(json, sound.get(), VOLUME, FADE_MS, true));
@@ -90,6 +119,37 @@ final class LivePlayback {
       }
     }
     return root;
+  }
+
+  /** 대사 자막. 컷 시간을 대사 글자 수 비율로 나눠 차례로 보여 준다. 화자는 호칭(없으면 null, 해설). */
+  static void captions(
+      ArrayNode out, ComicScript.Panel p, java.util.Map<String, String> names, int durationMs) {
+    List<ComicScript.Line> lines =
+        p.lines() == null
+            ? List.of()
+            : p.lines().stream().filter(l -> l.text() != null && !l.text().isBlank()).toList();
+    if (lines.isEmpty()) {
+      return;
+    }
+    int total = lines.stream().mapToInt(l -> l.text().strip().length()).sum();
+    int usable = durationMs - CAPTION_LEAD_MS - CAPTION_GAP_MS * (lines.size() - 1);
+    int start = CAPTION_LEAD_MS;
+    for (int k = 0; k < lines.size(); k++) {
+      ComicScript.Line l = lines.get(k);
+      int len = (int) Math.round((double) usable * l.text().strip().length() / Math.max(1, total));
+      int end = k == lines.size() - 1 ? durationMs : Math.min(durationMs, start + len);
+      ObjectNode c = out.addObject();
+      String speaker = l.speaker() == null ? null : names.get(l.speaker());
+      if (speaker == null) {
+        c.putNull("speaker");
+      } else {
+        c.put("speaker", speaker);
+      }
+      c.put("text", l.text().strip());
+      c.put("startMs", start);
+      c.put("endMs", end);
+      start = Math.min(durationMs, end + CAPTION_GAP_MS);
+    }
   }
 
   /** 대사 글자 수에 맞춘 보여 주는 시간. */
