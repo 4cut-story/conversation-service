@@ -81,8 +81,7 @@ class ScriptDraftTest {
     assertThat(faces.get(1).path("face").asString()).isEqualTo("x, looking down");
     assertThat(faces.get(2).path("face").asString()).isEqualTo("y, looking away");
     assertThat(faces.get(3).path("face").asString()).isEqualTo("z");
-    assertThat(ScriptDraft.gaze("{C}", "{A} sits", Map.of()))
-        .isEqualTo("looking off to the side at someone");
+    assertThat(ScriptDraft.gaze("{C}", "{A} sits", Map.of())).isEqualTo("looking off to the side");
   }
 
   @Test

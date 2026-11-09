@@ -382,6 +382,27 @@ class DrawPromptTest {
         .contains(
             "add one lone yellow sock with red stripes in the character's hands at the chest,"
                 + " held by its top, only one sock");
+    // 쥐는 곳이 "at the chest" 뒤에 오면 빈손 문구에 남지 않고 2차로 간다(시험 30회 funny-15 2컷)
+    var after =
+        DrawHandler.hold(
+            new ComicScript.Panel(
+                "승",
+                "medium",
+                "{A} holds up one lone yellow sock with red stripes at the chest by its toe, bedroom",
+                List.of()));
+    assertThat(after.emptyPanel().scene())
+        .isEqualTo("{A} holds the hands together at the chest, hands empty, bedroom");
+    assertThat(DrawHandler.holdPrompt("s", after)).contains("held by its toe");
+    // "holding"으로 써도 2단으로 나눈다(시험 30회 funny-12 6컷)
+    var holding =
+        DrawHandler.hold(
+            new ComicScript.Panel(
+                "결",
+                "medium",
+                "{A} smiles, holding a closed white plastic bag at the chest, market aisle",
+                List.of()));
+    assertThat(holding.emptyPanel().scene())
+        .isEqualTo("{A} smiles, holds the hands together at the chest, hands empty, market aisle");
     // 물건 뒤 "out in front"는 물건 이름이 아니고, 시선이 물건 이름 앞부분만 써도 손을 보게 바꾼다(회차 29 콘티 19판 funny-15)
     var vacuum =
         DrawHandler.hold(
@@ -665,6 +686,9 @@ class DrawPromptTest {
         .contains("exactly one character, alone in the frame, drawn only once");
     assertThat(DrawHandler.frame(3)).contains("exactly three characters, each drawn only once");
     assertThat(DrawHandler.frame(9)).contains("exactly four characters");
+    assertThat(DrawHandler.frame(1, true))
+        .contains("exactly one character drawn only once and one small pet")
+        .doesNotContain("alone");
   }
 
   @Test

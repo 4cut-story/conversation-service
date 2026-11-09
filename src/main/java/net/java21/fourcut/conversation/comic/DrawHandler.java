@@ -234,7 +234,7 @@ class DrawHandler implements StepHandler {
             + ", "
             + SINGLE
             + ", "
-            + frame(legacy ? 0 : people)
+            + frame(legacy ? 0 : people, PET.matcher(String.valueOf(panel.scene())).find())
             + ", "
             + shot
             + keyObject(panel)
@@ -375,18 +375,28 @@ class DrawHandler implements StepHandler {
    * 92.7점 → 이 말을 넣어 93.2점).
    */
   static String frame(int people) {
+    return frame(people, false);
+  }
+
+  /** 반려동물 소품이 있으면 "alone"이 동물과 어긋난다. 동물을 사람으로 하나 더 그리지 않게 인물과 동물을 따로 센다(시험 30회 funny-15 6컷). */
+  static String frame(int people, boolean pet) {
     String count =
         people <= 0
             ? ""
-            : people == 1
-                ? "exactly one character, alone in the frame, drawn only once, "
-                : "exactly "
-                    + COUNTS.get(Math.min(people, COUNTS.size()) - 1)
-                    + " characters, each drawn only once, ";
+            : people == 1 && pet
+                ? "exactly one character drawn only once and one small pet, "
+                : people == 1
+                    ? "exactly one character, alone in the frame, drawn only once, "
+                    : "exactly "
+                        + COUNTS.get(Math.min(people, COUNTS.size()) - 1)
+                        + " characters, each drawn only once, ";
     return "one full-frame illustration of a single moment, "
         + count
         + "same outfit and same props in every panel";
   }
+
+  /** 반려동물 소품 draw(콘티 규칙: "tiny ... on four legs, no clothes"). */
+  private static final Pattern PET = Pattern.compile("\\bon four legs\\b");
 
   /**
    * 그린 뒤 워커가 확인할 인물별 자리·성별·나이·동물(워커가 CLIP으로 보고 틀리면 시드를 바꿔 다시 그린다). 심각 오류 대부분이 아이가 어른으로, 여자가 남자로,
@@ -987,7 +997,8 @@ class DrawHandler implements StepHandler {
   }
 
   private static final Pattern HOLD_VERB =
-      Pattern.compile("\\b(?:holds up|holds out|holds|lifts) ");
+      Pattern.compile(
+          "\\b(?:holds up|holds out|holds|holding up|holding out|holding|lifts|clutches) ");
 
   private static final Pattern NOT_HELD =
       Pattern.compile("^(?:the hands|both|fists|the (?:top|edge|side|end) of)");
@@ -995,6 +1006,8 @@ class DrawHandler implements StepHandler {
   private static final String AT_CHEST = " at the chest";
 
   private static final String SCREEN = ", screen showing ";
+
+  private static final String BY_ITS = " by its ";
 
   /** 가슴 앞에 드는 말 하나: 동작 시작·끝 자리, 물건, 쥐는 곳("by its handle"), 화면 내용. */
   record Held(int start, int end, String object, String grip, String state) {}
@@ -1023,6 +1036,13 @@ class DrawHandler implements StepHandler {
       object = object.substring(0, by);
     }
     int end = chest + AT_CHEST.length();
+    // "holds {양말} at the chest by its toe"처럼 쥐는 곳이 뒤에 오면 빈손 문구 뒤에 "by its toe"가 남았다(시험 30회)
+    if (grip.isEmpty() && scene.startsWith(BY_ITS, end)) {
+      int next = scene.indexOf(',', end + BY_ITS.length());
+      int stop = next < 0 ? scene.length() : next;
+      grip = scene.substring(end, stop);
+      end = stop;
+    }
     String state = "";
     if (scene.startsWith(SCREEN, end)) {
       int next = scene.indexOf(',', end + SCREEN.length());
