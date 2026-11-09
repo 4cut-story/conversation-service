@@ -987,7 +987,8 @@ class DrawHandler implements StepHandler {
   }
 
   private static final Pattern HOLD_VERB =
-      Pattern.compile("\\b(?:holds up|holds out|holds|lifts) ");
+      Pattern.compile(
+          "\\b(?:holds up|holds out|holds|holding up|holding out|holding|lifts|clutches) ");
 
   private static final Pattern NOT_HELD =
       Pattern.compile("^(?:the hands|both|fists|the (?:top|edge|side|end) of)");
