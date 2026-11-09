@@ -310,7 +310,7 @@ class DrawHandler implements StepHandler {
    */
   static String once(String prompt) {
     // 괄호 안(한 인물의 외모)은 한 덩어리로 본다
-    List<String> parts = new java.util.ArrayList<>();
+    List<String> parts = new ArrayList<>();
     int depth = 0;
     int start = 0;
     for (int i = 0; i < prompt.length(); i++) {
@@ -325,7 +325,7 @@ class DrawHandler implements StepHandler {
       }
     }
     parts.add(prompt.substring(start));
-    java.util.Set<String> seen = new java.util.HashSet<>();
+    Set<String> seen = new HashSet<>();
     StringBuilder out = new StringBuilder();
     for (String part : parts) {
       String key = part.strip().toLowerCase(java.util.Locale.ROOT);
@@ -483,7 +483,7 @@ class DrawHandler implements StepHandler {
       Pattern.compile(
           "(?i)\\b(night|midnight|dawn|predawn|before sunrise|dark(?![ -](?:gray|grey))|starry|stars?|moonlit)\\b");
 
-  /**
+  /*
    * 배경에서 빛·날씨를 말하는 조각을 그림체 바로 뒤에 둔다. 배경은 프롬프트 끝에 붙어 힘이 약해, 새벽 3시 별 보는 장면이 낮처럼 밝게 그려지고 별이 빠졌다(시험 8회
    * 템플스테이 만화). 밤·새벽이면 "dark night lighting"도 붙인다.
    */
@@ -813,7 +813,7 @@ class DrawHandler implements StepHandler {
   /** 두 사람 컷을 앞사람 컷과 뒷사람 한 마디로 나눈다. 두 사람 컷이 아니면 null. 앞사람은 장면에 먼저 나오는 사람이다. */
   static Split split(ComicScript.Panel panel) {
     String scene = panel.scene() == null ? "" : panel.scene().strip();
-    List<String> marks = new java.util.ArrayList<>();
+    List<String> marks = new ArrayList<>();
     Matcher m = MARK.matcher(scene);
     while (m.find()) {
       if (!marks.contains(m.group(1))) {
@@ -826,7 +826,7 @@ class DrawHandler implements StepHandler {
     String front = marks.get(0);
     String back = marks.get(1);
     String mark = "{" + back + "}";
-    List<String> kept = new java.util.ArrayList<>();
+    List<String> kept = new ArrayList<>();
     String clause = null;
     for (String part : scene.split(",\\s*")) {
       int at = part.indexOf(mark);
@@ -835,7 +835,7 @@ class DrawHandler implements StepHandler {
         continue;
       }
       String head = part.substring(0, at).strip();
-      if (head.isEmpty() || head.equalsIgnoreCase("small")) {
+      if (head.isEmpty() || "small".equalsIgnoreCase(head)) {
         clause = part.substring(at);
       } else {
         // 앞사람 동작 안에 든 뒷사람("walks toward small {B} seen from behind")은 앞 낱말과 함께 떼어 낸다.
@@ -968,35 +968,38 @@ class DrawHandler implements StepHandler {
 
   static Held held(String scene) {
     Matcher v = HOLD_VERB.matcher(scene);
-    while (v.find()) {
-      int from = v.end();
-      int chest = scene.indexOf(AT_CHEST, from + 1);
+    int from = -1;
+    int chest = -1;
+    while (from < 0 && v.find()) {
+      chest = scene.indexOf(AT_CHEST, v.end() + 1);
       if (chest < 0) {
         return null;
       }
-      if (NOT_HELD.matcher(scene.substring(from)).find()) {
-        continue;
+      if (!NOT_HELD.matcher(scene.substring(v.end())).find()) {
+        from = v.end();
       }
-      String object = scene.substring(from, chest);
-      String grip = "";
-      int by = object.indexOf(" by its ", 1);
-      if (by > 0 && object.indexOf(',', by) < 0) {
-        grip = object.substring(by);
-        object = object.substring(0, by);
-      }
-      int end = chest + AT_CHEST.length();
-      String state = "";
-      if (scene.startsWith(SCREEN, end)) {
-        int next = scene.indexOf(',', end + SCREEN.length());
-        int stop = next < 0 ? scene.length() : next;
-        if (stop > end + SCREEN.length()) {
-          state = scene.substring(end, stop);
-          end = stop;
-        }
-      }
-      return new Held(v.start(), end, object, grip, state);
     }
-    return null;
+    if (from < 0) {
+      return null;
+    }
+    String object = scene.substring(from, chest);
+    String grip = "";
+    int by = object.indexOf(" by its ", 1);
+    if (by > 0 && object.indexOf(',', by) < 0) {
+      grip = object.substring(by);
+      object = object.substring(0, by);
+    }
+    int end = chest + AT_CHEST.length();
+    String state = "";
+    if (scene.startsWith(SCREEN, end)) {
+      int next = scene.indexOf(',', end + SCREEN.length());
+      int stop = next < 0 ? scene.length() : next;
+      if (stop > end + SCREEN.length()) {
+        state = scene.substring(end, stop);
+        end = stop;
+      }
+    }
+    return new Held(v.start(), end, object, grip, state);
   }
 
   /** 한 사람이 물건을 가슴 앞에 드는 컷이면 빈손 컷과 물건으로 나눈다. 아니면 null. */
@@ -1400,7 +1403,7 @@ class DrawHandler implements StepHandler {
    */
   static final String SINGLE = "one single scene";
 
-  /**
+  /*
    * 여럿이 나오는 컷의 구도 말. 두 사람이 말하는 컷에 한 사람만 그려져 말풍선 자리(왼쪽·오른쪽)와 그림이 어긋났다(그림책 '밤마다 그려진 담벼락 그림의 비밀'
    * 2·4컷). Lightning(guidance 0)은 negative를 읽지 않아 구도는 이 말로만 잡는다.
    */
