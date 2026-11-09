@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.12";
+  static final String VERSION = "2026-11-09.13";
 
   private Prompts() {}
 
@@ -130,7 +130,8 @@ final class Prompts {
       - persona: 이 장면에서 드러난 성격을 "%CONCEPT%" 세계의 인물로 한 줄(예: 먹는 데 진심인 친구). 대사 말투는 이
         persona를 따르고, 한 인물은 모든 컷 내내 같은 말투를 쓴다.
       - look: %LOOK%
-      - bottom: 아래옷을 그림용 영어 4단어 이내로 색과 함께 쓴다(예: "blue jeans", "long navy skirt", "white trousers").
+      - bottom: 아래옷을 그림용 영어 4단어 이내로 색과 함께 쓴다(예: "blue jeans", "long navy skirt", "straight-leg white trousers").
+        바지는 "straight-leg"·"jeans"처럼 두 다리가 따로 보이는 말과 함께 쓴다("wide trousers", "baggy pants"는 치마로 그려진다).
         한 벌 옷(dress, robe, overalls)이면 그 아래 보이는 것을 쓰고, 바지를 입지 않은 동물은 "bare fur legs".
       - shoes: 신발을 그림용 영어 3단어 이내로 색과 함께 쓴다(예: "white sneakers", "black cloth shoes"). 맨발이면 "bare feet".
       - 동물 인물이 둘 이상이면 종·털색·몸집이 한눈에 다르게 고른다(회색 토끼와 회색 고양이처럼 비슷하면 한 인물로 섞여
@@ -243,8 +244,10 @@ final class Prompts {
         두 손으로 앞에 들게 쓴다. 끌어안으면 몸과 물건이 붙어 그려진다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는
         모습만 쓰지 않는다. 동작은 손·팔·몸이 무엇을 하는지 보이게 쓴다.
         동작은 얼굴을 가려도 실루엣만으로 읽히는 큰 동작으로 고른다. 소매 당기기, 귓속말, 손가락 개수 세기, 윙크, 고개 끄덕이기
-        처럼 작고 미묘한 동작은 그림에서 그냥 서 있는 모습으로 바뀌므로, 같은 뜻의 큰 동작(두 팔을 앞으로 뻗기, 두 손을 번쩍
-        들기, 물건을 머리 위로 들기)으로 바꿔 쓴다. 한 동작에 물건은 하나만 쓴다.
+        처럼 작고 미묘한 동작은 그림에서 그냥 서 있는 모습으로 바뀌므로, 같은 뜻의 큰 동작(두 주먹을 번쩍
+        들기, 허리에 두 손 얹기, 물건을 가슴 앞에 들기)으로 바꿔 쓴다. 손바닥을 펴서 보이는 동작(손 흔들기, 손바닥 내밀기,
+        두 팔을 앞으로 뻗기, 손가락 펴기)은 손가락 수가 틀리게 그려지므로 주먹을 쥐거나 물건을 쥔 동작으로 바꿔 쓴다.
+        몸짓은 그 컷 대사의 감정과 맞게 고른다(놀라는 말에 두 주먹 번쩍, 미안한 말에 고개 숙이기, 뿌듯한 말에 허리에 손). 한 동작에 물건은 하나만 쓴다.
         손이 물건에서 떨어진 동작(멀리 있는 것 가리키기, 문 밀기, 이불 당기기, 엄지로 뒤 가리키기)은 그림에서 빈손 자세로
         바뀌므로, 손에 물건을 쥐고 있는 동작(들어 올리기, 내밀기, 받치기)이나 버튼처럼 손끝이 닿는
         동작으로 쓴다.
@@ -263,7 +266,9 @@ final class Prompts {
         setting의 배경 물건은 손에 들 수 없는 큰 것(가구, 나무, 기계, 건물)만 쓴다. 컵·그릇·찜기처럼 손에 드는 물건이
         배경에 있으면 action의 물건과 함께 쥐어져 손이 셋으로 그려진다. 컷에 나오지 않는 인물은 setting에 쓰지 않는다.
         실내 컷(place가 방·부엌·가게·현관처럼 지붕 아래인 컷)의 setting에는 rain·snow·raindrops 낱말을 아예 쓰지 않는다.
-        이 낱말이 있으면 방 안에 빗줄기가 그려진다. 비 오는 날 실내는 "dim gray light from the window"처럼 빛으로만 쓴다. 이야기 안에서 시간이
+        이 낱말이 있으면 방 안에 빗줄기가 그려진다. 비 오는 날 실내는 "dark gray sky in the window, dim room"처럼 창밖이 어둡고 방이 어둑하게 쓴다("light"만 쓰면 창이 밝게
+        그려진다). 야외에서 비를 맞는 컷의 action에는 젖은 모습을 쓴다(예: "{A} stands in the rain, soaked hair and clothes";
+        우산이 props에 있으면 "holding {우산} by its handle over her head"). 이야기 안에서 시간이
         흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.
       - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
         쓴다(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로
