@@ -225,7 +225,24 @@ class DrawHandler implements StepHandler {
             + keyObject(panel)
             + scene
             + detail
-            + cast);
+            + cast
+            + onlyOne(scene));
+  }
+
+  private static final Pattern SINGLE_PROP =
+      Pattern.compile("\\b(?:a single|one lone|single) ([a-z][a-z -]*?)(?= with | on |,|$)");
+
+  /**
+   * 동작에 "a single X"로 나온 물건은 끝에 "only one X in the whole picture"를 붙인다. 같은 물건을 둘 그렸다(회차 29 콘티 22판
+   * funny-03 3컷 키오스크 둘, mystery-08 5컷 망원경 둘). 물건 이름은 머리 낱말 하나만 쓴다.
+   */
+  static String onlyOne(String scene) {
+    Matcher m = SINGLE_PROP.matcher(scene);
+    if (!m.find()) {
+      return "";
+    }
+    String head = m.group(1).strip();
+    return ", only one " + head.substring(head.lastIndexOf(' ') + 1) + " in the whole picture";
   }
 
   /**

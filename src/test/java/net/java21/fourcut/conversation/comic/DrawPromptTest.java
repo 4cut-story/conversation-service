@@ -592,6 +592,21 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: 동작에 a single로 나온 물건은 그림 전체에 하나만 있다고 끝에 한 번 더 적는다")
+  void onlyOneProp() {
+    assertThat(
+            DrawHandler.onlyOne(
+                "old woman presses a burger picture button on a single tall white touchscreen kiosk"
+                    + " with plain screen, fast food restaurant"))
+        .isEqualTo(", only one kiosk in the whole picture");
+    assertThat(
+            DrawHandler.onlyOne(
+                "boy peers into the eyepiece of single brass telescope with one eyepiece on tripod"))
+        .isEqualTo(", only one telescope in the whole picture");
+    assertThat(DrawHandler.onlyOne("girl waves, park")).isEmpty();
+  }
+
+  @Test
   @DisplayName("FR-006: 한 순간·인물 수·같은 옷과 소품 말은 인물 수에 맞게 붙고, 인물을 모르면 수를 빼고 붙는다")
   void frame() {
     assertThat(DrawHandler.frame(0))
