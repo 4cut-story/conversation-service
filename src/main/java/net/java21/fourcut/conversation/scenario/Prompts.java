@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.10";
+  static final String VERSION = "2026-11-09.11";
 
   private Prompts() {}
 
@@ -156,6 +156,8 @@ final class Prompts {
       - 모양이 헷갈리기 쉬운 물건(판 놀이, 기계, 음식)은 그림 모델이 알아보게 생김새를 쓴다: 전체 모양, 겉면에 보이는 것,
         작은 조각이 어디에 어떻게 놓이는지(예: "flat square chessboard of black and white squares, a few small chess
         pieces standing on it", "one tall red vending machine with rows of drink cans behind glass").
+        생김새가 비슷한 다른 물건이 있으면(망원경 ↔ 쌍안경, 외발자전거 ↔ 자전거) 둘을 가르는 부분의 개수를 쓴다(예: "single
+        long brass telescope tube with one eyepiece on a tripod"). 개수가 없으면 더 흔한 쪽 물건으로 그려진다.
         작은 조각을 집는 동작은 크기를 함께 쓴다(예: "{A} lifts one tiny white chess piece with two fingers").
       - 그림 모델은 글자를 제대로 못 쓰고 가짜 글자를 그린다. 글자가 보이는 물건(간판, 팻말, 문자 메시지, 책 표지)은 글자 없이
         모양과 색으로 쓴다(예: "blank wooden shop sign", "phone with glowing green screen"). 병풍·족자·액자·칠판·화면처럼
@@ -225,7 +227,8 @@ final class Prompts {
         (예: "{B} presses a drink button on {자판기}", "{A} pours water from {주전자} into
         a cup", "{A} holds {휴대폰} up to {B}, screen showing a photo").
         이야기의 핵심 물건은 두 컷 이상에 나온다. 핵심 물건은 가슴 높이에서 들거나 내밀게 쓰고 "above head", "high up"으로
-        들지 않는다. 컷 위쪽은 말풍선 자리라 물건이 가려진다. 몸보다 큰 물건(로봇청소기, 상자, 베개)은 끌어안지 않고 옆에 두거나
+        들지 않는다. 컷 위쪽은 말풍선 자리라 물건이 가려진다. 하늘이나 배경에 있는 핵심 대상(토성, 별똥별, 무지개, 먼 오두막 불빛)도
+        컷 가운데 높이에 두게 쓴다(예: "ringed planet low above the mountains, in the middle of the frame"). 몸보다 큰 물건(로봇청소기, 상자, 베개)은 끌어안지 않고 옆에 두거나
         두 손으로 앞에 들게 쓴다. 끌어안으면 몸과 물건이 붙어 그려진다. "happy", "smiles", "talks", "listens", "shares news"처럼 감정이나 말하는
         모습만 쓰지 않는다. 동작은 손·팔·몸이 무엇을 하는지 보이게 쓴다.
         동작은 얼굴을 가려도 실루엣만으로 읽히는 큰 동작으로 고른다. 소매 당기기, 귓속말, 손가락 개수 세기, 윙크, 고개 끄덕이기
