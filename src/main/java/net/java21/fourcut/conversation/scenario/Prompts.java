@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.13";
+  static final String VERSION = "2026-11-09.14";
 
   private Prompts() {}
 
@@ -156,6 +156,10 @@ final class Prompts {
         이야기의 핵심이면 사람이 들지 않는 한 더미로 써서 바닥이나 그 안에 둔다(예: "heap of socks spilling out of {강아지집}").
         draw에는 바뀌지 않는 생김새만 쓰고, 화면에 보이는 것·열림·켜짐 같은 상태는 그 컷 action에만 한 번 쓴다. 두 곳에 다르게
         쓰면 같은 물건이 두 개로 그려진다.
+        draw에는 그 물건 하나만 쓰고 담는 것·받치는 것·싸는 것(접시, 쟁반, 받침, 보자기, 포장지)을 함께 쓰지 않는다
+        ("toast on a plate"는 손에 한 장, 접시에 한 장으로, "box wrapped in silk"는 상자 두 개로 그려진다).
+        한 장소에 여러 대 놓일 법한 기계(키오스크, 자판기, 세탁기, 가스레인지)는 draw를 "a single"로 시작한다(예: "a single tall
+        white touchscreen kiosk"). 쓰지 않으면 같은 기계가 두 대 그려진다.
       - 모양이 헷갈리기 쉬운 물건(판 놀이, 기계, 음식)은 그림 모델이 알아보게 생김새를 쓴다: 전체 모양, 겉면에 보이는 것,
         작은 조각이 어디에 어떻게 놓이는지(예: "flat square chessboard of black and white squares, a few small chess
         pieces standing on it", "one tall red vending machine with rows of drink cans behind glass").
@@ -220,7 +224,8 @@ final class Prompts {
         두 명 컷은 두 사람을 왼쪽과 오른쪽에 떨어뜨려 세우고, 몸이 겹치거나 손이 맞닿는 동작(안기, 손잡기, 악수, 함께 쥐기,
         귓속말)을 쓰지 않는다. 두 명 컷은 한 사람만 움직인다. 움직이는 사람은 물건을 하나까지만 자기 가슴 앞에 쥐고, 다른 사람은 떨어져
         서서 빈손으로 팔을 내린 채 표정으로만 반응한다. 두 사람이 같은 동작을 따라 하게 쓰지 않는다(물건까지 따라 들어 물건이
-        둘로 그려진다). 움직이는 사람을 먼저 쓰고, 반응하는 사람은 "stands apart, arms down"으로 쓴다 (예: "{A} and {B} stand side by side looking up at {연}").
+        둘로 그려진다). 움직이는 사람을 먼저 쓰고 "on the left"를 붙이고, 반응하는 사람은 "stands apart on the right, arms down"으로
+        쓴다(자리를 쓰지 않으면 두 사람의 동작이 뒤바뀌어 그려진다) (예: "{A} and {B} stand side by side looking up at {연}").
         두 명 컷에서는 팔을 옆으로 벌리거나 상대 쪽으로 뻗지 않는다(두 사람 팔이 하나로 합쳐진다).
         두 명 컷에서 물건을 상대 쪽으로 내밀지("holds out X toward {B}") 않는다. 상대가 손을 뻗어 함께 쥔 모습으로 그려진다.
         물건을 든 사람은 자기 가슴 앞에 들고, 다른 사람은 떨어져서 본다. 한 물건(우산, 쟁반, 상자)을 두 사람이 함께
@@ -265,13 +270,15 @@ final class Prompts {
         stones")으로 쓰지 않는다. props에 있는 물건을 setting에 다시 쓰지 않는다.
         setting의 배경 물건은 손에 들 수 없는 큰 것(가구, 나무, 기계, 건물)만 쓴다. 컵·그릇·찜기처럼 손에 드는 물건이
         배경에 있으면 action의 물건과 함께 쥐어져 손이 셋으로 그려진다. 컷에 나오지 않는 인물은 setting에 쓰지 않는다.
-        실내 컷(place가 방·부엌·가게·현관처럼 지붕 아래인 컷)의 setting에는 rain·snow·raindrops 낱말을 아예 쓰지 않는다.
+        문·창·문턱을 지나가는 동작(문을 넘어 들어오기, 창 너머로 보기)은 쓰지 않고 문 앞에 선 모습으로 쓴다. 문 안팎에 같은
+        사람이 둘로 그려진다.
+        실내 컷(place가 방·부엌·가게·현관·정류장 지붕·처마 밑처럼 지붕 아래인 컷)의 setting에는 rain·snow·raindrops 낱말을 아예 쓰지 않는다.
         이 낱말이 있으면 방 안에 빗줄기가 그려진다. 비 오는 날 실내는 "dark gray sky in the window, dim room"처럼 창밖이 어둡고 방이 어둑하게 쓴다("light"만 쓰면 창이 밝게
         그려진다). 야외에서 비를 맞는 컷의 action에는 젖은 모습을 쓴다(예: "{A} stands in the rain, soaked hair and clothes";
         우산이 props에 있으면 "holding {우산} by its handle over her head"). 이야기 안에서 시간이
         흐르지 않으면 모든 컷에 같은 때(낮·저녁·밤)를 쓴다.
-      - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓을 그림 모델용 영어 4단어 이내로
-        쓴다(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로
+      - faces: 그 컷 action에 나오는 인물마다 하나. face는 그 순간의 표정과 몸짓 하나를 그림 모델용 영어 4단어 이내로
+        쓴다("then", "turns into"처럼 두 표정을 잇는 말은 쓰지 않는다. 컷 안에 작은 컷이 생긴다)(예: "wide-eyed, hands on cheeks", "teary smile"). 대사와 상황에 맞게 컷마다 바꾸고, 모든 컷을 같은 표정으로
         두지 않는다. 성격·외모·이름과 안경·모자·머리 같은 몸에 지닌 것은 쓰지 않는다(다른 인물에게 옮겨 그려진다). lookAt은 그 인물이 보는 곳이다: 말을 거는 상대의 자리표({B}), 대사가 가리키는
         물건의 자리표({휴대폰}), 또는 "viewer"·"sky"·"down" 같은 영어 한 낱말. 말하는 사람과 듣는 사람이 엉뚱한 곳을 보지 않게 한다.
         action이 무엇을 가리키거나 그쪽으로 팔을 뻗거나 바라보는 동작이면 lookAt도 그 대상으로 쓴다. 두 명 컷에서 두 사람
