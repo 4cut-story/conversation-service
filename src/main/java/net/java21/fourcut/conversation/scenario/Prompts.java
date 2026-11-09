@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.24";
+  static final String VERSION = "2026-11-09.25";
 
   private Prompts() {}
 
@@ -137,8 +137,9 @@ final class Prompts {
       - bottom: 아래옷을 그림용 영어 4단어 이내로 색과 함께 쓴다(예: "blue jeans", "long navy skirt", "straight-leg white
         trousers"). 바지는 "straight-leg"·"jeans"처럼 두 다리가 따로 보이는 말로 쓴다("wide trousers"는 치마로 그려진다).
         한 벌 옷(dress, robe, overalls)이면 그 아래 보이는 것을, 바지를 입지 않은 동물은 "bare fur legs"를 쓴다.
-      - shoes: 신발을 그림용 영어 3단어 이내로 색과 함께 쓴다(예: "white sneakers", "black cloth shoes"). 맨발이면 "bare feet".
-      - 인물끼리 한눈에 달라 보이게 한다: 윗옷 색이 겹치지 않게, 동물이면 종·털색·몸집도 겹치지 않게 고른다(회색 토끼와 회색
+      - shoes: 신발을 그림용 영어 3단어 이내로 색과 함께 쓴다(예: "white sneakers", "black cloth shoes"). 집 안 장면이 많은
+        인물은 양말이나 실내화로 쓴다(예: "white socks", "gray slippers"). "bare feet"는 쓰지 않는다(발가락이 뭉개진다).
+      - 인물끼리 한눈에 달라 보이게 한다: 윗옷 종류와 색, 머리 길이가 겹치지 않게, 동물이면 종·털색·몸집도 겹치지 않게 고른다(회색 토끼와 회색
         고양이는 한 인물로 섞인다). 동물 look에는 털색을 쓴다(예: "brown bear", "white rabbit"). 입력에 외모가 이미 정해진
         인물이 있으면 다른 인물은 그와 다르게 고른다.
       - look·bottom·shoes는 모든 컷에서 입는 한 벌이다. 컷마다 바꾸지 않는다.
@@ -182,6 +183,9 @@ final class Prompts {
         하는 크고 눈에 띄는 특징 2~3개를 색·모양과 함께 붙인다(예: "small playground, yellow slide, blue swings, sandbox").
         소품에 있는 물건은 장소 draw에 쓰지 않는다(장소에 하나, 소품으로 하나 더 그려진다). 대화 내용과 시대(%CONCEPT%)에
         맞게 정한다.
+      - draw 끝에 그 장소의 때와 빛을 붙인다(예: "..., morning, bright daylight through the window", "..., night, dark
+        window"). 대사에 시각이 나오면 그 시각에 맞춘다(아침 8시는 밝은 아침이다. 별·달·어두운 창을 쓰지 않는다).
+        때가 대사에 없으면 대화 내용에서 가장 그럴듯한 때를 고른다.
       - 이야기 속에서 실제로 옮겨 갈 때만 장소를 하나 더 둔다.
 
       자리표: 인물은 {A}, {B}, 소품은 {연}처럼 key를 중괄호로 감싸 쓴다. action·setting·lookAt에서 인물과 소품은 자리표로만
@@ -212,12 +216,15 @@ final class Prompts {
         하는 컷과 다른 사람이 반응하는 컷으로 나눈다(예: 3컷 "{A} holds up {연} at the chest", 4컷 "{B} looks up at {연},
         wide-eyed").
       - 그 컷 lines의 speaker는 그 컷 주인공이다. 상대의 대답은 상대가 나오는 다음 컷에 둔다.
-      - 컷에 나오지 않는 인물은 action·setting에 쓰지 않는다.
+      - 컷에 나오지 않는 인물은 action·setting에 쓰지 않는다. 그 인물을 보는 컷이면 lookAt만 그 자리표로 쓴다(그림에는
+        그리지 않는다).
+      - 말풍선 자리: 인물은 화면 아래쪽 2/3에 두고 머리 위를 비운다. 하늘·배경의 핵심 대상도 위쪽 끝에 두지 않는다.
 
       shot
       - wide(온몸과 장소), medium(허리 위, 다리는 화면 밖), close-up(가슴 위 얼굴) 중 하나. 기는 보통 wide, 전은 보통
         close-up이고, wide는 전체 컷의 절반을 넘지 않는다. 같은 구도가 두 컷 넘게 이어지지 않게 섞는다.
-      - 다리가 보여야 하는 동작(서기, 걷기, 달리기, 앉기, 무릎 꿇기)은 wide에만 쓴다. medium은 손·팔·얼굴 동작(들어 올리기,
+      - 다리가 보여야 하는 동작(서기, 걷기, 달리기, 무릎 꿇기)은 wide에만 쓴다. 앉은 컷은 발이 이야기가 아니면 medium으로
+        쓴다(발이 화면에 들어가면 자주 뭉개진다). medium은 손·팔·얼굴 동작(들어 올리기,
         내밀기, 버튼 누르기)만, close-up은 얼굴·머리·목 동작(볼 붉히기, 입 벌리기, 고개 숙이기)만 쓴다. close-up에서는 물건을
         쥐지 않는다(물건이 잘려 두 개로 그려진다).
 
@@ -250,17 +257,17 @@ final class Prompts {
         · his·her·him·she·he 같은 대명사(몸은 the로: "puts fists on the hips"). 성별이 바뀌어 그려진다.
         가구와 발
         · 침대·소파·의자에 앉으면 다리 위치를 쓴다(예: "{A} sits on the edge of {침대}, feet on the floor", "{A} sits up in {침대}, blanket over the legs"). 신을 벗는 곳
-          (침대, 이불 속, 방바닥)에서 발이 보이면 "bare feet"나 "white socks"를 쓴다.
+          (침대, 이불 속, 방바닥)에서 발이 보이면 "white socks"를 쓴다("bare feet"는 쓰지 않는다).
       - place: places의 key 하나.
       - setting: 그 컷의 때·분위기 한 마디와, 더 보여야 할 배경 물건 0~1개를 그림 모델용 영어 10단어 이내로 쓴다. 장소 이름,
         인물, 표정, props에 있는 물건은 쓰지 않는다.
-        · 때·하늘·빛은 보이는 모습으로 쓴다(예: 밤 "night, deep navy sky full of twinkling stars", 저녁 "orange sunset glow,
+        · 때·하늘·빛은 장소 draw의 때와 같게, 보이는 모습으로 쓴다(예: 밤 "night, deep navy sky full of twinkling stars", 저녁 "orange sunset glow,
           long shadows", 낮 실내 "bright daylight from the window"). 대사에 나오는 별·달·노을·눈·비는 꼭 쓴다. 이야기 안에서
           시간이 흐르지 않으면 모든 컷에 같은 때를 쓴다.
         · 배경 물건은 손에 들 수 없는 큰 것(가구, 나무, 건물)만 쓴다. 컵·그릇처럼 드는 물건은 손에 함께 쥐어진다. 작은 조각
           (체스말, 구슬)은 놓인 자리와 함께만 쓰고 바닥에 흩어진 모습으로 쓰지 않는다.
         · 실내(방, 부엌, 가게, 현관, 지붕 아래) setting에는 rain·snow·raindrops를 쓰지 않는다(방 안에 비가 그려진다). 비 오는
-          날 실내는 "dark gray sky in the window, dim room". 야외에서 비를 맞으면 action에 젖은 모습을 쓴다(예: "{A} stands in
+          날 실내는 "rain streaks on the window glass, dim room". 야외에서 비를 맞으면 action에 젖은 모습을 쓴다(예: "{A} stands in
           the rain, soaked hair and clothes", 우산이 있으면 "holding {우산} by its handle over the head").
       - faces: 그 컷 주인공 하나. face는 그 순간의 표정과 몸짓 하나를 영어 4단어 이내로 쓴다(예: "wide-eyed, hands on
         cheeks", "teary smile"). 두 표정을 잇는 말("then", "turns into")은 쓰지 않는다. 컷마다 대사에 맞게 바꾼다. 성격·외모와
