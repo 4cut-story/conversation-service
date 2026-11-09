@@ -189,4 +189,34 @@ class LiveModeTest {
     assertThat(last.has("captions")).isFalse();
     assertThat(first.path("camera").asString()).isNotEqualTo(last.path("camera").asString());
   }
+
+  @Test
+  @DisplayName("FR-022: 소리 크기는 효과음 > 장소 소리 > 바탕 배경음악이고, 점수가 있으면 남긴다")
+  void volumes() {
+    var place =
+        new SoundMatcher.Picked(
+            "aaaaaaaaaaaaaaaaaaaaa", "빗소리", "a", "CC0-1.0", "l", "s", null, 0.72, "AMBIENCE");
+    var piano =
+        new SoundMatcher.Picked(
+            "mmmmmmmmmmmmmmmmmmmmm", "피아노", "a", "CC0-1.0", "l", "s", null, 0.3, "MUSIC");
+    var alarm =
+        new SoundMatcher.Picked("ccccccccccccccccccccc", "알람", "a", "CC0-1.0", "l", "s", null);
+
+    var live =
+        LivePlayback.build(
+            json,
+            script,
+            List.of(Optional.of(place), Optional.of(piano)),
+            List.of(Optional.of(alarm)),
+            List.of(false, false));
+
+    var first = live.path("panels").get(0);
+    var second = live.path("panels").get(1);
+    assertThat(first.path("effect").path("volume").asDouble())
+        .isGreaterThan(first.path("sound").path("volume").asDouble());
+    assertThat(first.path("sound").path("volume").asDouble())
+        .isGreaterThan(second.path("sound").path("volume").asDouble());
+    assertThat(first.path("sound").path("score").asDouble()).isEqualTo(0.72);
+    assertThat(first.path("effect").has("score")).isFalse();
+  }
 }

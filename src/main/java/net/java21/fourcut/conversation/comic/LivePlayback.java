@@ -24,7 +24,13 @@ final class LivePlayback {
   static final int MAX_MS = 8000;
   static final int PER_CHAR_MS = 60;
 
-  static final double VOLUME = 0.8;
+  /**
+   * 소리 크기 비율: 효과음(한 번, 또렷하게) 0.9 &gt; 장소·환경음 0.7 &gt; 바탕 배경음악 0.45. 음악은 장소 소리가 없을 때만 깔리고 대사·효과음을 덮지
+   * 않게 작게 둔다.
+   */
+  static final double VOLUME = 0.7;
+
+  static final double MUSIC_VOLUME = 0.45;
   static final int FADE_MS = 800;
 
   /** 사건 효과음은 배경음 위에 한 번, 조금 크게 바로 튼다. */
@@ -95,7 +101,8 @@ final class LivePlayback {
       panel.put("camera", CAMERAS.get(i % CAMERAS.size()));
       Optional<SoundMatcher.Picked> sound = i < sounds.size() ? sounds.get(i) : Optional.empty();
       if (sound.isPresent()) {
-        panel.set("sound", sound(json, sound.get(), VOLUME, FADE_MS, true));
+        double volume = sound.get().music() ? MUSIC_VOLUME : VOLUME;
+        panel.set("sound", sound(json, sound.get(), volume, FADE_MS, true));
       } else {
         panel.putNull("sound");
       }
@@ -169,6 +176,10 @@ final class LivePlayback {
     node.put("volume", volume);
     node.put("fadeMs", fadeMs);
     node.put("loop", loop);
+    if (s.score() != null) {
+      // 소리 설명과 컷 질의의 유사도(1 - 코사인 거리). 소리 거리 한도를 맞출 때 본다
+      node.put("score", s.score());
+    }
     ObjectNode credit = node.putObject("credit");
     credit.put("author", s.author());
     credit.put("license", s.license());

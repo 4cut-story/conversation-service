@@ -67,7 +67,7 @@ class SoundMatcherTest {
   }
 
   @Test
-  @DisplayName("FR-008: 시간대·날씨가 장면과 어긋나는 소리는 뒤로 보낸다")
+  @DisplayName("FR-008: 시간대·날씨가 장면과 어긋나는 소리는 쓰지 않는다")
   void timeAndWeather() {
     var night = described("aaaaaaaaaaaaaaaaaaaaa", "밤 풀벌레", "한밤 공원에서 귀뚜라미가 울어요");
     var rain = described("bbbbbbbbbbbbbbbbbbbbb", "창밖 빗소리", "비가 창문을 두드려요");
@@ -203,5 +203,62 @@ class SoundMatcherTest {
     assertThat(seen).containsExactlyInAnyOrder("aaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbb");
     assertThat(matcher.match(query).get(0).orElseThrow().publicId())
         .isEqualTo(matcher.match(query).get(0).orElseThrow().publicId());
+  }
+
+  private static SoundLibrary.Sound music(String id) {
+    return new SoundLibrary.Sound(
+        id, "MUSIC", "잔잔한", "잔잔한 피아노", "", List.of(), List.of(), 60_000, null);
+  }
+
+  @Test
+  @DisplayName("FR-008b: 거리 한도(0.40)보다 먼 장소 소리는 쓰지 않고, 바탕 배경음악을 작게 깐다")
+  void farFallsBackToMusic() {
+    var near = sound("aaaaaaaaaaaaaaaaaaaaa");
+    var far = sound("bbbbbbbbbbbbbbbbbbbbb");
+    var piano = music("mmmmmmmmmmmmmmmmmmmmm");
+    SoundMatcher matcher =
+        SoundMatcher.scored(
+            (q, n) ->
+                q.startsWith("비")
+                    ? List.of(new SoundMatcher.Scored(near, 0.25))
+                    : List.of(new SoundMatcher.Scored(far, 0.55)),
+            (q, n) -> List.of(),
+            (q, n) -> List.of(new SoundMatcher.Scored(piano, 0.7)));
+
+    var picked =
+        matcher.match(
+            List.of(
+                new SoundMatcher.Query("비 오는 골목, 빗소리", "alley", ""),
+                new SoundMatcher.Query("마트 계산대", "mart", ""),
+                new SoundMatcher.Query("마트 진열대", "mart", "")));
+
+    assertThat(picked.get(0).orElseThrow().publicId()).isEqualTo("aaaaaaaaaaaaaaaaaaaaa");
+    assertThat(picked.get(0).orElseThrow().score()).isEqualTo(0.75);
+    assertThat(picked.get(0).orElseThrow().music()).isFalse();
+    assertThat(picked.get(1).orElseThrow().publicId()).isEqualTo("mmmmmmmmmmmmmmmmmmmmm");
+    assertThat(picked.get(1).orElseThrow().music()).isTrue();
+    assertThat(picked.get(2).orElseThrow().publicId()).isEqualTo("mmmmmmmmmmmmmmmmmmmmm");
+  }
+
+  @Test
+  @DisplayName("FR-020: 거리 한도보다 먼 효과음은 넣지 않는다")
+  void farEffectSkipped() {
+    var alarm = described("ddddddddddddddddddddd", "알람시계", "아침 알람시계가 울려요");
+    SoundMatcher matcher =
+        SoundMatcher.scored(
+            (q, n) -> List.of(),
+            (q, n) ->
+                q.contains("알람")
+                    ? List.of(new SoundMatcher.Scored(alarm, 0.2))
+                    : List.of(new SoundMatcher.Scored(alarm, 0.6)));
+
+    var picked = matcher.effects(List.of("알람시계가 울린다", "냄비가 끓는다", ""));
+
+    assertThat(picked.get(0).orElseThrow().publicId()).isEqualTo("ddddddddddddddddddddd");
+    assertThat(picked.get(1)).isEmpty();
+    assertThat(picked.get(2)).isEmpty();
+    // 장소 소리도 음악도 없으면 소리 없음
+    assertThat(matcher.match(List.of(new SoundMatcher.Query("마트", "mart", ""))))
+        .containsExactly(Optional.empty());
   }
 }
