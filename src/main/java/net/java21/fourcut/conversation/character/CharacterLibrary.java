@@ -112,6 +112,17 @@ public class CharacterLibrary {
    */
   @Transactional
   public Map<String, CharacterRef> match(List<Wanted> wanted, String concept) {
+    return match(wanted, concept, 0);
+  }
+
+  /**
+   * 인물 key → 캐릭터 모습. 거리가 사실상 같은 후보가 여럿이면 seed(대화마다 정해진 값)로 고른다.
+   *
+   * @param concept 만화 컨셉 이름 (DAILY 등)
+   * @param seed 대화의 시드. 0이면 늘 가장 가까운 후보다
+   */
+  @Transactional
+  public Map<String, CharacterRef> match(List<Wanted> wanted, String concept, long seed) {
     if (!properties.enabled() || wanted.isEmpty()) {
       return Map.of();
     }
@@ -152,7 +163,8 @@ public class CharacterLibrary {
     }
     if (!rest.isEmpty() && vectors.available()) {
       for (Wanted w : rest) {
-        nearest(w.look(), c, used).ifPresent(r -> found.put(w.key(), r));
+        nearest(w.look(), c, used, seed == 0 ? 0 : seed + w.key().hashCode())
+            .ifPresent(r -> found.put(w.key(), r));
       }
     }
     if (!found.isEmpty()) {
@@ -166,7 +178,7 @@ public class CharacterLibrary {
     return "WUXIA".equals(concept) || "JOSEON".equals(concept);
   }
 
-  private Optional<CharacterRef> nearest(String look, String concept, Set<String> used) {
+  private Optional<CharacterRef> nearest(String look, String concept, Set<String> used, long seed) {
     Optional<float[]> query = embedder.embed(look);
     if (query.isEmpty()) {
       return Optional.empty();
@@ -180,6 +192,8 @@ public class CharacterLibrary {
     // 프롬프트("young woman")가 어긋나 여자로 그려지고 안경·옷이 빠졌다(school-18, school-19, love-11)
     boolean[] passes = wanted.gender() == null ? new boolean[] {true, false} : new boolean[] {true};
     for (boolean strict : passes) {
+      List<Candidate> fits = new ArrayList<>();
+      Set<String> seen = new HashSet<>();
       for (CharacterVectors.Nearest n : near) {
         if (!wanted.accepts(LookHead.of(n.look()))) {
           continue;
@@ -190,13 +204,34 @@ public class CharacterLibrary {
             && LookHead.fitsOutfit(look, l.get().look())
             && agesWithDb(l.get())
             && !used.contains(l.get().character().publicId())
+            && seen.add(l.get().character().publicId())
             && hasReference(l.get())) {
-          used.add(l.get().character().publicId());
-          return Optional.of(ref(l.get(), n.distance()));
+          fits.add(new Candidate(l.get(), n.distance()));
         }
+      }
+      Optional<Candidate> pick = tieBreak(fits, properties.tieMargin(), seed);
+      if (pick.isPresent()) {
+        used.add(pick.get().look().character().publicId());
+        return Optional.of(ref(pick.get().look(), pick.get().distance()));
       }
     }
     return Optional.empty();
+  }
+
+  /** 조건에 맞는 캐릭터 모습과 거리. */
+  record Candidate(CharacterLook look, double distance) {}
+
+  /**
+   * 가장 가까운 후보와 거리 차이가 margin 안인 후보들(사실상 같은 점수) 중에서 seed로 하나를 고른다. 늘 첫 후보만 쓰면 외모 설명이 비슷한 만화마다 같은
+   * 캐릭터가 나온다. seed는 대화마다 정해져 있어 같은 대화를 다시 그려도 같은 캐릭터가 나온다. fits는 가까운 순이다.
+   */
+  static Optional<Candidate> tieBreak(List<Candidate> fits, double margin, long seed) {
+    if (fits.isEmpty()) {
+      return Optional.empty();
+    }
+    double best = fits.get(0).distance();
+    List<Candidate> tied = fits.stream().filter(c -> c.distance() <= best + margin).toList();
+    return Optional.of(tied.get((int) Math.floorMod(seed, (long) tied.size())));
   }
 
   /** 모습 문구의 첫 마디에 없는 성별·나이는 캐릭터 DB 값으로 채운다. */

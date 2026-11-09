@@ -18,7 +18,7 @@ class BgeEmbedderTest {
   private BgeEmbedder embedder(String url) {
     return new BgeEmbedder(
         RestClient.builder(),
-        new CharacterProperties(true, 0.35, url, "bge-m3", "plus-face-sdxl-vit-h"),
+        new CharacterProperties(true, 0.35, url, "bge-m3", "plus-face-sdxl-vit-h", 0.02),
         json);
   }
 

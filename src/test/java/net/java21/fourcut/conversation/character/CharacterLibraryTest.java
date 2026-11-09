@@ -65,7 +65,7 @@ class CharacterLibraryTest {
         vectors,
         embedder,
         storage,
-        new CharacterProperties(enabled, 0.30, "http://emb", "bge-m3", ADAPTER));
+        new CharacterProperties(enabled, 0.30, "http://emb", "bge-m3", ADAPTER, 0.02));
   }
 
   @Test
@@ -326,5 +326,24 @@ class CharacterLibraryTest {
                 List.of(new CharacterLibrary.Wanted("A", null, "young woman, police uniform")),
                 "DAILY"))
         .containsKey("A");
+  }
+
+  @Test
+  @DisplayName("REQ-018: 거리가 사실상 같은 후보는 대화 시드로 고르고, 차이가 크면 늘 가장 가까운 후보다")
+  void tieBreak() {
+    var a = new CharacterLibrary.Candidate(null, 0.10);
+    var b = new CharacterLibrary.Candidate(null, 0.11);
+    var far = new CharacterLibrary.Candidate(null, 0.20);
+    List<CharacterLibrary.Candidate> fits = List.of(a, b, far);
+
+    assertThat(CharacterLibrary.tieBreak(fits, 0.02, 0)).containsSame(a);
+    assertThat(CharacterLibrary.tieBreak(fits, 0.02, 1)).containsSame(b);
+    assertThat(CharacterLibrary.tieBreak(fits, 0.02, 2)).containsSame(a);
+    assertThat(
+            java.util.stream.LongStream.range(0, 20)
+                .mapToObj(seed -> CharacterLibrary.tieBreak(fits, 0.02, seed).orElseThrow())
+                .distinct())
+        .containsExactlyInAnyOrder(a, b);
+    assertThat(CharacterLibrary.tieBreak(List.of(), 0.02, 3)).isEmpty();
   }
 }
