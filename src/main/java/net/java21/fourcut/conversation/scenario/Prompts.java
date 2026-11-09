@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.11";
+  static final String VERSION = "2026-11-09.12";
 
   private Prompts() {}
 
@@ -210,7 +210,8 @@ final class Prompts {
         동작은 wide에만 쓴다. medium·close-up 컷의 action은 손·팔·얼굴만 쓰는 동작이다(물건 들어 올리기,
         내밀기, 버튼 누르기, 볼 감싸기).
         침대·소파·의자에 앉거나 눕는 동작은 다리가 어디 있는지 쓴다(예: "{A} sits on the edge of {침대}, feet on the floor",
-        "{A} sits up in {침대}, blanket over her legs"). 다리 위치가 없으면 다리가 가구 속에 묻혀 그려진다.
+        "{A} sits up in {침대}, blanket over her legs"). 다리 위치가 없으면 다리가 가구 속에 묻혀 그려진다. 침대·이불 속·방바닥처럼 신을 벗는 곳에서 발이 보이면 "bare feet" 또는
+        "white socks"를 쓴다(쓰지 않으면 맨발과 양말 사이 어정쩡한 발로 그려진다).
       - 컷에 나오는 사람: 한 컷은 그 컷의 주인공 한 명을 기본으로 그린다. 두 사람이 몸으로 함께 하는 일(물건 건네기, 같은
         물건 함께 보기)이 장면의 핵심일 때만 두 명을 넣는다. 두 명 컷은 편 전체에서 한 컷까지이고
         shot은 wide로 둔다. 세 명 이상은 넣지 않는다.
