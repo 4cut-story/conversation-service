@@ -639,6 +639,31 @@ class DrawHandler implements StepHandler {
 
   private static final Pattern BARE_ADULT = Pattern.compile("(?i)^(woman|man)(?=,|$)");
 
+  /** 나이가 young만 적힌 어른. 큰 머리·짧은 몸의 아이 체형으로 그려졌다(회차 29 콘티 17판 solo-01 4컷, love-06 7컷). */
+  private static final Pattern YOUNG = Pattern.compile("(?i)^young (woman|man)\\b");
+
+  /** "young woman"을 "young adult woman"으로 바꾼다. */
+  static ComicScript young(ComicScript script) {
+    List<ComicScript.Character> out =
+        script.characters().stream()
+            .map(
+                c -> {
+                  if (c.look() == null) {
+                    return c;
+                  }
+                  String look = c.look().strip();
+                  Matcher m = YOUNG.matcher(look);
+                  return m.find()
+                      ? c.withLook(
+                          "young adult "
+                              + m.group(1).toLowerCase(java.util.Locale.ROOT)
+                              + look.substring(m.end()))
+                      : c;
+                })
+            .toList();
+    return out.equals(script.characters()) ? script : script.withCharacters(out);
+  }
+
   /**
    * 무협 아이 외모 "little swordsman"을 "little boy swordsman, child"로 바꾼다. 아이 낱말이 없으면 무협 그림체가 어른 무림 고수를
    * 그렸다.
@@ -675,7 +700,7 @@ class DrawHandler implements StepHandler {
     if (script.characters() == null) {
       return script;
     }
-    script = kids(script);
+    script = young(kids(script));
     boolean child =
         script.characters().stream()
             .anyMatch(

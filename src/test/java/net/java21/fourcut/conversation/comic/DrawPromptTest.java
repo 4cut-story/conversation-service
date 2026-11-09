@@ -264,6 +264,29 @@ class DrawPromptTest {
   }
 
   @Test
+  @DisplayName("FR-006: young woman·young man은 young adult로 그려 아이 체형이 되지 않게 한다")
+  void youngAdults() {
+    var pair =
+        new ComicScript(
+            "t",
+            List.of(
+                new ComicScript.Character("A", "딸", "", "young woman in hanbok, black hair bun"),
+                new ComicScript.Character("B", "친구", "", "Young man, navy sweater"),
+                new ComicScript.Character("C", "할머니", "", "old woman, gray hair"),
+                new ComicScript.Character("D", "아이", "", "youngster")),
+            List.of(),
+            true,
+            List.of());
+    assertThat(DrawHandler.adults(pair).characters())
+        .extracting(ComicScript.Character::look)
+        .containsExactly(
+            "young adult woman in hanbok, black hair bun",
+            "young adult man, navy sweater",
+            "old woman, gray hair",
+            "youngster");
+  }
+
+  @Test
   @DisplayName("FR-006: 무협 아이(little swordsman)는 아이 낱말을 붙여 어른으로 그려지지 않게 한다")
   void wuxiaKids() {
     var heroes =
