@@ -83,7 +83,7 @@ class PipelineFlowIntegrationTest {
 
   private static final FieldDescriptor[] VIEW = {
     fieldWithPath("id").description("대화 ID"),
-    fieldWithPath("source").description("RECORDING 또는 UPLOAD"),
+    fieldWithPath("source").description("RECORDING, UPLOAD 또는 ARTICLE(기사로 만들기)"),
     fieldWithPath("status")
         .description(
             "보여 줄 상태. RECORDING, QUEUED, TRANSCRIBING, SELECTING, SCRIPTING, DRAWING, COMPOSING, DONE,"
@@ -112,7 +112,15 @@ class PipelineFlowIntegrationTest {
             "만화 컨셉. AUTO(장면에 맞게 고름), DAILY, ANIMALS, WATERCOLOR, PICTURE_BOOK, NEWSPAPER, JOSEON, WUXIA"),
     fieldWithPath("dialect")
         .description("대사 사투리. NONE(없음), GYEONGSANG, JEOLLA, CHUNGCHEONG, GANGWON, SEOUL"),
-    fieldWithPath("createdAt").description("만든 시각")
+    fieldWithPath("createdAt").description("만든 시각"),
+    fieldWithPath("sourceUrl")
+        .type(JsonFieldType.STRING)
+        .optional()
+        .description("기사로 만든 대화의 원문 주소"),
+    fieldWithPath("sourceTitle")
+        .type(JsonFieldType.STRING)
+        .optional()
+        .description("기사로 만든 대화의 기사 제목")
   };
 
   @Autowired private MockMvc mvc;

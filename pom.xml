@@ -20,6 +20,7 @@
     <properties>
         <awssdk.version>2.57.8</awssdk.version>
         <spring-modulith.version>2.1.2</spring-modulith.version>
+        <jsoup.version>1.21.2</jsoup.version>
     </properties>
 
     <dependencyManagement>
@@ -104,6 +105,12 @@
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
+        </dependency>
+        <!-- 기사 URL의 HTML에서 본문만 골라낸다 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
         </dependency>
 
         <dependency>

@@ -5,6 +5,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.stream.IntStream;
+import net.java21.fourcut.conversation.article.Article;
+import net.java21.fourcut.conversation.article.ArticleStore;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.pipeline.ManualLlmJobs;
@@ -42,6 +44,7 @@ public class ConversationService {
           "audio/aac");
 
   private final ConversationRepository conversations;
+  private final ArticleStore articles;
   private final ManualLlmJobs manualLlm;
   private final PipelineService pipeline;
   private final ObjectStorage storage;
@@ -54,8 +57,10 @@ public class ConversationService {
       ManualLlmJobs manualLlm,
       ObjectStorage storage,
       JsonMapper json,
-      Clock clock) {
+      Clock clock,
+      ArticleStore articles) {
     this.conversations = conversations;
+    this.articles = articles;
     this.pipeline = pipeline;
     this.manualLlm = manualLlm;
     this.storage = storage;
@@ -65,6 +70,9 @@ public class ConversationService {
 
   @Transactional
   public ConversationApi.Created create(String owner, ConversationApi.CreateRequest request) {
+    if (request.source() == Conversation.Source.ARTICLE) {
+      throw new ApiException(ErrorCode.VALIDATION_FAILED, "기사 주소를 넣어 주세요.");
+    }
     if (!Boolean.TRUE.equals(request.consent())) {
       throw new ApiException(ErrorCode.CONSENT_REQUIRED);
     }
@@ -76,6 +84,30 @@ public class ConversationService {
       c.markManualLlm();
     }
     Conversation saved = conversations.save(c);
+    return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
+  }
+
+  /** 기사로 만들기. 이미 읽은 기사(본문)를 작업 폴더에 두고 바로 처리를 시작한다. 기사는 녹음 동의가 필요 없다. 전사 단계가 녹음 대신 기사를 대화로 각색한다. */
+  @Transactional
+  public ConversationApi.Created createFromArticle(
+      String owner, ConversationApi.CreateRequest request, Article article) {
+    Conversation c =
+        new Conversation(
+            owner,
+            Conversation.Source.ARTICLE,
+            request.language() == null ? article.language() : request.language(),
+            request.chosenConcept(),
+            clock.instant());
+    c.chooseDialect(request.chosenDialect());
+    if (Boolean.TRUE.equals(request.manualLlm())) {
+      c.markManualLlm();
+    }
+    c.fromArticle(article.url(), article.title(), article.site());
+    Conversation saved = conversations.save(c);
+    articles.save(saved.getPublicId(), article);
+    saved.queue(0);
+    conversations.flush();
+    pipeline.start(saved.getId());
     return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
   }
 
@@ -229,7 +261,9 @@ public class ConversationService {
         c.getConcept() == null ? "AUTO" : c.getConcept(),
         c.getDialect() == null ? "NONE" : c.getDialect(),
         c.getDurationSec(),
-        c.getCreatedAt());
+        c.getCreatedAt(),
+        c.getSourceUrl(),
+        c.getSourceTitle());
   }
 
   /** 주인의 대화. 없거나, 남의 것이거나, 형식이 틀린 ID면 404. */

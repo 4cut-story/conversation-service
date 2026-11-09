@@ -29,7 +29,8 @@ class ConversationProgress implements PipelineObserver {
                     c.getChunkCount(),
                     c.getConcept(),
                     c.getDialect(),
-                    c.isManualLlm()))
+                    c.isManualLlm(),
+                    c.articleSource()))
         .orElse(null);
   }
 
