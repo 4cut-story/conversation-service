@@ -193,7 +193,9 @@ class DrawHandler implements StepHandler {
                     ? who
                     : COUNTS.get(Math.min(people, COUNTS.size()) - 1) + " " + concept.crowd())
                 + ", "
-                + SIDE_BY_SIDE
+                + (panel.scene() != null && panel.scene().contains("foreground")
+                    ? DEPTH
+                    : SIDE_BY_SIDE)
                 + ", "
             : "";
     // 인물 외모(옷·머리)를 그림체 바로 뒤에 둔다. 뒤쪽에 두면 앞 77토큰 묶음보다 약하게 읽혀 같은 인물의 옷·머리가 컷마다 바뀌었다(회차 21·22).
@@ -874,6 +876,9 @@ class DrawHandler implements StepHandler {
           "medium", "medium shot from the waist up");
 
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
+
+  /** 앞사람은 크게, 뒤 사람은 작게 그리는 두 사람 컷(콘티 15b판). 나란히 그리면 두 사람이 섞였다(회차 29 콘티 11~13판). */
+  static final String DEPTH = "one large in the foreground, one small far in the background";
 
   /** 콘티 내용(제목과 컷 장면)으로 정한 그림 시드. 같은 콘티면 대화 ID가 달라도 같은 시드로 그려 고정 시험 세트로 수정 전후를 비교할 수 있다. */
   static long seedOf(ComicScript script) {
