@@ -1,9 +1,7 @@
 package net.java21.fourcut.conversation.comic;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Optional;
-import net.java21.fourcut.conversation.pipeline.ConversationInfo;
 import net.java21.fourcut.conversation.pipeline.PipelineObserver;
 import net.java21.fourcut.conversation.pipeline.Production;
 import net.java21.fourcut.conversation.scenario.StorySummary;
@@ -15,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * 줄거리 요약이 생기기 전에 만든 만화에 요약을 채운다. 서버가 뜰 때 한 번 뒤에서 돈다. 콘티가 남아 있는(7일) 만화만 채울 수 있다. 외부 LLM을 만화마다 한 번
@@ -62,27 +59,7 @@ class SummaryBackfill {
 
   /** 합성까지 끝난 대화마다 줄거리 요약을 채운다. 하나가 실패해도 나머지는 한다. */
   int run() {
-    List<Long> ids = production.composed();
-    int sent = 0;
-    for (Long id : ids) {
-      ConversationInfo conversation = conversations.find(id);
-      if (conversation == null) {
-        continue;
-      }
-      String publicId = conversation.publicId();
-      try {
-        if (fill(publicId)) {
-          sent++;
-        }
-      } catch (HttpClientErrorException.NotFound e) {
-        log.debug("지운 만화라 건너뜀: conversation={}", publicId);
-        mark(publicId);
-      } catch (RuntimeException e) {
-        log.warn("줄거리 요약 채우기 실패: conversation={} ({})", publicId, e.toString());
-      }
-    }
-    log.info("줄거리 요약 채우기: 대화 {}건 중 {}건 보냄", ids.size(), sent);
-    return sent;
+    return ComposedBackfill.run(production, conversations, log, "줄거리 요약", this::fill, this::mark);
   }
 
   /** 한 만화를 채운다. 보낼 것이 없으면 false. */
