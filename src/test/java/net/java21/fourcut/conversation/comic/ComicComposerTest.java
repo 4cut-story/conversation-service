@@ -189,6 +189,22 @@ class ComicComposerTest {
   }
 
   @Test
+  @DisplayName("FR-007: 얼굴이 크게 그려져 넓은 말풍선이 들어갈 빈 자리가 없으면, 좁힌 말풍선은 얼굴 옆 빈 자리를 찾는다")
+  void narrowBubbleFitsBesideBigFace() {
+    int top = 100;
+    int panel = ComicComposer.PANEL;
+    var face = ComicComposer.face(new PanelPlacement.Head(0.5, 0.55, 0.3), top);
+    var wide = ComicComposer.clear(face, (int) (panel * 0.72), 160, top, List.of(face), List.of());
+    assertThat(wide).isNull();
+    var narrow = ComicComposer.clear(face, 100, 150, top, List.of(face), List.of());
+    assertThat(narrow).isNotNull();
+    assertThat(narrow.intersects(face)).isFalse();
+    // 빈 자리가 없어도 place는 가장 덜 가리는 자리를 준다
+    assertThat(ComicComposer.place(face, (int) (panel * 0.72), 160, top, List.of(face), List.of()))
+        .isNotNull();
+  }
+
+  @Test
   @DisplayName("FR-007: 그림에서 본 물건(그릇·휴대폰 등)도 얼굴처럼 말풍선이 가리지 않는다")
   void avoidsProps() {
     int top = 100;

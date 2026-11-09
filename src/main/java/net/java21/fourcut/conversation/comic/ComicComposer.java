@@ -203,11 +203,8 @@ public class ComicComposer {
       boolean top = i % 2 == 0;
       int max =
           side == Staging.Side.LEFT || side == Staging.Side.RIGHT ? BUBBLE_MAX_SIDE : BUBBLE_MAX;
-      List<String> rows =
-          wrap(
-              bubbleText(names.getOrDefault(line.speaker(), line.speaker()), line),
-              fm,
-              max - 2 * BUBBLE_PAD);
+      String text = bubbleText(names.getOrDefault(line.speaker(), line.speaker()), line);
+      List<String> rows = wrap(text, fm, max - 2 * BUBBLE_PAD);
       int w = rows.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
       int h = rows.size() * fm.getHeight() + 2 * BUBBLE_PAD;
       PanelPlacement.Head head = line.speaker() == null ? null : heads.get(line.speaker());
@@ -216,7 +213,27 @@ public class ComicComposer {
       int y;
       if (head != null) {
         Rectangle face = face(head, panelTop);
-        Rectangle box = place(face, w, h, panelTop, faces, taken);
+        Rectangle box = clear(face, w, h, panelTop, faces, taken);
+        // 넓은 말풍선이 들어갈 빈 자리가 없으면(얼굴이 크게 그려진 컷) 폭을 좁혀 줄을 늘린 말풍선으로 빈 자리를 다시 찾는다
+        for (int n = 0; box == null && n < NARROW.length; n++) {
+          int limit = (int) (PANEL * NARROW[n]);
+          if (limit >= w) {
+            continue;
+          }
+          List<String> narrow = wrap(text, fm, limit - 2 * BUBBLE_PAD);
+          int nw = narrow.stream().mapToInt(fm::stringWidth).max().orElse(0) + 2 * BUBBLE_PAD;
+          int nh = narrow.size() * fm.getHeight() + 2 * BUBBLE_PAD;
+          Rectangle fit = clear(face, nw, nh, panelTop, faces, taken);
+          if (fit != null) {
+            rows = narrow;
+            w = nw;
+            h = nh;
+            box = fit;
+          }
+        }
+        if (box == null) {
+          box = place(face, w, h, panelTop, faces, taken);
+        }
         x = box.x;
         y = box.y;
         shape = new Area(new RoundRectangle2D.Float(x, y, w, h, 28, 28));
@@ -266,14 +283,14 @@ public class ComicComposer {
   private static final int PROP_PAD = 8;
 
   /**
-   * 얼굴 자리(합성 이미지 좌표). 받은 얼굴 높이를 그대로 반지름으로 써서 얼굴 높이의 두 배로 잡고, 머리카락과 위치 오차를 덮게 위로 반지름의 절반을 더 늘린다.
-   * 반지름을 얼굴 높이의 0.65배로 잡던 때는 말풍선이 눈을 가렸다.
+   * 얼굴 자리(합성 이미지 좌표). 받은 얼굴 높이를 그대로 반지름으로 써서 얼굴 높이의 두 배로 잡고, 머리카락과 위치 오차를 덮게 위로 반지름의 절반(최대 48px)을 더
+   * 늘린다. 반지름을 얼굴 높이의 0.65배로 잡던 때는 말풍선이 눈을 가렸다.
    */
   static Rectangle face(PanelPlacement.Head head, int panelTop) {
     int cx = MARGIN + (int) Math.round(head.x() * PANEL);
     int cy = panelTop + (int) Math.round(head.y() * PANEL);
     int r = Math.max(32, (int) Math.round(head.size() * PANEL));
-    int up = r / 2;
+    int up = Math.min(r / 2, 48);
     return new Rectangle(cx - r, cy - r - up, 2 * r, 2 * r + up);
   }
 
@@ -292,6 +309,14 @@ public class ComicComposer {
    */
   static Rectangle place(
       Rectangle face, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
+    List<Rectangle> options = options(face, w, h, panelTop, taken);
+    Rectangle free = clear(face, w, h, panelTop, faces, taken);
+    return free != null ? free : pick(options, faces, taken);
+  }
+
+  /** 얼굴 쪽 말풍선 후보 자리: 얼굴 위, 아래, 바깥 옆, 안쪽 옆, 앞 말풍선 아래. */
+  private static List<Rectangle> options(
+      Rectangle face, int w, int h, int panelTop, List<Rectangle> taken) {
     int cx = (int) face.getCenterX();
     int cy = (int) face.getCenterY();
     int x = clampX(cx - w / 2, w);
@@ -307,13 +332,24 @@ public class ComicComposer {
             belowLast(x, w, h, panelTop, taken),
             belowLast(MARGIN + 16, w, h, panelTop, taken),
             belowLast(MARGIN + PANEL - 16 - w, w, h, panelTop, taken));
-    for (Rectangle o : options) {
+    return options;
+  }
+
+  /** 좁힌 말풍선 폭(컷 폭에 대한 비율). 넓은 말풍선이 들어갈 빈 자리가 없을 때 차례로 써 본다. */
+  private static final double[] NARROW = {0.5, 0.38};
+
+  /**
+   * 얼굴·물건·앞 말풍선을 하나도 가리지 않고 대사 순서대로 읽히는 자리. 정해 둔 후보(얼굴 위, 아래, 옆…)를 먼저 보고, 모두 걸리면 컷 전체를 훑어 화자 얼굴에 가장
+   * 가까운 곳이다. 그런 자리가 없으면 null.
+   */
+  static Rectangle clear(
+      Rectangle face, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
+    for (Rectangle o : options(face, w, h, panelTop, taken)) {
       if (cost(o, faces, taken) == 0) {
         return o;
       }
     }
-    Rectangle near = nearest(face, w, h, panelTop, faces, taken);
-    return near != null ? near : pick(options, faces, taken);
+    return nearest(face, w, h, panelTop, faces, taken);
   }
 
   /** 빈 자리를 찾을 때 훑는 간격(픽셀). */
