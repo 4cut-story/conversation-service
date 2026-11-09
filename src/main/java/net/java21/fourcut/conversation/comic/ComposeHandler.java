@@ -130,6 +130,7 @@ class ComposeHandler implements StepHandler {
                 cast(script, portraits),
                 Concept.of(script.concept()).name(),
                 Dialect.of(context.conversation().dialect()).name(),
+                script.summary(),
                 production(context.conversation().id()),
                 live));
     return new StepOutcome.Completed(full, registered.comicId());

@@ -16,6 +16,7 @@ public interface ContentClient {
    * @param cast 만화 아래에 보이는 등장인물 소개
    * @param concept 그린 그림체({@code Concept} 이름). 자동이면 서버가 고른 그림체
    * @param dialect 대사 사투리({@code Dialect} 이름). 사투리 없음은 NONE
+   * @param summary 만화 아래에 보이는 줄거리 요약. 예전 콘티면 null
    * @param production 제작 정보 ({@link net.java21.fourcut.conversation.pipeline.Production}). 못 만들면
    *     null
    * @param live 라이브 모드 재생 정보 (common contracts/live-mode.yaml LivePlayback). 못 만들면 null
@@ -31,6 +32,7 @@ public interface ContentClient {
       List<CastMember> cast,
       String concept,
       String dialect,
+      String summary,
       JsonNode production,
       JsonNode live) {}
 
@@ -53,6 +55,13 @@ public interface ContentClient {
   /** 대화로 찾은 만화에 제작 정보를 채운다. 이미 있으면 그대로 둔다. 만화가 없으면 404. */
   @PutExchange("/internal/comics/by-conversation/{conversationId}/production")
   void production(@PathVariable String conversationId, @RequestBody JsonNode production);
+
+  /** 줄거리 요약 본문. */
+  record Summary(String summary) {}
+
+  /** 대화로 찾은 만화에 줄거리 요약을 채운다. 이미 있으면 그대로 둔다. 만화가 없으면 404. */
+  @PutExchange("/internal/comics/by-conversation/{conversationId}/summary")
+  void summary(@PathVariable String conversationId, @RequestBody Summary summary);
 
   /** 대화로 찾은 만화의 등장인물 소개를 바꾼다 (예전 만화에 얼굴 그림을 채울 때). 만화가 없으면 404. */
   @PutExchange("/internal/comics/by-conversation/{conversationId}/cast")

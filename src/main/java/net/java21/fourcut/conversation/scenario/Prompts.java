@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.22";
+  static final String VERSION = "2026-11-09.23";
 
   private Prompts() {}
 
@@ -308,12 +308,17 @@ final class Prompts {
       title은 20자 이내로 이 장면의 핵심을 살려 짓고(예: "사라진 아이스크림의 범인", "할머니의 비밀 레시피") 실명과 가명을
       넣지 않는다(인물은 role 호칭으로). title과 persona도 맞춤법·띄어쓰기를 지킨다. 대사·제목·persona는 대화와 같은 언어로
       쓴다.
+
+      summary는 만화 아래에 보이는 줄거리 요약이다. 만화만 봐서는 놓치는 앞뒤 사정까지 [장면 앞 대화]·[장면 대화]·[장면 뒤
+      대화]에서 있었던 일 전체를 3~4문장(250자 이내)으로 쓴다: 어떤 상황에서 시작해 무슨 일이 생겼고 어떻게 끝났는지. 인물은
+      role 호칭으로만 부르고(예: "손녀가 할머니에게…") 실명·가명·화자 표시(A, B)·자리표({A})는 쓰지 않는다. 대화에 없는 일을
+      지어 넣지 않고, 대사를 길게 옮기지 않는다. 대화와 같은 언어로, 맞춤법·띄어쓰기를 지켜 평서문(~다)으로 쓴다.
       """;
 
   static final String SCRIPT_SCHEMA =
       """
-      {"type":"object","required":["title","characters","props","places","panels","nameWarnings"],"properties":{
-       "title":{"type":"string"},
+      {"type":"object","required":["title","summary","characters","props","places","panels","nameWarnings"],"properties":{
+       "title":{"type":"string"},"summary":{"type":"string"},
        "characters":{"type":"array","minItems":1,"items":{"type":"object",
         "required":["speaker","name","role","persona","look","bottom","shoes"],"properties":{"speaker":{"type":"string"},
          "name":{"type":"string"},"role":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"},

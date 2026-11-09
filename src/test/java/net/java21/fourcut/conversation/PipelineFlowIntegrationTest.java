@@ -285,6 +285,8 @@ class PipelineFlowIntegrationTest {
     return java.util.Map.of(
         "title",
         "접시 미스터리",
+        "summary",
+        "저녁상 앞에서 하린의 접시가 비었다. 준호는 아니라고 하지만 입가의 소스가 들통난다.",
         "characters",
         List.of(
             java.util.Map.of(
@@ -608,6 +610,8 @@ class PipelineFlowIntegrationTest {
     assertThat(live.path("version").asInt()).isEqualTo(1);
     assertThat(live.path("panels")).isNotEmpty();
     assertThat(live.path("panels").get(0).path("image").asString()).isEqualTo("panels/1.png");
+    // FR-006: 콘티와 함께 만든 줄거리 요약을 함께 보낸다
+    assertThat(registered.getValue().summary()).contains("들통난다");
     // FR-006: 제작 정보에 단계별 걸린 시간과 워커가 보낸 모델 정보가 들어간다
     JsonNode production = registered.getValue().production();
     assertThat(production.path("version").asInt()).isEqualTo(1);

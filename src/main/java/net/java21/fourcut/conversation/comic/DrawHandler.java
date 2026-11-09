@@ -776,7 +776,8 @@ class DrawHandler implements StepHandler {
         script.panels(),
         script.reviewed(),
         script.nameWarnings(),
-        script.concept());
+        script.concept(),
+        script.summary());
   }
 
   /**
@@ -1281,7 +1282,8 @@ class DrawHandler implements StepHandler {
             script.panels(),
             script.reviewed(),
             script.nameWarnings(),
-            script.concept());
+            script.concept(),
+            script.summary());
   }
 
   /**

@@ -151,6 +151,7 @@ class ScriptHandler implements StepHandler {
             .withoutRepeatedLines()
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withRoleCalls()
+            .withCleanSummary()
             .withConcept(concept)
             .withMotionLimits();
     if (concept == Concept.ANIMALS) {
