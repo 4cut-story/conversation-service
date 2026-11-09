@@ -189,8 +189,8 @@ public class SoundMatcher {
             }
           }
           if (!found.isEmpty()) {
-            SoundLibrary.Sound head = headFirst(q, found.stream().map(Scored::sound).toList());
-            chosen = found.stream().filter(s -> s.sound() == head).findFirst().orElseThrow();
+            List<SoundLibrary.Sound> sounds = found.stream().map(Scored::sound).toList();
+            chosen = found.get(sounds.indexOf(headFirst(q, sounds)));
           }
         } catch (RuntimeException e) {
           log.warn("컷 효과음을 고르지 못했다: {}", e.toString());
