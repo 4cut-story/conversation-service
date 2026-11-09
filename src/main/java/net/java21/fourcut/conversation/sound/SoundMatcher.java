@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,23 +50,67 @@ public class SoundMatcher {
       String license,
       String licenseUrl,
       String sourceUrl,
-      String originalTitle) {}
+      String originalTitle,
+      Double score,
+      String kind) {
+
+    /** 점수를 모르는 소리. */
+    public Picked(
+        String publicId,
+        String title,
+        String author,
+        String license,
+        String licenseUrl,
+        String sourceUrl,
+        String originalTitle) {
+      this(publicId, title, author, license, licenseUrl, sourceUrl, originalTitle, null, null);
+    }
+
+    /** 바탕 배경음악인지(장소·환경음보다 작게 깐다). */
+    public boolean music() {
+      return "MUSIC".equals(kind);
+    }
+  }
 
   /** 거리가 이만큼 안이면 같은 점수로 보고 만화마다 다르게 고른다(설명 임베딩 코사인 거리). */
   static final double TIE_MARGIN = 0.02;
 
-  /** 후보 하나와 질의까지의 거리. 거리를 모르는 찾기(글자 찾기)는 순위를 거리로 쓴다(같은 점수가 없다). */
-  public record Scored(SoundLibrary.Sound sound, double distance) {}
+  /**
+   * 후보 하나와 질의까지의 거리(설명 임베딩 코사인 거리, 0~2). 거리를 모르는 찾기(글자 찾기)는 {@link #UNKNOWN}부터 순위를 더한 음수를 쓴다(같은 점수가
+   * 없고, 거리 기준을 적용하지 않는다).
+   */
+  public record Scored(SoundLibrary.Sound sound, double distance) {
+
+    boolean known() {
+      return distance >= 0;
+    }
+  }
+
+  /** 거리를 모르는 후보의 거리 시작값. */
+  static final double UNKNOWN = -1_000_000;
+
+  /**
+   * 소리를 쓰는 거리 한도 기본값(코사인 거리 0.40 = 유사도 0.60 이상). 이보다 먼 소리는 장면과 관계가 약하다고 보고 그 컷은 소리 없이 둔다. 아무 소리나 가장
+   * 가까운 것을 붙이면 장면과 상관없는 소리가 나왔다(marco, 2026-11-09). 실제 만화의 점수(재생 정보 sound.score)를 보고 조정한다.
+   */
+  public static final double DEFAULT_MAX_DISTANCE = 0.40;
 
   private final BiFunction<String, Integer, List<Scored>> finder;
-  private final BiFunction<String, Integer, List<SoundLibrary.Sound>> effectFinder;
+  private final BiFunction<String, Integer, List<Scored>> effectFinder;
+  private final BiFunction<String, Integer, List<Scored>> musicFinder;
+  private final double maxDistance;
 
   @Autowired
-  SoundMatcher(SoundLibrary library) {
+  SoundMatcher(
+      SoundLibrary library,
+      @Value("${sound.max-distance:" + DEFAULT_MAX_DISTANCE + "}") double maxDistance) {
     this.finder =
         (q, n) -> library.scored(new SoundLibrary.Filter("AMBIENCE", null, null, null), q, n);
     this.effectFinder =
-        (q, n) -> library.search(new SoundLibrary.Filter("EFFECT", null, null, null), q, n);
+        (q, n) -> library.scored(new SoundLibrary.Filter("EFFECT", null, null, null), q, n);
+    this.musicFinder =
+        (q, n) -> library.scored(new SoundLibrary.Filter("MUSIC", null, null, null), q, n);
+    this.maxDistance = maxDistance;
   }
 
   SoundMatcher(BiFunction<String, Integer, List<SoundLibrary.Sound>> finder) {
@@ -75,49 +120,78 @@ public class SoundMatcher {
   SoundMatcher(
       BiFunction<String, Integer, List<SoundLibrary.Sound>> finder,
       BiFunction<String, Integer, List<SoundLibrary.Sound>> effectFinder) {
-    this.finder = (q, n) -> byRank(finder.apply(q, n));
-    this.effectFinder = effectFinder;
+    this(
+        (q, n) -> byRank(finder.apply(q, n)),
+        (q, n) -> byRank(effectFinder.apply(q, n)),
+        (q, n) -> List.of(),
+        DEFAULT_MAX_DISTANCE);
   }
 
   private SoundMatcher(
       BiFunction<String, Integer, List<Scored>> scored,
-      BiFunction<String, Integer, List<SoundLibrary.Sound>> effectFinder,
-      boolean unused) {
+      BiFunction<String, Integer, List<Scored>> effectFinder,
+      BiFunction<String, Integer, List<Scored>> musicFinder,
+      double maxDistance) {
     this.finder = scored;
     this.effectFinder = effectFinder;
+    this.musicFinder = musicFinder;
+    this.maxDistance = maxDistance;
   }
 
   /** 거리를 아는 찾기로 만든다(테스트). */
   static SoundMatcher scored(BiFunction<String, Integer, List<Scored>> scored) {
-    return new SoundMatcher(scored, (q, n) -> List.of(), true);
+    return scored(scored, (q, n) -> List.of());
+  }
+
+  /** 거리를 아는 배경음·효과음 찾기로 만든다(테스트). */
+  static SoundMatcher scored(
+      BiFunction<String, Integer, List<Scored>> scored,
+      BiFunction<String, Integer, List<Scored>> effects) {
+    return scored(scored, effects, (q, n) -> List.of());
+  }
+
+  /** 거리를 아는 배경음·효과음·배경음악 찾기로 만든다(테스트). */
+  static SoundMatcher scored(
+      BiFunction<String, Integer, List<Scored>> scored,
+      BiFunction<String, Integer, List<Scored>> effects,
+      BiFunction<String, Integer, List<Scored>> music) {
+    return new SoundMatcher(scored, effects, music, DEFAULT_MAX_DISTANCE);
   }
 
   static List<Scored> byRank(List<SoundLibrary.Sound> sounds) {
     List<Scored> out = new ArrayList<>();
     for (int i = 0; i < sounds.size(); i++) {
-      out.add(new Scored(sounds.get(i), i));
+      out.add(new Scored(sounds.get(i), UNKNOWN + i));
     }
     return out;
+  }
+
+  /** 거리 한도 안의 후보만. 거리를 모르는 후보(글자 찾기)는 그대로 둔다. */
+  List<Scored> close(List<Scored> found) {
+    return found.stream().filter(s -> !s.known() || s.distance() <= maxDistance).toList();
   }
 
   /** 컷마다 고른 사건 효과음(같은 순서·개수). 사건 소리가 비었거나 못 찾으면 빈 값. 앞 컷 소리를 이어 쓰지 않는다. */
   public List<Optional<Picked>> effects(List<String> events) {
     List<Optional<Picked>> out = new ArrayList<>();
     for (String event : events) {
-      SoundLibrary.Sound chosen = null;
+      Scored chosen = null;
       String q = text(event);
       if (!q.isEmpty()) {
         try {
-          List<SoundLibrary.Sound> found = effectFinder.apply(q, EFFECT_CANDIDATES);
+          List<Scored> found = close(effectFinder.apply(q, EFFECT_CANDIDATES));
           if (found.isEmpty()) {
             for (String word : words(q)) {
-              found = effectFinder.apply(word, EFFECT_CANDIDATES);
+              found = close(effectFinder.apply(word, EFFECT_CANDIDATES));
               if (!found.isEmpty()) {
                 break;
               }
             }
           }
-          chosen = found.isEmpty() ? null : headFirst(q, found);
+          if (!found.isEmpty()) {
+            List<SoundLibrary.Sound> sounds = found.stream().map(Scored::sound).toList();
+            chosen = found.get(sounds.indexOf(headFirst(q, sounds)));
+          }
         } catch (RuntimeException e) {
           log.warn("컷 효과음을 고르지 못했다: {}", e.toString());
         }
@@ -167,20 +241,27 @@ public class SoundMatcher {
    */
   public List<Optional<Picked>> match(List<Query> panels, long seed) {
     List<Optional<Picked>> out = new ArrayList<>();
-    SoundLibrary.Sound previous = null;
+    Scored previous = null;
     String previousPlace = null;
     for (Query q : panels) {
-      SoundLibrary.Sound chosen = null;
+      Scored chosen = null;
       try {
         List<Scored> ranked = ranked(q);
         if (previous != null && samePlace(previousPlace, q.place())) {
-          String keep = previous.id();
-          if (ranked.stream().limit(KEEP_WITHIN).anyMatch(s -> s.sound().id().equals(keep))) {
-            chosen = previous;
-          }
+          String keep = previous.sound().id();
+          chosen =
+              ranked.stream()
+                  .limit(KEEP_WITHIN)
+                  .filter(s -> s.sound().id().equals(keep))
+                  .findFirst()
+                  .orElse(null);
         }
         if (chosen == null && !ranked.isEmpty()) {
           chosen = tieBreak(q, ranked, seed);
+        }
+        if (chosen == null) {
+          // 한도 안의 장소·환경음이 없으면 같은 질의로 분위기 배경음악을 깐다
+          chosen = music(q, previous, seed);
         }
       } catch (RuntimeException e) {
         log.warn("컷 배경음을 고르지 못했다: {}", e.toString());
@@ -192,8 +273,35 @@ public class SoundMatcher {
     return out;
   }
 
+  /**
+   * 바탕 배경음악. 한도 안의 장소·환경음이 없는 컷도 바탕 소리는 늘 깔리게, 분위기가 가장 가까운 음악을 거리 한도 없이 고른다(marco: 기본 배경음 위에 상황에 맞는
+   * 효과음). 앞 컷이 같은 음악이고 후보 위쪽에 있으면 이어 쓴다. 음악이 없으면 null.
+   */
+  private Scored music(Query q, Scored previous, long seed) {
+    String query = query(q);
+    if (query.isEmpty()) {
+      return null;
+    }
+    List<Scored> found = musicFinder.apply(query, CANDIDATES);
+    if (found.isEmpty()) {
+      return null;
+    }
+    if (previous != null) {
+      String keep = previous.sound().id();
+      Optional<Scored> same =
+          found.stream().limit(KEEP_WITHIN).filter(s -> s.sound().id().equals(keep)).findFirst();
+      if (same.isPresent()) {
+        return same.get();
+      }
+    }
+    Scored best = found.get(0);
+    List<Scored> tied =
+        found.stream().filter(s -> s.distance() - best.distance() <= TIE_MARGIN).toList();
+    return tied.get((int) Math.floorMod(seed, (long) tied.size()));
+  }
+
   /** 첫 후보와 장소 낱말 여부·어긋남이 같고 거리 차이가 {@link #TIE_MARGIN} 안인 후보들 중 seed로 하나. */
-  static SoundLibrary.Sound tieBreak(Query q, List<Scored> ranked, long seed) {
+  static Scored tieBreak(Query q, List<Scored> ranked, long seed) {
     String scene = text(q.soundScene());
     String context = (scene + " " + text(q.place())).toLowerCase(Locale.ROOT);
     Scored best = ranked.get(0);
@@ -205,7 +313,7 @@ public class SoundMatcher {
             .filter(s -> placeHit(scene, s.sound()) == hit)
             .filter(s -> conflicts(context, s.sound()) == off)
             .toList();
-    return tied.get((int) Math.floorMod(seed, (long) tied.size())).sound();
+    return tied.get((int) Math.floorMod(seed, (long) tied.size()));
   }
 
   /**
@@ -217,17 +325,13 @@ public class SoundMatcher {
     List<Scored> found = find(q);
     String scene = text(q.soundScene());
     String context = (scene + " " + text(q.place())).toLowerCase(Locale.ROOT);
-    List<Scored> fit = new ArrayList<>();
-    List<Scored> off = new ArrayList<>();
-    for (Scored s : found) {
-      (conflicts(context, s.sound()) ? off : fit).add(s);
-    }
+    // 시간대·날씨가 어긋나는 소리는 쓰지 않는다(장면과 관계없는 소리보다 바탕 배경음악이 낫다)
+    List<Scored> fit = close(found).stream().filter(s -> !conflicts(context, s.sound())).toList();
     List<Scored> top = fit.subList(0, Math.min(PLACE_WINDOW, fit.size()));
     List<Scored> out = new ArrayList<>();
     top.stream().filter(s -> placeHit(scene, s.sound())).forEach(out::add);
     top.stream().filter(s -> !placeHit(scene, s.sound())).forEach(out::add);
     out.addAll(fit.subList(top.size(), fit.size()));
-    out.addAll(off);
     return out;
   }
 
@@ -299,7 +403,8 @@ public class SoundMatcher {
     return !text(a).isEmpty() && text(a).equalsIgnoreCase(text(b));
   }
 
-  private static Picked picked(SoundLibrary.Sound s) {
+  private static Picked picked(Scored scored) {
+    SoundLibrary.Sound s = scored.sound();
     SoundLibrary.Credit c = s.credit();
     return new Picked(
         s.id(),
@@ -308,7 +413,9 @@ public class SoundMatcher {
         c == null ? null : c.license(),
         c == null ? null : c.licenseUrl(),
         c == null ? null : c.sourceUrl(),
-        c == null ? null : c.originalTitle());
+        c == null ? null : c.originalTitle(),
+        scored.known() ? Math.round((1 - scored.distance()) * 100) / 100.0 : null,
+        s.kind());
   }
 
   private static String text(String value) {
