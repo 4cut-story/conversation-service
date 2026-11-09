@@ -292,13 +292,13 @@ class DrawHandler implements StepHandler {
         people <= 0
             ? ""
             : people == 1
-                ? "exactly one character, alone in the frame, drawn only once, "
+                ? "exactly one character, "
                 : "exactly "
                     + COUNTS.get(Math.min(people, COUNTS.size()) - 1)
                     + " characters, each drawn only once, ";
     return "one full-frame illustration of a single moment, "
         + count
-        + "same outfit and same props in every panel";
+        + "same outfit in every panel";
   }
 
   /**
@@ -478,7 +478,11 @@ class DrawHandler implements StepHandler {
         most = shared;
       }
     }
-    return best == null ? "" : best + ", ";
+    // 얼굴 컷에 장면과 상관없는 배경 물건을 앞세우면 그 물건이 몸 앞을 덮었다(밭고랑에 몸통이 묻힘, 회차 29 콘티 20판 family-09 5·7컷)
+    if (best == null || most == 0 && "close-up".equals(panel.shot())) {
+      return "";
+    }
+    return best + ", ";
   }
 
   /** 문장의 낱말(소문자, 세 글자 이상). 장면과 배경 조각이 같은 물건을 말하는지 견줄 때 쓴다. */
