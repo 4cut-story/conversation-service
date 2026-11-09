@@ -261,4 +261,45 @@ class SoundMatcherTest {
     assertThat(matcher.match(List.of(new SoundMatcher.Query("마트", "mart", ""))))
         .containsExactly(Optional.empty());
   }
+
+  @Test
+  @DisplayName("FR-008c: 유사도 0.70보다 먼 장소 소리는 장면이 그 장소·소리를 말할 때만 쓴다 (햄버거 가게의 기계실 웅웅거림)")
+  void graySoundNeedsSceneWord() {
+    var hum = described("hhhhhhhhhhhhhhhhhhhhh", "기계실 웅웅거림", "", "기계실", "지하");
+    var diner = described("ddddddddddddddddddddd", "식당 손님들 말소리", "", "식당");
+    var piano = music("mmmmmmmmmmmmmmmmmmmmm");
+    SoundMatcher matcher =
+        SoundMatcher.scored(
+            (q, n) ->
+                List.of(new SoundMatcher.Scored(hum, 0.33), new SoundMatcher.Scored(diner, 0.36)),
+            (q, n) -> List.of(),
+            (q, n) -> List.of(new SoundMatcher.Scored(piano, 0.5)));
+
+    var kiosk =
+        matcher.match(
+            List.of(new SoundMatcher.Query("낮 햄버거 가게 안, 손님들이 웅성이는 소리", "burger shop", "")));
+    var restaurant =
+        matcher.match(List.of(new SoundMatcher.Query("저녁 식당 안, 손님들 말소리", "restaurant", "")));
+    var basement =
+        matcher.match(List.of(new SoundMatcher.Query("밤 지하 기계실, 낮게 웅웅거림", "basement", "")));
+
+    assertThat(kiosk.get(0).orElseThrow().music()).isTrue();
+    assertThat(restaurant.get(0).orElseThrow().publicId()).isEqualTo("ddddddddddddddddddddd");
+    assertThat(basement.get(0).orElseThrow().publicId()).isEqualTo("hhhhhhhhhhhhhhhhhhhhh");
+  }
+
+  @Test
+  @DisplayName("FR-008c: 유사도 0.70 이상이면 장면 낱말이 없어도 쓰고, 소리 이름의 중심 낱말은 끝 낱말이다")
+  void sureSoundKept() {
+    var waves = described("wwwwwwwwwwwwwwwwwwwww", "밤바다에 밀려오는 잔잔한 파도 소리", "");
+    SoundMatcher matcher =
+        SoundMatcher.scored((q, n) -> List.of(new SoundMatcher.Scored(waves, 0.21)));
+
+    assertThat(matcher.match(List.of(new SoundMatcher.Query("밤, 별이 가득한 하늘", "beach", ""))).get(0))
+        .isPresent();
+    assertThat(SoundMatcher.head("밤바다에 밀려오는 잔잔한 파도 소리")).isEqualTo("파도");
+    assertThat(SoundMatcher.head("기계실 웅웅거림")).isEqualTo("웅웅거림");
+    assertThat(SoundMatcher.supported("밤 바닷가, 잔잔한 파도", waves)).isTrue();
+    assertThat(SoundMatcher.supported("", waves)).isFalse();
+  }
 }

@@ -95,15 +95,24 @@ public class SoundMatcher {
    */
   public static final double DEFAULT_MAX_DISTANCE = 0.40;
 
+  /**
+   * 장면 낱말 없이도 믿고 쓰는 거리 기본값(코사인 거리 0.30 = 유사도 0.70 이상). 이보다 먼(유사도 0.60~0.70) 장소·환경음은 소리의 장소 낱말이나 중심
+   * 낱말(제목 끝 낱말: "기계실 웅웅거림"의 웅웅거림)이 소리 장면 문장에 있을 때만 쓴다. 실제 만화에서 유사도 0.63~0.69로 붙은 소리가 햄버거 가게에 기계실
+   * 웅웅거림, 정전된 집 안에 집 밖 밤 소리, 눈 오는 날 선풍기처럼 장면과 어긋났다(marco, 2026-11-09). 쓰지 못하면 바탕 배경음악을 깐다.
+   */
+  public static final double DEFAULT_SURE_DISTANCE = 0.30;
+
   private final BiFunction<String, Integer, List<Scored>> finder;
   private final BiFunction<String, Integer, List<Scored>> effectFinder;
   private final BiFunction<String, Integer, List<Scored>> musicFinder;
   private final double maxDistance;
+  private final double sureDistance;
 
   @Autowired
   SoundMatcher(
       SoundLibrary library,
-      @Value("${sound.max-distance:" + DEFAULT_MAX_DISTANCE + "}") double maxDistance) {
+      @Value("${sound.max-distance:" + DEFAULT_MAX_DISTANCE + "}") double maxDistance,
+      @Value("${sound.sure-distance:" + DEFAULT_SURE_DISTANCE + "}") double sureDistance) {
     this.finder =
         (q, n) -> library.scored(new SoundLibrary.Filter("AMBIENCE", null, null, null), q, n);
     this.effectFinder =
@@ -111,6 +120,7 @@ public class SoundMatcher {
     this.musicFinder =
         (q, n) -> library.scored(new SoundLibrary.Filter("MUSIC", null, null, null), q, n);
     this.maxDistance = maxDistance;
+    this.sureDistance = sureDistance;
   }
 
   SoundMatcher(BiFunction<String, Integer, List<SoundLibrary.Sound>> finder) {
@@ -124,18 +134,21 @@ public class SoundMatcher {
         (q, n) -> byRank(finder.apply(q, n)),
         (q, n) -> byRank(effectFinder.apply(q, n)),
         (q, n) -> List.of(),
-        DEFAULT_MAX_DISTANCE);
+        DEFAULT_MAX_DISTANCE,
+        DEFAULT_SURE_DISTANCE);
   }
 
   private SoundMatcher(
       BiFunction<String, Integer, List<Scored>> scored,
       BiFunction<String, Integer, List<Scored>> effectFinder,
       BiFunction<String, Integer, List<Scored>> musicFinder,
-      double maxDistance) {
+      double maxDistance,
+      double sureDistance) {
     this.finder = scored;
     this.effectFinder = effectFinder;
     this.musicFinder = musicFinder;
     this.maxDistance = maxDistance;
+    this.sureDistance = sureDistance;
   }
 
   /** 거리를 아는 찾기로 만든다(테스트). */
@@ -155,7 +168,7 @@ public class SoundMatcher {
       BiFunction<String, Integer, List<Scored>> scored,
       BiFunction<String, Integer, List<Scored>> effects,
       BiFunction<String, Integer, List<Scored>> music) {
-    return new SoundMatcher(scored, effects, music, DEFAULT_MAX_DISTANCE);
+    return new SoundMatcher(scored, effects, music, DEFAULT_MAX_DISTANCE, DEFAULT_SURE_DISTANCE);
   }
 
   static List<Scored> byRank(List<SoundLibrary.Sound> sounds) {
@@ -326,13 +339,38 @@ public class SoundMatcher {
     String scene = text(q.soundScene());
     String context = (scene + " " + text(q.place())).toLowerCase(Locale.ROOT);
     // 시간대·날씨가 어긋나는 소리는 쓰지 않는다(장면과 관계없는 소리보다 바탕 배경음악이 낫다)
-    List<Scored> fit = close(found).stream().filter(s -> !conflicts(context, s.sound())).toList();
+    // 믿을 만큼 가깝지 않은 소리는 장면 문장이 그 장소나 소리를 말할 때만 쓴다
+    List<Scored> fit =
+        close(found).stream()
+            .filter(s -> !conflicts(context, s.sound()))
+            .filter(s -> sure(s) || supported(scene, s.sound()))
+            .toList();
     List<Scored> top = fit.subList(0, Math.min(PLACE_WINDOW, fit.size()));
     List<Scored> out = new ArrayList<>();
     top.stream().filter(s -> placeHit(scene, s.sound())).forEach(out::add);
     top.stream().filter(s -> !placeHit(scene, s.sound())).forEach(out::add);
     out.addAll(fit.subList(top.size(), fit.size()));
     return out;
+  }
+
+  /** 장면 낱말 없이도 쓸 만큼 가까운가. 거리를 모르는 후보(글자 찾기)는 찾은 낱말이 이미 장면에 있다. */
+  private boolean sure(Scored s) {
+    return !s.known() || s.distance() <= sureDistance;
+  }
+
+  /** 소리 장면 문장이 소리의 장소 낱말이나 중심 낱말(제목 끝 낱말)을 말하는가. */
+  static boolean supported(String scene, SoundLibrary.Sound s) {
+    if (placeHit(scene, s)) {
+      return true;
+    }
+    String head = head(s.title());
+    return !scene.isEmpty() && head.length() >= 2 && scene.contains(head);
+  }
+
+  /** 소리 이름의 중심 낱말: "소리" 같은 흔한 말을 뺀 끝 낱말("밤바다 파도 소리"는 파도). */
+  static String head(String title) {
+    List<String> words = words(title).stream().filter(w -> !GENERIC.contains(w)).toList();
+    return words.isEmpty() ? "" : words.get(words.size() - 1);
   }
 
   private static boolean placeHit(String scene, SoundLibrary.Sound s) {
