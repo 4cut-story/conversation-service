@@ -91,6 +91,13 @@ class MotionTest {
     assertThat(Prompts.SCRIPT_SYSTEM).contains("effect:", "휴대폰 알람 소리");
   }
 
+  @Test
+  @DisplayName("FR-008: 소리 장면은 시간대·장소·계속 들리는 소리 순서로 쓰고, 한 번 나는 소리와 대사 속 물건은 쓰지 않는다")
+  void soundSceneRule() {
+    assertThat(Prompts.SCRIPT_SYSTEM)
+        .contains("계속 들리는 소리와 그 결", "한 번 나는 소리(병 부딪힘", "대사에 나온 음식·물건 이름은 쓰지 않는다");
+  }
+
   private static ComicScript.Panel panel(String role, String scene, String setting, String motion) {
     return new ComicScript.Panel(
         role, "wide", scene, List.of(), setting, List.of(), "밤 공원, 풀벌레", motion);
