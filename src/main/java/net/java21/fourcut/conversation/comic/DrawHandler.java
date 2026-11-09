@@ -847,7 +847,7 @@ class DrawHandler implements StepHandler {
     String head = String.join(" ", java.util.Arrays.copyOf(words, Math.min(3, words.length)));
     String empty =
         scene.substring(0, m.start())
-            + "holds the hands together at the chest, hands empty"
+            + "holds the hands together at the chest"
             + scene.substring(m.end());
     List<ComicScript.Face> faces =
         panel.faces() == null
@@ -861,7 +861,9 @@ class DrawHandler implements StepHandler {
                                 f.speaker(),
                                 f.face()
                                     .replaceAll(
-                                        "looking at the (?:lone )?" + Pattern.quote(head) + "[^,]*",
+                                        "looking at (?:it\\b|the (?:lone )?"
+                                            + Pattern.quote(head)
+                                            + ")[^,]*",
                                         "looking down at the hands")))
                 .toList();
     return new Hold(
@@ -892,7 +894,7 @@ class DrawHandler implements StepHandler {
         + (hold.grip().isEmpty() ? "" : ", held " + hold.grip())
         + ", only one "
         + noun
-        + " in the whole picture";
+        + " in the whole picture, the floor and the background stay as they are";
   }
 
   private static final Pattern CHILD_HEAD = Pattern.compile("\\b(?:girl|boy|child|kid)\\b");
@@ -907,6 +909,14 @@ class DrawHandler implements StepHandler {
   private static final Pattern YOUNG = Pattern.compile("(?i)^young (woman|man)\\b");
 
   /** "young woman"을 "young adult woman"으로 바꾼다. */
+  /** 첫 쉼표 앞(인물 머리말) 뒤에 어른 몸 비율 말을 넣는다. */
+  static String proportions(String look) {
+    int comma = look.indexOf(',');
+    return comma < 0
+        ? look + ", mature adult body proportions"
+        : look.substring(0, comma) + ", mature adult body proportions" + look.substring(comma);
+  }
+
   static ComicScript young(ComicScript script) {
     List<ComicScript.Character> out =
         script.characters().stream()
@@ -918,10 +928,12 @@ class DrawHandler implements StepHandler {
                   String look = c.look().strip();
                   Matcher m = YOUNG.matcher(look);
                   return m.find()
+                      // 아이 체형으로 그려지지 않게 어른 몸 비율을 함께 쓴다(회차 29 콘티 19판 love-07 8컷)
                       ? c.withLook(
-                          "young adult "
-                              + m.group(1).toLowerCase(java.util.Locale.ROOT)
-                              + look.substring(m.end()))
+                          proportions(
+                              "young adult "
+                                  + m.group(1).toLowerCase(java.util.Locale.ROOT)
+                                  + look.substring(m.end())))
                       : c;
                 })
             .toList();
@@ -1167,8 +1179,10 @@ class DrawHandler implements StepHandler {
   /** 구도 말. "close up shot"만 쓰면 거의 모든 컷이 온몸 구도로 그려졌다(회차 29 구조화 콘티 판). 어디까지 보이는지를 적는다. */
   static final Map<String, String> SHOTS =
       Map.of(
-          "close-up", "close-up shot, head and shoulders filling the frame",
-          "medium", "medium shot from the waist up, upper body only, legs out of frame");
+          "close-up",
+          "tight close-up portrait, the face and shoulders filling the frame",
+          "medium",
+          "medium waist-up portrait, camera framed closely on the upper body");
 
   static final String SIDE_BY_SIDE = "side by side, both fully visible";
 
