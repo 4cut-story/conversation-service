@@ -806,8 +806,12 @@ class DrawHandler implements StepHandler {
     if (people != 1 || !m.find() || m.group(1).contains("{")) {
       return null;
     }
-    String object = m.group(1).strip();
+    // "holds {청소기} out in front at the chest"의 "out in front"는 물건 이름이 아니다
+    String object = m.group(1).strip().replaceFirst("\\s+(?:out in front|out|up|forward)$", "");
     String bare = object.replaceFirst("(?i)^(?:one lone |one |a single |an? |the )", "");
+    // 시선 말에는 물건 이름의 앞부분만 있을 수 있다("looking at the round white robot vacuum"). 앞 세 낱말로 찾는다
+    String[] words = bare.split(",", 2)[0].strip().split("\\s+");
+    String head = String.join(" ", java.util.Arrays.copyOf(words, Math.min(3, words.length)));
     String empty =
         scene.substring(0, m.start())
             + "holds the hands together at the chest, hands empty"
@@ -824,9 +828,7 @@ class DrawHandler implements StepHandler {
                                 f.speaker(),
                                 f.face()
                                     .replaceAll(
-                                        "looking at the (?:lone )?"
-                                            + Pattern.quote(bare.split(",", 2)[0].strip())
-                                            + "[^,]*",
+                                        "looking at the (?:lone )?" + Pattern.quote(head) + "[^,]*",
                                         "looking down at the hands")))
                 .toList();
     return new Hold(

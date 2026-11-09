@@ -381,6 +381,23 @@ class DrawPromptTest {
         .contains(
             "add one lone yellow sock with red stripes in the character's hands at the chest,"
                 + " held by its top, only one sock");
+    // 물건 뒤 "out in front"는 물건 이름이 아니고, 시선이 물건 이름 앞부분만 써도 손을 보게 바꾼다(회차 29 콘티 19판 funny-15)
+    var vacuum =
+        DrawHandler.hold(
+            new ComicScript.Panel(
+                "기",
+                "medium",
+                "{A} holds a single round white robot vacuum with one small blue light out in front"
+                    + " at the chest, cozy living room",
+                List.of(),
+                "cozy living room",
+                List.of(
+                    new ComicScript.Face(
+                        "A", "cheerful grin, looking at the round white robot vacuum"))));
+    assertThat(vacuum.object())
+        .isEqualTo("a single round white robot vacuum with one small blue light");
+    assertThat(vacuum.emptyPanel().faces().get(0).face())
+        .isEqualTo("cheerful grin, looking down at the hands");
     // 얼굴만 나오는 컷과 빈손 동작은 나누지 않는다
     assertThat(
             DrawHandler.hold(

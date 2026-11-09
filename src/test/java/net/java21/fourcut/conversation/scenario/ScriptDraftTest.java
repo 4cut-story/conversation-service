@@ -66,7 +66,7 @@ class ScriptDraftTest {
         .isEqualTo("small backyard vegetable garden, wooden fence, night");
     assertThat(panels.get(0).has("action")).isFalse();
     assertThat(panels.get(0).path("faces").get(0).path("face").asString())
-        .isEqualTo("wide-eyed, looking at the phone with glowing green screen");
+        .isEqualTo("wide-eyed, looking at the phone");
     assertThat(panels.get(0).path("faces").get(1).path("face").asString())
         .isEqualTo("grin, looking at the other person");
     assertThat(panels.get(0).path("faces").get(1).has("lookAt")).isFalse();
@@ -86,14 +86,24 @@ class ScriptDraftTest {
   }
 
   @Test
-  @DisplayName("FR-006: 소품 시선은 draw 앞의 관사와 a single을 빼고 쓴다")
+  @DisplayName("FR-006: 소품 시선은 draw 앞의 관사와 a single을 빼고 with 앞 물건 이름까지만 쓴다")
   void gazeSingle() {
     assertThat(
             ScriptDraft.gaze(
                 "{오두막}",
                 "{A} stands",
                 Map.of("오두막", "a single small wooden hut with glowing window")))
-        .isEqualTo("looking at the small wooden hut with glowing window");
+        .isEqualTo("looking at the small wooden hut");
+  }
+
+  @Test
+  @DisplayName("FR-006: 앞을 보는 시선은 \"looking at forward\"가 아니라 \"looking straight ahead\"로 쓴다")
+  void gazeForward() {
+    assertThat(ScriptDraft.gaze("forward", "{A} knocks", Map.of()))
+        .isEqualTo("looking straight ahead");
+    assertThat(ScriptDraft.gaze("ahead", "{A} knocks", Map.of()))
+        .isEqualTo("looking straight ahead");
+    assertThat(ScriptDraft.gaze("camera", "{A} knocks", Map.of())).isEqualTo("looking at viewer");
   }
 
   @Test

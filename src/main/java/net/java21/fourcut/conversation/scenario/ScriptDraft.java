@@ -121,7 +121,10 @@ final class ScriptDraft {
       String name =
           draw.split(",", 2)[0]
               .strip()
-              .replaceFirst("(?i)^(?:(?:a|an|the|one)\\s+)?(?:single\\s+)?", "");
+              .replaceFirst("(?i)^(?:(?:a|an|the|one)\\s+)?(?:single\\s+|lone\\s+)?", "")
+              // 시선에는 물건 이름까지만 쓴다. 생김새를 한 번 더 쓰면 같은 물건이 하나 더 그려졌다(회차 29 콘티 19판 funny-15)
+              .split(" with ", 2)[0]
+              .strip();
       return "looking at the " + name;
     }
     String word = resolve(lookAt, props).toLowerCase(Locale.ROOT);
@@ -130,6 +133,9 @@ final class ScriptDraft {
     }
     return switch (word) {
       case "down", "up", "away", "back" -> "looking " + word;
+      // "looking at forward"는 문장이 깨져 손이 하나 더 그려졌다(회차 29 콘티 19판 mystery-08 4컷)
+      case "forward", "ahead", "front", "straight", "straight ahead" -> "looking straight ahead";
+      case "camera", "reader", "the viewer" -> "looking at viewer";
       case "sky" -> "looking up at the sky";
       default -> "looking at " + word;
     };
