@@ -15,7 +15,8 @@ import org.springframework.stereotype.Service;
 /**
  * 라이브 모드 컷별 배경음 고르기 (docs specs/003-live-mode R6). 컷마다 소리 장면 문장·장소·대사를 설명 임베딩(BGE-M3)으로
  * 장소·환경음(AMBIENCE)과 견줘 가까운 소리를 고른다. 소리의 장소 낱말이 소리 장면 문장에 있으면 앞으로 올리고, 앞 컷과 같은 장소이고 앞 소리가 후보 위쪽에 있으면
- * 앞 소리를 이어 쓴다(끊지 않고 이어 틀기). 임베딩을 쓸 수 없으면 글자로 찾고, 그래도 없으면 소리 없음이다. 고르다 실패해도 만화 생성은 이어진다.
+ * 앞 소리를 이어 쓴다(끊지 않고 이어 틀기). 임베딩을 쓸 수 없으면 글자로 찾고, 그래도 없으면 소리 없음이다. 고르다 실패해도 만화 생성은 이어진다. 콘티가 컷에 사건
+ * 소리(알람, 초인종…)를 적었으면 효과음(EFFECT)에서 가장 가까운 소리 하나를 따로 고른다({@link #effects}).
  */
 @Service
 public class SoundMatcher {
@@ -45,14 +46,51 @@ public class SoundMatcher {
       String originalTitle) {}
 
   private final BiFunction<String, Integer, List<SoundLibrary.Sound>> finder;
+  private final BiFunction<String, Integer, List<SoundLibrary.Sound>> effectFinder;
 
   @Autowired
   SoundMatcher(SoundLibrary library) {
-    this((q, n) -> library.search(new SoundLibrary.Filter("AMBIENCE", null, null, null), q, n));
+    this(
+        (q, n) -> library.search(new SoundLibrary.Filter("AMBIENCE", null, null, null), q, n),
+        (q, n) -> library.search(new SoundLibrary.Filter("EFFECT", null, null, null), q, n));
   }
 
   SoundMatcher(BiFunction<String, Integer, List<SoundLibrary.Sound>> finder) {
+    this(finder, (q, n) -> List.of());
+  }
+
+  SoundMatcher(
+      BiFunction<String, Integer, List<SoundLibrary.Sound>> finder,
+      BiFunction<String, Integer, List<SoundLibrary.Sound>> effectFinder) {
     this.finder = finder;
+    this.effectFinder = effectFinder;
+  }
+
+  /** 컷마다 고른 사건 효과음(같은 순서·개수). 사건 소리가 비었거나 못 찾으면 빈 값. 앞 컷 소리를 이어 쓰지 않는다. */
+  public List<Optional<Picked>> effects(List<String> events) {
+    List<Optional<Picked>> out = new ArrayList<>();
+    for (String event : events) {
+      SoundLibrary.Sound chosen = null;
+      String q = text(event);
+      if (!q.isEmpty()) {
+        try {
+          List<SoundLibrary.Sound> found = effectFinder.apply(q, 1);
+          if (found.isEmpty()) {
+            for (String word : words(q)) {
+              found = effectFinder.apply(word, 1);
+              if (!found.isEmpty()) {
+                break;
+              }
+            }
+          }
+          chosen = found.isEmpty() ? null : found.get(0);
+        } catch (RuntimeException e) {
+          log.warn("컷 효과음을 고르지 못했다: {}", e.toString());
+        }
+      }
+      out.add(Optional.ofNullable(chosen).map(SoundMatcher::picked));
+    }
+    return out;
   }
 
   /** 컷마다 고른 소리(같은 순서·개수). 고르지 못한 컷은 빈 값. */

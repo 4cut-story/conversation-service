@@ -92,4 +92,34 @@ class SoundMatcherTest {
                 .match(List.of(new SoundMatcher.Query(null, null, null))))
         .containsExactly(Optional.empty());
   }
+
+  @Test
+  @DisplayName("FR-019: 사건 소리가 있는 컷만 효과음에서 고르고, 긴 말로 못 찾으면 낱말로 찾는다")
+  void effects() {
+    List<String> asked = new ArrayList<>();
+    SoundMatcher matcher =
+        new SoundMatcher(
+            (q, n) -> List.of(),
+            (q, n) -> {
+              asked.add(q);
+              return q.equals("알람") ? List.of(sound("ddddddddddddddddddddd")) : List.of();
+            });
+
+    var picked = matcher.effects(java.util.Arrays.asList("휴대폰 알람", "", null));
+
+    assertThat(picked.get(0)).map(SoundMatcher.Picked::publicId).contains("ddddddddddddddddddddd");
+    assertThat(picked.get(1)).isEmpty();
+    assertThat(picked.get(2)).isEmpty();
+    assertThat(asked).containsExactly("휴대폰 알람", "휴대폰", "알람");
+
+    SoundMatcher broken =
+        new SoundMatcher(
+            (q, n) -> List.of(),
+            (q, n) -> {
+              throw new IllegalStateException("down");
+            });
+    assertThat(broken.effects(List.of("알람"))).containsExactly(Optional.empty());
+    assertThat(new SoundMatcher((q, n) -> List.of()).effects(List.of("알람")))
+        .containsExactly(Optional.empty());
+  }
 }

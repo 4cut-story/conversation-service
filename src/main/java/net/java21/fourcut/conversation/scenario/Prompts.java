@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.23";
+  static final String VERSION = "2026-11-09.24";
 
   private Prompts() {}
 
@@ -290,7 +290,12 @@ final class Prompts {
       - 욕설과 민감한 표현은 순화한다.
       - sound: 라이브 모드에서 그 컷에 틀 배경 소리 장면을 한국어 한 줄(30자 이내)로 쓴다. 장소와 거기서 들리는 소리를
         쓴다(예: "밤 바닷가, 잔잔한 파도와 풀벌레", "비 오는 골목, 빗소리", "붐비는 카페, 사람들 웅성거림"). 인물 이름과
-        대사는 쓰지 않는다. 같은 장소가 이어지면 같은 문장을 쓴다.
+        대사는 쓰지 않는다. 같은 장소가 이어지면 같은 문장을 쓴다. 시간대와 날씨가 정해져 있으면 함께 쓴다(예: "아침 방 안,
+        창밖 빗소리").
+      - effect: 그 컷에서 실제로 울리거나 나는 사건 소리 하나를 한국어 짧은 말(15자 이내)로 쓴다. 대사·행동·장면에 그 소리가
+        나와야 한다(예: 알람이 울린다 → "휴대폰 알람 소리", 초인종을 누른다 → "초인종 소리", 문을 쾅 닫는다 → "문 쾅
+        닫히는 소리", 전화가 온다 → "전화벨 소리"). 배경에 계속 깔리는 소리(빗소리, 파도, 웅성거림)는 sound에 쓰고 여기에는
+        쓰지 않는다. 사건 소리가 없으면 빈 문자열 ""이고, 대부분의 컷은 ""다. 확실하지 않으면 "".
       - motion: 라이브 모드에서 그 컷 배경만 살짝 움직일지 고른다. 아래 여섯 가지 중 하나 또는 "none"이다. 그 배경이 그
         컷 setting에 실제로 쓰여 있고, 바뀌는 것이 배경뿐이고 인물·물건·구도는 그대로일 때만 고른다. 한 편에 많아야
         1~2컷이고, 나머지 컷은 모두 "none"이다. 확실하지 않으면 "none".
@@ -328,7 +333,7 @@ final class Prompts {
        "places":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"object","required":["key","draw"],
         "properties":{"key":{"type":"string"},"draw":{"type":"string"}}}},
        "panels":{"type":"array","minItems":4,"maxItems":10,"items":{"type":"object",
-        "required":["role","shot","action","place","setting","faces","lines","sound","motion"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
+        "required":["role","shot","action","place","setting","faces","lines","sound","motion","effect"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
          "action":{"type":"string"},"place":{"type":"string"},"setting":{"type":"string"},
          "faces":{"type":"array","items":{"type":"object","required":["speaker","face","lookAt"],
@@ -336,6 +341,7 @@ final class Prompts {
           "required":["speaker","quote","text"],"properties":{"speaker":{"type":"string"},
            "quote":{"type":"string"},"text":{"type":"string"}}}},
          "sound":{"type":"string"},
+         "effect":{"type":"string"},
          "motion":{"type":"string","enum":["none","twinkle","rain","snow","flicker","shimmer","petals"]}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;
