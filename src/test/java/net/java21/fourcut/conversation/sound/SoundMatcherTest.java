@@ -12,12 +12,17 @@ import org.junit.jupiter.api.Test;
 class SoundMatcherTest {
 
   private static SoundLibrary.Sound sound(String id, String... places) {
+    return described(id, "소리 " + id, "", places);
+  }
+
+  private static SoundLibrary.Sound described(
+      String id, String title, String description, String... places) {
     return new SoundLibrary.Sound(
         id,
         "AMBIENCE",
-        "RAIN",
-        "소리 " + id,
-        "",
+        "CITY",
+        title,
+        description,
         List.of(),
         List.of(places),
         30000,
@@ -40,6 +45,48 @@ class SoundMatcherTest {
     assertThat(picked.get(0).get().publicId()).isEqualTo("bbbbbbbbbbbbbbbbbbbbb");
     assertThat(picked.get(0).get().author()).isEqualTo("작가");
     assertThat(picked.get(0).get().license()).isEqualTo("CC-BY-4.0");
+  }
+
+  @Test
+  @DisplayName("FR-008: 장소 낱말만 맞는 먼 후보는 가까운 후보를 앞지르지 못한다 (마트 장면의 와인병 소리)")
+  void placeOnlyNearTop() {
+    SoundMatcher matcher =
+        new SoundMatcher(
+            (q, n) ->
+                List.of(
+                    sound("aaaaaaaaaaaaaaaaaaaaa", "식당"),
+                    sound("bbbbbbbbbbbbbbbbbbbbb", "클럽"),
+                    sound("ccccccccccccccccccccc", "광장"),
+                    sound("ddddddddddddddddddddd", "시장"),
+                    sound("eeeeeeeeeeeeeeeeeeeee", "마트")));
+
+    var picked =
+        matcher.match(List.of(new SoundMatcher.Query("마트 시식 코너, 사람들 웅성임", "supermarket", "")));
+
+    assertThat(picked.get(0)).map(SoundMatcher.Picked::publicId).contains("aaaaaaaaaaaaaaaaaaaaa");
+  }
+
+  @Test
+  @DisplayName("FR-008: 시간대·날씨가 장면과 어긋나는 소리는 뒤로 보낸다")
+  void timeAndWeather() {
+    var night = described("aaaaaaaaaaaaaaaaaaaaa", "밤 풀벌레", "한밤 공원에서 귀뚜라미가 울어요");
+    var rain = described("bbbbbbbbbbbbbbbbbbbbb", "창밖 빗소리", "비가 창문을 두드려요");
+    var room = described("ccccccccccccccccccccc", "조용한 방", "시계 소리가 작게 들려요");
+    SoundMatcher matcher = new SoundMatcher((q, n) -> List.of(night, rain, room));
+
+    var picked =
+        matcher.match(
+            List.of(
+                new SoundMatcher.Query("아침 방 안, 시계 소리", "bedroom", ""),
+                new SoundMatcher.Query("한밤 공원, 풀벌레", "park", ""),
+                new SoundMatcher.Query("아침 방 안, 창밖 빗소리", "bedroom", "")));
+
+    assertThat(picked)
+        .extracting(p -> p.get().publicId())
+        .containsExactly("ccccccccccccccccccccc", "aaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbb");
+    assertThat(SoundMatcher.conflicts("morning", night)).isTrue();
+    assertThat(SoundMatcher.conflicts("night", described("x", "아침 새소리", ""))).isTrue();
+    assertThat(SoundMatcher.conflicts("", night)).isFalse();
   }
 
   @Test
@@ -78,7 +125,7 @@ class SoundMatcherTest {
     assertThat(words.match(List.of(new SoundMatcher.Query("골목 빗소리", null, "가자"))).get(0))
         .map(SoundMatcher.Picked::publicId)
         .contains("ccccccccccccccccccccc");
-    assertThat(asked).containsExactly("골목 빗소리. 가자", "골목", "빗소리");
+    assertThat(asked).containsExactly("골목 빗소리", "골목", "빗소리");
 
     SoundMatcher broken =
         new SoundMatcher(
