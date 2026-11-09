@@ -165,13 +165,10 @@ public class SoundMatcher {
     boolean sceneDay = DAY.matcher(context).find();
     boolean soundNight = NIGHT.matcher(sound).find();
     boolean soundDay = DAY.matcher(sound).find();
-    if (sceneDay && !sceneNight && soundNight && !soundDay) {
-      return true;
-    }
-    if (sceneNight && !sceneDay && soundDay && !soundNight) {
-      return true;
-    }
-    return RAIN.matcher(sound).find() && !RAIN.matcher(context).find();
+    boolean dayVsNight = sceneDay && !sceneNight && soundNight && !soundDay;
+    boolean nightVsDay = sceneNight && !sceneDay && soundDay && !soundNight;
+    boolean rainOnly = RAIN.matcher(sound).find() && !RAIN.matcher(context).find();
+    return dayVsNight || nightVsDay || rainOnly;
   }
 
   private static final Pattern NIGHT = Pattern.compile("밤|한밤|새벽|풀벌레|귀뚜라미|night|midnight");
