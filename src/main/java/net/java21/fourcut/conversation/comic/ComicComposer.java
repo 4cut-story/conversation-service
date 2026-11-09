@@ -121,6 +121,44 @@ public class ComicComposer {
     return new Result(png(out), png(scale(out, THUMB_WIDTH)));
   }
 
+  /** 라이브 모드 컷 그림 한 변(테두리 포함). */
+  public static final int LIVE_SIZE = PANEL + 4;
+
+  /**
+   * 라이브 모드 컷 그림 한 장: 세로 만화와 같은 말풍선을 같은 자리에 넣고 테두리까지 자른 PNG(LIVE_SIZE 정사각형). 두 번째 그림도 첫 그림의
+   * 자리(stage, heads)로 그려 말풍선이 움직이지 않는다.
+   */
+  byte[] livePanel(
+      ComicScript script,
+      int index,
+      BufferedImage panel,
+      Map<String, Staging.Side> stage,
+      Map<String, PanelPlacement.Head> heads) {
+    int height = PANEL + 2 * MARGIN;
+    BufferedImage out = new BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_RGB);
+    Graphics2D g = out.createGraphics();
+    try {
+      quality(g);
+      g.setColor(Color.WHITE);
+      g.fillRect(0, 0, WIDTH, height);
+      g.drawImage(panel, MARGIN, MARGIN, PANEL, PANEL, null);
+      g.setStroke(new BasicStroke(4f));
+      g.setColor(Color.BLACK);
+      g.drawRect(MARGIN, MARGIN, PANEL, PANEL);
+      List<ComicScript.Line> lines = script.panels().get(index).lines();
+      drawBubbles(
+          g,
+          lines == null ? List.of() : lines,
+          script.callNames(),
+          stage == null ? Map.of() : stage,
+          heads == null ? Map.of() : heads,
+          MARGIN);
+    } finally {
+      g.dispose();
+    }
+    return png(out.getSubimage(MARGIN - 2, MARGIN - 2, LIVE_SIZE, LIVE_SIZE));
+  }
+
   private void drawBubbles(
       Graphics2D g,
       List<ComicScript.Line> lines,

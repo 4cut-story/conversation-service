@@ -94,9 +94,28 @@ public record ComicScript(
    * @param scene 그림 모델용 영어 장면. 인물은 {A}, {B}로 쓴다
    * @param setting 그림 모델용 영어 배경: 장소와 눈에 보이는 배경 물건. 예전 콘티에는 없다
    * @param faces 인물별 표정·몸짓. 예전 콘티에는 없다
+   * @param sound 라이브 모드 소리 장면 한 줄(한국어). 컷 배경음을 고르는 질의가 된다. 예전 콘티에는 없다
+   * @param motion 라이브 모드 두 장 움직임({@link Motion} 코드). 없으면 null 또는 "none". 그림의 첫 프롬프트에는 쓰지 않는다
    */
   public record Panel(
-      String role, String shot, String scene, List<Line> lines, String setting, List<Face> faces) {
+      String role,
+      String shot,
+      String scene,
+      List<Line> lines,
+      String setting,
+      List<Face> faces,
+      String sound,
+      String motion) {
+
+    public Panel(
+        String role,
+        String shot,
+        String scene,
+        List<Line> lines,
+        String setting,
+        List<Face> faces) {
+      this(role, shot, scene, lines, setting, faces, null, null);
+    }
 
     public Panel(String role, String shot, String scene, List<Line> lines) {
       this(role, shot, scene, lines, null, null);
@@ -104,13 +123,51 @@ public record ComicScript(
 
     /** 대사만 바꾼 컷. */
     public Panel withLines(List<Line> next) {
-      return new Panel(role, shot, scene, next, setting, faces);
+      return new Panel(role, shot, scene, next, setting, faces, sound, motion);
     }
 
     /** 장면만 바꾼 컷. */
     public Panel withScene(String next) {
-      return new Panel(role, shot, next, lines, setting, faces);
+      return new Panel(role, shot, next, lines, setting, faces, sound, motion);
     }
+
+    /** 움직임만 바꾼 컷. */
+    public Panel withMotion(String next) {
+      return new Panel(role, shot, scene, lines, setting, faces, sound, next);
+    }
+
+    /** 걸러진 움직임. 없거나 목록 밖이면 빈 값. */
+    public java.util.Optional<Motion> liveMotion() {
+      return Motion.parse(motion);
+    }
+  }
+
+  /**
+   * 라이브 모드 움직임을 거른다: 목록 밖 값, 그 배경 낱말이 컷 장면·배경에 없는 값, 실내 비·눈은 지우고, 한 만화에 {@link
+   * Motion#MAX_PER_COMIC}컷까지만(앞에서부터) 남긴다. 남긴 값은 소문자 코드로 맞춘다. 예전 콘티(움직임 없음)는 그대로다.
+   */
+  public ComicScript withMotionLimits() {
+    if (panels == null) {
+      return this;
+    }
+    int kept = 0;
+    List<Panel> out = new java.util.ArrayList<>();
+    for (Panel p : panels) {
+      java.util.Optional<Motion> m = p.liveMotion();
+      String background =
+          java.util.Objects.toString(p.scene(), "")
+              + ", "
+              + java.util.Objects.toString(p.setting(), "");
+      if (m.isPresent() && kept < Motion.MAX_PER_COMIC && m.get().fits(background)) {
+        kept++;
+        out.add(p.motion().equals(m.get().code()) ? p : p.withMotion(m.get().code()));
+      } else {
+        out.add(p.motion() == null ? p : p.withMotion(null));
+      }
+    }
+    return out.equals(panels)
+        ? this
+        : new ComicScript(title, characters, out, reviewed, nameWarnings, concept);
   }
 
   /**

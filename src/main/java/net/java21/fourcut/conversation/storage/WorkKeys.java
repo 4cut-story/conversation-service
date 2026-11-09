@@ -51,6 +51,31 @@ public final class WorkKeys {
     return work(conversationId, "panel-" + index + ".png");
   }
 
+  /** 라이브 모드 움직임 컷의 두 번째 그림(말풍선 없음, 워커가 올린다). */
+  public static String panelB(String conversationId, int index) {
+    return work(conversationId, "panel-" + index + "-b.png");
+  }
+
+  /** 만화 폴더 (원본·썸네일·컷 그림·재생 정보가 함께 있다). */
+  public static String comicPrefix(String conversationId) {
+    return "comics/" + conversationId + "/";
+  }
+
+  /** 라이브 모드 컷 그림의 만화 폴더 기준 상대 경로. second면 두 번째 그림. */
+  public static String livePanelPath(int index, boolean second) {
+    return "panels/" + index + (second ? "-b" : "") + ".png";
+  }
+
+  /** 라이브 모드 컷 그림(말풍선 포함). */
+  public static String livePanel(String conversationId, int index, boolean second) {
+    return comicPrefix(conversationId) + livePanelPath(index, second);
+  }
+
+  /** 라이브 모드 재생 정보. */
+  public static String liveJson(String conversationId) {
+    return comicPrefix(conversationId) + "live.json";
+  }
+
   public static String comicFull(String conversationId) {
     return "comics/" + conversationId + "/full.png";
   }
