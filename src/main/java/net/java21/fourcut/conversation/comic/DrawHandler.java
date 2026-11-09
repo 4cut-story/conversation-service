@@ -774,7 +774,7 @@ class DrawHandler implements StepHandler {
 
   private static final Pattern HOLD =
       Pattern.compile(
-          "\\b(?:holds up|holds out|holds|lifts) (?!the hands|both|fists)(.+?)( by its [^,]+?)? at the chest"
+          "\\b(?:holds up|holds out|holds|lifts) (?!the hands|both|fists|the (?:top|edge|side|end) of)(.+?)( by its [^,]+?)? at the chest"
               + "((?:, screen showing [^,]+)?)");
 
   /** 한 사람이 물건을 가슴 앞에 드는 컷이면 빈손 컷과 물건으로 나눈다. 아니면 null. */
