@@ -1,9 +1,9 @@
 package net.java21.fourcut.conversation.character;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import net.java21.fourcut.conversation.support.Vectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -109,17 +109,10 @@ class CharacterVectors {
   record Nearest(String publicId, double distance, String look) {}
 
   static String literal(float[] v) {
-    StringBuilder sb = new StringBuilder(v.length * 10).append('[');
-    for (int i = 0; i < v.length; i++) {
-      if (i > 0) {
-        sb.append(',');
-      }
-      sb.append(String.format(Locale.ROOT, "%.7g", v[i]));
-    }
-    return sb.append(']').toString();
+    return Vectors.literal(v);
   }
 
   private static String quote(String identifier) {
-    return '"' + identifier.replace("\"", "\"\"") + '"';
+    return Vectors.quote(identifier);
   }
 }

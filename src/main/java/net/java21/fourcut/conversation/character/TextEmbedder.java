@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** 글 → 설명 임베딩 (1024차원, 길이 1로 맞춘다). 쓸 수 없으면 빈 값이고, 그동안 캐릭터는 이름으로만 찾는다. */
-interface TextEmbedder {
+/** 글 → 설명 임베딩 (BGE-M3 1024차원, 길이 1로 맞춘다). 쓸 수 없으면 빈 값이다. 캐릭터와 배경음(sound) 검색이 함께 쓴다. */
+public interface TextEmbedder {
 
   Optional<float[]> embed(String text);
 
