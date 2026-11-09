@@ -88,6 +88,16 @@ public class ComicComposer {
       List<BufferedImage> panels,
       List<Map<String, Staging.Side>> stages,
       List<Map<String, PanelPlacement.Head>> heads) {
+    return compose(script, panels, stages, heads, List.of());
+  }
+
+  /** props: 컷별 가리면 안 되는 물건(그림에서 본 상자). 말풍선이 얼굴과 함께 피한다. */
+  Result compose(
+      ComicScript script,
+      List<BufferedImage> panels,
+      List<Map<String, Staging.Side>> stages,
+      List<Map<String, PanelPlacement.Head>> heads,
+      List<List<PanelPlacement.Prop>> props) {
     int height = MARGIN + TITLE_HEIGHT + panels.size() * (PANEL + GAP) - GAP + MARGIN;
     BufferedImage out = new BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = out.createGraphics();
@@ -112,7 +122,8 @@ public class ComicComposer {
         List<ComicScript.Line> lines = script.panels().get(i).lines();
         Map<String, Staging.Side> stage = i < stages.size() ? stages.get(i) : Map.of();
         Map<String, PanelPlacement.Head> faces = i < heads.size() ? heads.get(i) : Map.of();
-        drawBubbles(g, lines == null ? List.of() : lines, names, stage, faces, y);
+        List<PanelPlacement.Prop> things = i < props.size() ? props.get(i) : List.of();
+        drawBubbles(g, lines == null ? List.of() : lines, names, stage, faces, things, y);
         y += PANEL + GAP;
       }
     } finally {
@@ -134,6 +145,17 @@ public class ComicComposer {
       BufferedImage panel,
       Map<String, Staging.Side> stage,
       Map<String, PanelPlacement.Head> heads) {
+    return livePanel(script, index, panel, stage, heads, List.of());
+  }
+
+  /** 가리면 안 되는 물건(props)까지 피하는 라이브 모드 컷 그림. */
+  byte[] livePanel(
+      ComicScript script,
+      int index,
+      BufferedImage panel,
+      Map<String, Staging.Side> stage,
+      Map<String, PanelPlacement.Head> heads,
+      List<PanelPlacement.Prop> props) {
     int height = PANEL + 2 * MARGIN;
     BufferedImage out = new BufferedImage(WIDTH, height, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = out.createGraphics();
@@ -152,6 +174,7 @@ public class ComicComposer {
           script.callNames(),
           stage == null ? Map.of() : stage,
           heads == null ? Map.of() : heads,
+          props == null ? List.of() : props,
           MARGIN);
     } finally {
       g.dispose();
@@ -165,11 +188,14 @@ public class ComicComposer {
       Map<String, String> names,
       Map<String, Staging.Side> stage,
       Map<String, PanelPlacement.Head> heads,
+      List<PanelPlacement.Prop> props,
       int panelTop) {
     g.setFont(new Font(family, Font.PLAIN, 28));
     FontMetrics fm = g.getFontMetrics();
+    // 가리면 안 되는 자리: 얼굴과 물건. 말풍선 자리를 고를 때 똑같이 피한다
     List<Rectangle> faces = new ArrayList<>();
     heads.values().forEach(h -> faces.add(face(h, panelTop)));
+    props.forEach(p -> faces.add(prop(p, panelTop)));
     List<Rectangle> taken = new ArrayList<>();
     for (int i = 0; i < lines.size(); i++) {
       ComicScript.Line line = lines.get(i);
@@ -230,12 +256,34 @@ public class ComicComposer {
   /** 말풍선과 얼굴 사이 여백(꼬리가 보일 만큼). */
   private static final int FACE_GAP = 36;
 
-  /** 얼굴 자리(합성 이미지 좌표). 머리카락까지 덮게 얼굴 높이보다 조금 크게 잡는다. */
+  /**
+   * 얼굴 위 말풍선과 얼굴 사이 여백. 그림을 읽는 모델이 얼굴 가운데를 실제보다 아래(입·턱 쪽)로 답하는 일이 잦아, 얼굴 바로 위에 붙이면 눈을 가렸다(팀장 4컷
+   * 2·3컷). 위쪽은 넉넉히 띄운다.
+   */
+  private static final int ABOVE_GAP = 72;
+
+  /** 물건 상자 둘레 여백. */
+  private static final int PROP_PAD = 8;
+
+  /**
+   * 얼굴 자리(합성 이미지 좌표). 받은 얼굴 높이를 그대로 반지름으로 써서 얼굴 높이의 두 배로 잡고, 머리카락과 위치 오차를 덮게 위로 반지름의 절반을 더 늘린다.
+   * 반지름을 얼굴 높이의 0.65배로 잡던 때는 말풍선이 눈을 가렸다.
+   */
   static Rectangle face(PanelPlacement.Head head, int panelTop) {
     int cx = MARGIN + (int) Math.round(head.x() * PANEL);
     int cy = panelTop + (int) Math.round(head.y() * PANEL);
-    int r = Math.max(24, (int) Math.round(head.size() * PANEL * 0.65));
-    return new Rectangle(cx - r, cy - r, 2 * r, 2 * r);
+    int r = Math.max(32, (int) Math.round(head.size() * PANEL));
+    int up = r / 2;
+    return new Rectangle(cx - r, cy - r - up, 2 * r, 2 * r + up);
+  }
+
+  /** 물건 자리(합성 이미지 좌표). 둘레를 조금 넓힌다. */
+  static Rectangle prop(PanelPlacement.Prop prop, int panelTop) {
+    int x = MARGIN + (int) Math.round(prop.x() * PANEL) - PROP_PAD;
+    int y = panelTop + (int) Math.round(prop.y() * PANEL) - PROP_PAD;
+    int w = (int) Math.round(prop.w() * PANEL) + 2 * PROP_PAD;
+    int h = (int) Math.round(prop.h() * PANEL) + 2 * PROP_PAD;
+    return new Rectangle(x, y, w, h);
   }
 
   /**
@@ -252,14 +300,54 @@ public class ComicComposer {
     int inX = leftHalf ? face.x + face.width + FACE_GAP : face.x - FACE_GAP - w;
     List<Rectangle> options =
         List.of(
-            new Rectangle(x, clampY(face.y - FACE_GAP - h, h, panelTop), w, h),
+            new Rectangle(x, clampY(face.y - ABOVE_GAP - h, h, panelTop), w, h),
             new Rectangle(x, clampY(face.y + face.height + FACE_GAP, h, panelTop), w, h),
             new Rectangle(clampX(outX, w), clampY(cy - h / 2, h, panelTop), w, h),
             new Rectangle(clampX(inX, w), clampY(cy - h / 2, h, panelTop), w, h),
             belowLast(x, w, h, panelTop, taken),
             belowLast(MARGIN + 16, w, h, panelTop, taken),
             belowLast(MARGIN + PANEL - 16 - w, w, h, panelTop, taken));
-    return pick(options, faces, taken);
+    for (Rectangle o : options) {
+      if (cost(o, faces, taken) == 0) {
+        return o;
+      }
+    }
+    Rectangle near = nearest(face, w, h, panelTop, faces, taken);
+    return near != null ? near : pick(options, faces, taken);
+  }
+
+  /** 빈 자리를 찾을 때 훑는 간격(픽셀). */
+  private static final int SCAN = 16;
+
+  /**
+   * 정해 둔 자리가 모두 얼굴·물건·앞 말풍선에 걸릴 때, 컷 전체를 훑어 아무것도 가리지 않고 대사 순서대로 읽히는 자리 가운데 화자 얼굴에 가장 가까운 자리. 얼굴에 너무
+   * 붙으면 꼬리 둘 틈이 없어 뺀다. 없으면 null.
+   */
+  static Rectangle nearest(
+      Rectangle face, int w, int h, int panelTop, List<Rectangle> faces, List<Rectangle> taken) {
+    Rectangle best = null;
+    double bestDist = Double.MAX_VALUE;
+    for (int y = panelTop + 16; y <= panelTop + PANEL - 16 - h; y += SCAN) {
+      for (int x = MARGIN + 16; x <= MARGIN + PANEL - 16 - w; x += SCAN) {
+        Rectangle r = new Rectangle(x, y, w, h);
+        if (cost(r, faces, taken) != 0) {
+          continue;
+        }
+        double dist = gap(r, face);
+        if (dist >= FACE_GAP / 2.0 && dist < bestDist) {
+          best = r;
+          bestDist = dist;
+        }
+      }
+    }
+    return best;
+  }
+
+  /** 두 상자 사이 가장 가까운 거리(겹치면 0). */
+  private static double gap(Rectangle a, Rectangle b) {
+    int dx = Math.max(0, Math.max(b.x - (a.x + a.width), a.x - (b.x + b.width)));
+    int dy = Math.max(0, Math.max(b.y - (a.y + a.height), a.y - (b.y + b.height)));
+    return Math.hypot(dx, dy);
   }
 
   /**
@@ -299,15 +387,7 @@ public class ComicComposer {
     Rectangle best = options.get(0);
     long bestCover = Long.MAX_VALUE;
     for (Rectangle o : options) {
-      long hidden = covered(o, taken);
-      long cover = covered(o, faces) * 2 + hidden * 3;
-      if (hidden > 0) {
-        // 앞 말풍선 글을 가리면 읽을 수 없다. 순서가 바뀌는 것보다 나쁘다(회차 11 love-07·funny-12 3컷)
-        cover += 4L * PANEL * PANEL;
-      }
-      if (!taken.isEmpty() && !readsAfter(o, taken.getLast())) {
-        cover += (long) PANEL * PANEL;
-      }
+      long cover = cost(o, faces, taken);
       if (cover == 0) {
         return o;
       }
@@ -317,6 +397,20 @@ public class ComicComposer {
       }
     }
     return best;
+  }
+
+  /** 자리의 나쁨: 얼굴·물건과 앞 말풍선을 가린 넓이, 앞 말풍선을 가리거나 대사 순서가 거꾸로 읽히면 큰 벌점. 0이면 문제없는 자리다. */
+  private static long cost(Rectangle o, List<Rectangle> faces, List<Rectangle> taken) {
+    long hidden = covered(o, taken);
+    long cover = covered(o, faces) * 2 + hidden * 3;
+    if (hidden > 0) {
+      // 앞 말풍선 글을 가리면 읽을 수 없다. 순서가 바뀌는 것보다 나쁘다(회차 11 love-07·funny-12 3컷)
+      cover += 4L * PANEL * PANEL;
+    }
+    if (!taken.isEmpty() && !readsAfter(o, taken.getLast())) {
+      cover += (long) PANEL * PANEL;
+    }
+    return cover;
   }
 
   /** 앞 말풍선 다음에 읽히는 자리인지: 더 아래이거나, 거의 같은 높이에서 오른쪽. */
@@ -357,7 +451,7 @@ public class ComicComposer {
     double dx = fx - px;
     double dy = fy - py;
     double dist = Math.hypot(dx, dy);
-    double reach = Math.min(dist - fr * 0.8, TAIL * 1.6);
+    double reach = Math.min(dist - fr * 0.8, TAIL * 2.0);
     if (dist == 0 || reach < 14) {
       return null;
     }

@@ -170,6 +170,38 @@ class ComicComposerTest {
   }
 
   @Test
+  @DisplayName("FR-007: 얼굴 자리는 받은 얼굴 높이의 두 배에 머리카락 쪽으로 더 넓혀, 얼굴 위 말풍선이 눈과 머리를 가리지 않는다")
+  void faceBoxCoversHair() {
+    int top = 100;
+    int panel = ComicComposer.PANEL;
+    var head = new PanelPlacement.Head(0.5, 0.45, 0.15);
+    var face = ComicComposer.face(head, top);
+    int cy = top + (int) Math.round(0.45 * panel);
+    int size = (int) Math.round(0.15 * panel);
+    // 얼굴 가운데에서 위로 얼굴 높이보다 더 덮는다(답한 가운데가 입 쪽이어도 이마·머리카락까지)
+    assertThat(cy - face.y).isGreaterThan(size);
+    assertThat(face.width).isGreaterThanOrEqualTo(2 * size);
+    var above = ComicComposer.place(face, 400, 80, top, List.of(face), List.of());
+    assertThat(above.y + above.height).isLessThan(face.y);
+    // 얼굴 위 말풍선은 얼굴에서 떨어져 꼬리가 얼굴 안으로 들어가지 않는다
+    var tail = ComicComposer.tailTo(above, face).getBounds();
+    assertThat(tail.y + tail.height).isLessThan(cy);
+  }
+
+  @Test
+  @DisplayName("FR-007: 그림에서 본 물건(그릇·휴대폰 등)도 얼굴처럼 말풍선이 가리지 않는다")
+  void avoidsProps() {
+    int top = 100;
+    var face = ComicComposer.face(new PanelPlacement.Head(0.5, 0.1, 0.15), top);
+    var bowl = ComicComposer.prop(new PanelPlacement.Prop(0.25, 0.4, 0.5, 0.15), top);
+    var free = ComicComposer.place(face, 300, 80, top, List.of(face), List.of());
+    assertThat(free.intersects(bowl)).isTrue();
+    var b = ComicComposer.place(face, 300, 80, top, List.of(face, bowl), List.of());
+    assertThat(b.intersects(bowl)).isFalse();
+    assertThat(b.intersects(face)).isFalse();
+  }
+
+  @Test
   @DisplayName("FR-007: 꼬리는 말풍선에서 얼굴 쪽으로 나오고, 붙어 있으면 그리지 않는다")
   void tailToFace() {
     var face = new java.awt.Rectangle(300, 400, 100, 100);
@@ -213,7 +245,8 @@ class ComicComposerTest {
             script,
             List.of(image, image, image, image),
             Staging.panels(script),
-            List.of(heads, java.util.Map.of(), heads, heads));
+            List.of(heads, java.util.Map.of(), heads, heads),
+            List.of(List.of(new PanelPlacement.Prop(0.4, 0.6, 0.2, 0.2))));
     assertThat(ImageIO.read(new ByteArrayInputStream(result.full())).getWidth())
         .isEqualTo(ComicComposer.WIDTH);
   }

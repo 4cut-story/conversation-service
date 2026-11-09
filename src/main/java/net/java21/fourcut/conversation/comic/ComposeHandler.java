@@ -109,7 +109,8 @@ class ComposeHandler implements StepHandler {
       spots = placement.locate(script, panels, planned, references(script));
     }
     Map<String, String> portraits = portraits(id, script, panels, spots.heads());
-    ComicComposer.Result result = composer.compose(script, panels, spots.stages(), spots.heads());
+    ComicComposer.Result result =
+        composer.compose(script, panels, spots.stages(), spots.heads(), spots.props());
     String full = WorkKeys.comicFull(id);
     String thumb = WorkKeys.comicThumb(id);
     storage.put(full, result.full(), PNG);
@@ -148,9 +149,11 @@ class ComposeHandler implements StepHandler {
       for (int i = 0; i < panels.size(); i++) {
         Map<String, Staging.Side> stage = at(spots.stages(), i);
         Map<String, PanelPlacement.Head> heads = at(spots.heads(), i);
+        List<PanelPlacement.Prop> props =
+            spots.props() != null && i < spots.props().size() ? spots.props().get(i) : List.of();
         storage.put(
             WorkKeys.livePanel(id, i + 1, false),
-            composer.livePanel(script, i, panels.get(i), stage, heads),
+            composer.livePanel(script, i, panels.get(i), stage, heads, props),
             PNG);
         boolean move = false;
         if (script.panels().get(i).liveMotion().isPresent()) {
@@ -162,7 +165,7 @@ class ComposeHandler implements StepHandler {
             if (move) {
               storage.put(
                   WorkKeys.livePanel(id, i + 1, true),
-                  composer.livePanel(script, i, b, stage, heads),
+                  composer.livePanel(script, i, b, stage, heads, props),
                   PNG);
             } else {
               log.info("두 그림이 어긋나 움직임을 뺀다: conversation={} panel={}", id, i + 1);
