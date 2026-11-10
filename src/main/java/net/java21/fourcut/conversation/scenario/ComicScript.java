@@ -254,15 +254,22 @@ public record ComicScript(
           java.util.Objects.toString(p.scene(), "")
               + ", "
               + java.util.Objects.toString(p.setting(), "");
+      java.util.Optional<Motion> fill =
+          Motion.fallback(p.setting())
+              .or(
+                  () ->
+                      Motion.BREEZE.fits(background)
+                          ? java.util.Optional.of(Motion.BREEZE)
+                          : java.util.Optional.empty());
       if (m.isPresent() && kept < Motion.MAX_PER_COMIC && m.get().fits(background)) {
         kept++;
         out.add(p.motion().equals(m.get().code()) ? p : p.withMotion(m.get().code()));
-      } else if (p.motion() != null
-          && kept < Motion.MAX_PER_COMIC
-          && Motion.BREEZE.fits(background)) {
-        // 맞는 움직임이 없는 컷도 배경이 가볍게 움직이게 한다(FR-049). 움직임 필드가 없는 예전 콘티는 그대로다
+      } else if (p.motion() != null && kept < Motion.MAX_PER_COMIC && fill.isPresent()) {
+        // 맞는 움직임이 없는 컷도 배경(setting) 낱말로 고른 움직임(없으면 바람)으로 움직인다(FR-049).
+        // 장면 문장은 동사(waves 등)가 걸려 쓰지 않는다. 움직임 필드가 없는 예전 콘티는 그대로다
         kept++;
-        out.add(Motion.BREEZE.code().equals(p.motion()) ? p : p.withMotion(Motion.BREEZE.code()));
+        String code = fill.get().code();
+        out.add(code.equals(p.motion()) ? p : p.withMotion(code));
       } else {
         out.add(p.motion() == null ? p : p.withMotion(null));
       }
