@@ -11,17 +11,18 @@ import java.util.regex.Pattern;
  * 그림 edit에만 {@link #change}를 쓴다.
  */
 public enum Motion {
-  /** 별빛·작은 불빛 반짝임. */
+  /** 별빛·작은 불빛 반짝임. 밤하늘과 다른 별, 그림 밝기는 그대로 두고 별 몇 개만 밝힌다. */
   TWINKLE(
       "star|stars|starry|starlight|fairy lights|city lights|string lights",
       false,
       700,
-      "make the stars and small lights in the background sparkle brighter, with small"
-          + " star-shaped glints",
-      "make a different set of stars and small lights in the background sparkle brightly, and"
-          + " the other stars a little dimmer",
-      "make the stars and small lights in the background glow softly, with a few stars"
-          + " brighter in new places"),
+      "make a few of the stars and small lights a little brighter, with tiny star-shaped"
+          + " glints. Keep the dark night sky, every other star and the brightness of the"
+          + " picture exactly the same",
+      "make a different few of the stars and small lights a little brighter. Keep the dark"
+          + " night sky, every other star and the brightness of the picture exactly the same",
+      "make yet another few of the stars and small lights a little brighter. Keep the dark"
+          + " night sky, every other star and the brightness of the picture exactly the same"),
   /** 빗줄기. 야외만. */
   RAIN(
       "rain|raining|rainy|raindrops",
