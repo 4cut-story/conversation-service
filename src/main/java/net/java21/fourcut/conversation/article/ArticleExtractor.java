@@ -116,8 +116,13 @@ final class ArticleExtractor {
     if (ExcludedArticle.matches(title, url, meta(doc, "article:section"))) {
       throw new ArticleException(ArticleException.Reason.EXCLUDED, "제외 기사");
     }
+    // 브라우저에서 본문을 그리는 사이트(예: JTBC)는 본문이 스크립트 속 데이터에만 있다. 스크립트를 지우기 전에 찾아 둔다
+    String scripted = ScriptBody.find(doc);
     clean(doc);
     String text = body(doc);
+    if (text.length() < MIN_CHARS && scripted.length() > text.length()) {
+      text = scripted;
+    }
     if (text.length() < MIN_CHARS) {
       throw new ArticleException(ArticleException.Reason.NO_BODY, text.length() + "자");
     }

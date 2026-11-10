@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 
 class ArticleExtractorTest {
 
+  private static final tools.jackson.databind.json.JsonMapper JSON =
+      tools.jackson.databind.json.JsonMapper.builder().build();
+
   static final String PARAGRAPH = "동네 시장 한가운데에 30년 된 떡집이 문을 닫는다는 소식이 전해지자 단골손님들이 아침부터 줄을 섰다.";
 
   static String articleHtml() {
@@ -116,6 +119,60 @@ class ArticleExtractorTest {
         .isInstanceOf(ArticleException.class)
         .extracting(e -> ((ArticleException) e).reason())
         .isEqualTo(ArticleException.Reason.EXCLUDED);
+  }
+
+  @Test
+  @DisplayName("004 FR-059: 본문을 스크립트 데이터로만 보내는 사이트(Next.js)도 그 안의 기사 HTML에서 본문을 찾는다")
+  void nextFlightData() throws Exception {
+    String article =
+        "<div id=\"ijam_content\"><div class=\"image\"><img src=\"a.jpg\"></div> "
+            + PARAGRAPH
+            + " <br><br> "
+            + PARAGRAPH.replace("떡집", "방앗간")
+            + " <br><br> "
+            + PARAGRAPH.replace("떡집", "빵집")
+            + " <br><br> "
+            + PARAGRAPH.replace("떡집", "국숫집")
+            + "</div>";
+    String payload =
+        "0:[\"$\",\"div\",null,{\"data\":{\"articleTitle\":\"떡집\",\"articleContent\":"
+            + JSON.writeValueAsString(article)
+            + "}}]";
+    String html =
+        "<html><head><meta property=\"og:title\" content=\"떡집 마지막 날\"></head><body>"
+            + "<main><p>로딩 중</p></main><script>self.__next_f.push("
+            + JSON.writeValueAsString(java.util.List.of(1, payload))
+            + ")</script></body></html>";
+    Article read =
+        ArticleExtractor.extract(
+            "https://news.example.com/article/NB1",
+            "news.example.com",
+            html.getBytes(StandardCharsets.UTF_8));
+    assertThat(read.text()).contains("방앗간").contains("빵집").doesNotContain("로딩 중");
+    assertThat(read.text().length()).isGreaterThanOrEqualTo(ArticleExtractor.MIN_CHARS);
+  }
+
+  @Test
+  @DisplayName("004 FR-059: 화면에 본문이 없으면 JSON-LD의 articleBody를 쓴다")
+  void jsonLdBody() throws Exception {
+    String body =
+        PARAGRAPH
+            + "\n"
+            + PARAGRAPH.replace("떡집", "방앗간")
+            + "\n"
+            + PARAGRAPH.replace("떡집", "빵집")
+            + "\n"
+            + PARAGRAPH.replace("떡집", "국숫집");
+    String html =
+        "<html><head><script type=\"application/ld+json\">"
+            + JSON.writeValueAsString(java.util.Map.of("@type", "NewsArticle", "articleBody", body))
+            + "</script></head><body><div id=\"root\"></div></body></html>";
+    Article read =
+        ArticleExtractor.extract(
+            "https://news.example.com/a/2",
+            "news.example.com",
+            html.getBytes(StandardCharsets.UTF_8));
+    assertThat(read.text()).contains("방앗간").contains("빵집");
   }
 
   @Test
