@@ -43,17 +43,18 @@ public enum Motion {
           + " amount of snow",
       "redraw only the falling snowflakes in new places again, a little lower, the same amount"
           + " of snow, a few of them larger"),
-  /** 촛불·등불·네온 깜빡임. */
+  /** 촛불·등불·모닥불 불꽃 흔들림. 방 밝기는 그대로 두고 불꽃 모양만 바꾼다. */
   FLICKER(
       "candle|candles|candlelight|lantern|lanterns|neon|campfire|fireplace|torch|bonfire",
       false,
       350,
-      "make the flame and lamp light glow brighter and warmer, with a soft halo of light around"
-          + " it",
-      "make the flame and lamp light a little dimmer and more orange, the flames leaning"
-          + " slightly to one side",
-      "make the flame and lamp light flare up a little brighter and more yellow, the flames"
-          + " leaning slightly to the other side"),
+      "change only the shape of the flames a little, leaning slightly to one side. Keep the"
+          + " brightness and colors of the room and everything else exactly the same",
+      "change only the shape of the flames a little, leaning slightly to the other side and a"
+          + " little taller. Keep the brightness and colors of the room and everything else exactly"
+          + " the same",
+      "change only the shape of the flames a little, a little shorter and wider. Keep the"
+          + " brightness and colors of the room and everything else exactly the same"),
   /** 물결 반짝임. */
   SHIMMER(
       "sea|ocean|lake|river|pond|water|waves|beach",
