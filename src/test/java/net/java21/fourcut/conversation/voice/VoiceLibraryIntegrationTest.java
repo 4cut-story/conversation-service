@@ -194,4 +194,19 @@ class VoiceLibraryIntegrationTest {
     assertThat(library.reindex()).isEqualTo(VoiceLibrary.EMBED_BATCH);
     assertThat(count("ko_embedding is not null")).isEqualTo(VoiceLibrary.EMBED_BATCH);
   }
+
+  @Test
+  @DisplayName("FR-050: 점수가 사실상 같은 목소리가 여럿이면 만화마다 정해진 값으로 그중 하나를 고른다")
+  void tiesPickBySeed() {
+    VoiceLibrary.Voice a = new VoiceLibrary.Voice("a", "a", "FEMALE", "YOUNG", null, "t", 0.30);
+    VoiceLibrary.Voice b = new VoiceLibrary.Voice("b", "b", "FEMALE", "YOUNG", null, "t", 0.31);
+    VoiceLibrary.Voice c = new VoiceLibrary.Voice("c", "c", "FEMALE", "YOUNG", null, "t", 0.40);
+    assertThat(VoiceLibrary.pick(List.of(a, b, c), 0)).isEqualTo(a);
+    assertThat(VoiceLibrary.pick(List.of(a, b, c), 1)).isEqualTo(b);
+    assertThat(VoiceLibrary.pick(List.of(a, b, c), 2)).isEqualTo(a);
+    VoiceLibrary.Voice x = new VoiceLibrary.Voice("x", "x", "FEMALE", "YOUNG", null, "t", null);
+    VoiceLibrary.Voice y = new VoiceLibrary.Voice("y", "y", "FEMALE", "YOUNG", null, "t", null);
+    assertThat(VoiceLibrary.pick(List.of(x, y), 1)).isEqualTo(y);
+    assertThat(VoiceLibrary.pick(List.of(x, y), -3)).isEqualTo(y);
+  }
 }

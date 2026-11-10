@@ -2,6 +2,7 @@ package net.java21.fourcut.conversation.comic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -124,7 +125,7 @@ class SpeechTest {
   @DisplayName("FR-050: 인물마다 겹치지 않게 목소리를 정하고, 화자가 있는 대사만 감정·키와 함께 한 작업으로 읽힌다")
   void enqueues() {
     scenarios.saveScript(ID, script);
-    when(voices.match(argThat(q -> q != null && "FEMALE".equals(q.gender())), any()))
+    when(voices.match(argThat(q -> q != null && "FEMALE".equals(q.gender())), any(), anyLong()))
         .thenAnswer(
             i -> {
               VoiceLibrary.Query q = i.getArgument(0);
@@ -134,7 +135,7 @@ class SpeechTest {
               assertThat(taken).doesNotContain(id);
               return Optional.of(new VoiceLibrary.Voice(id, "n", "female", "x", null, "t", 0.1));
             });
-    when(voices.match(argThat(q -> q != null && q.gender() == null), any()))
+    when(voices.match(argThat(q -> q != null && q.gender() == null), any(), anyLong()))
         .thenReturn(Optional.empty());
 
     StepOutcome out = handler(true).start(context("ko"));
@@ -161,7 +162,7 @@ class SpeechTest {
   @DisplayName("FR-050: 기능 스위치가 꺼져 있거나, 영어 만화이거나, 목소리를 못 찾으면 바로 합성으로 넘어간다")
   void skips() {
     scenarios.saveScript(ID, script);
-    when(voices.match(any(), any())).thenReturn(Optional.empty());
+    when(voices.match(any(), any(), anyLong())).thenReturn(Optional.empty());
 
     for (StepOutcome out :
         List.of(

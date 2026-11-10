@@ -73,7 +73,7 @@ class SpeakHandler implements StepHandler {
     }
     ComicScript script = scenarios.script(id);
     List<SpeechCast.Spoken> lines = SpeechCast.spoken(script);
-    Map<String, String> cast = cast(script, context.conversation().dialect());
+    Map<String, String> cast = cast(script, context.conversation().dialect(), id);
     ObjectNode payload = json.createObjectNode();
     payload.put("conversationId", id);
     payload.put("speed", SPEED);
@@ -108,6 +108,11 @@ class SpeakHandler implements StepHandler {
 
   /** 화자 → 목소리 ID. 앞 인물에 준 목소리는 다른 후보가 있으면 피한다. 못 찾은 인물은 빠진다. */
   Map<String, String> cast(ComicScript script, String dialect) {
+    return cast(script, dialect, "");
+  }
+
+  /** 점수가 같은 목소리가 여럿이면 만화(conversationId)와 인물마다 정해진 값으로 그중 하나를 고른다. */
+  Map<String, String> cast(ComicScript script, String dialect, String conversationId) {
     Map<String, String> out = new LinkedHashMap<>();
     if (script.characters() == null) {
       return out;
@@ -124,7 +129,8 @@ class SpeakHandler implements StepHandler {
       Optional<VoiceLibrary.Voice> v =
           voices.match(
               new VoiceLibrary.Query(description, SpeechCast.gender(c), SpeechCast.ageGroup(c), d),
-              taken);
+              taken,
+              (conversationId + ":" + c.speaker()).hashCode());
       v.ifPresent(
           x -> {
             out.put(c.speaker(), x.id());
