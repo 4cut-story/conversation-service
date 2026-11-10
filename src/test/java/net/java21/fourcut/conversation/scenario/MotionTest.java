@@ -68,6 +68,21 @@ class MotionTest {
   }
 
   @Test
+  @DisplayName("FR-049: 가벼운 바람은 그림에 이미 있는 것만 흔들고 날리는 잎·바람 띠·새 화분을 그려 넣지 않는다")
+  void breezeAddsNothingNew() {
+    for (String prompt :
+        List.of(Motion.BREEZE.change(), Motion.BREEZE.next(), Motion.BREEZE.last())) {
+      assertThat(prompt)
+          .contains("already in the background")
+          .contains("no flying or falling leaves")
+          .contains("no wind lines")
+          .contains("no new plants")
+          .contains("keep any rain streaks or snowflakes as they are");
+    }
+    assertThat(Motion.BREEZE.next()).isNotEqualTo(Motion.BREEZE.change());
+  }
+
+  @Test
   @DisplayName("FR-002: 움직임 필드가 없는 예전 콘티는 그대로다")
   void oldScript() {
     ComicScript script =
