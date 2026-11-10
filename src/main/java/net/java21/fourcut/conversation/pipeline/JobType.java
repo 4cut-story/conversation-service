@@ -27,13 +27,11 @@ public enum JobType {
     return model;
   }
 
-  /** 워커가 올려 둔 모델 묶음에 맞는 작업 종류. 모르면 null. */
-  public static JobType forModel(String loadedModel) {
-    for (JobType t : values()) {
-      if (t.model.equals(loadedModel)) {
-        return t;
-      }
-    }
-    return null;
+  /** 워커가 올려 둔 모델 묶음을 쓰는 모든 작업 종류 이름(IMAGE와 SPEECH는 묶음이 같다). 모르면 빈 목록. */
+  public static java.util.List<String> typesForModel(String loadedModel) {
+    return java.util.Arrays.stream(values())
+        .filter(t -> t.model.equals(loadedModel))
+        .map(Enum::name)
+        .toList();
   }
 }

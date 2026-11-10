@@ -59,10 +59,10 @@ class GpuJobService {
   public Optional<WorkerApi.ClaimResponse> claim(String workerId, WorkerApi.ClaimRequest request) {
     Instant now = clock.instant();
     seen(workerId, now, request.loadedModel(), request.version());
-    JobType preferred = JobType.forModel(request.loadedModel());
+    List<String> preferred = JobType.typesForModel(request.loadedModel());
     return jobs.lockNext(
             request.types().stream().map(Enum::name).toList(),
-            preferred == null ? "" : preferred.name())
+            preferred.isEmpty() ? List.of("") : preferred)
         .map(
             job -> {
               job.lease(workerId, now, properties.leaseTime());
