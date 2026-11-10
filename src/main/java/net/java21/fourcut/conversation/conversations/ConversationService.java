@@ -11,11 +11,13 @@ import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
 import net.java21.fourcut.conversation.pipeline.ManualLlmJobs;
 import net.java21.fourcut.conversation.pipeline.PipelineService;
+import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import net.java21.fourcut.conversation.support.Cursor;
 import net.java21.fourcut.conversation.support.CursorPage;
 import net.java21.fourcut.conversation.support.PublicId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +52,7 @@ public class ConversationService {
   private final ObjectStorage storage;
   private final JsonMapper json;
   private final Clock clock;
+  private final boolean speech;
 
   public ConversationService(
       ConversationRepository conversations,
@@ -58,8 +61,10 @@ public class ConversationService {
       ObjectStorage storage,
       JsonMapper json,
       Clock clock,
-      ArticleStore articles) {
+      ArticleStore articles,
+      @Value("${comic.speech.enabled:false}") boolean speech) {
     this.conversations = conversations;
+    this.speech = speech;
     this.articles = articles;
     this.pipeline = pipeline;
     this.manualLlm = manualLlm;
@@ -291,7 +296,19 @@ public class ConversationService {
         c.getDurationSec(),
         c.getCreatedAt(),
         c.getSourceUrl(),
-        c.getSourceTitle());
+        c.getSourceTitle(),
+        voiced(c));
+  }
+
+  /**
+   * 대사 읽기 단계가 있는 대화인지. 이미 그 단계를 지났으면 기록으로, 아직이면 기능 스위치로 본다. 영어 만화는 읽지 않는다(SpeakHandler). 끝난 대화는 기록이
+   * 있어야 한다.
+   */
+  private boolean voiced(Conversation c) {
+    if (!speech || "en".equals(c.getLanguage())) {
+      return false;
+    }
+    return !c.getStatus().isFinal() || pipeline.reached(c.getId(), Step.SPEAK);
   }
 
   /** 주인의 대화. 없거나, 남의 것이거나, 형식이 틀린 ID면 404. */

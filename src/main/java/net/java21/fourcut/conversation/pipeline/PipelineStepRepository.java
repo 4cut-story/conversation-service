@@ -14,6 +14,8 @@ interface PipelineStepRepository extends JpaRepository<PipelineStep, Long> {
   Optional<PipelineStep> findFirstByConversationIdAndStepOrderByAttemptAsc(
       Long conversationId, Step step);
 
+  boolean existsByConversationIdAndStep(Long conversationId, Step step);
+
   List<PipelineStep> findByConversationIdOrderByIdAsc(Long conversationId);
 
   /** 합성까지 끝난(만화가 있는) 대화. */

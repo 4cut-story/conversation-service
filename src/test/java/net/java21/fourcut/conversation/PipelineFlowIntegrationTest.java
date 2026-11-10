@@ -86,7 +86,8 @@ class PipelineFlowIntegrationTest {
     fieldWithPath("source").description("RECORDING, UPLOAD 또는 ARTICLE(기사로 만들기)"),
     fieldWithPath("status")
         .description(
-            "보여 줄 상태. RECORDING, QUEUED, TRANSCRIBING, SELECTING, SCRIPTING, DRAWING, COMPOSING, DONE,"
+            "보여 줄 상태. RECORDING, QUEUED, TRANSCRIBING, SELECTING, SCRIPTING, DRAWING, SPEAKING(대사 읽기), COMPOSING,"
+                + " DONE,"
                 + " GPU_WAITING(GPU 워커가 꺼져 기다리는 중), FAILED, NO_SCENE"),
     fieldWithPath("stage").description("저장된 진행 단계 (GPU_WAITING일 때 원래 단계)"),
     fieldWithPath("progress").description("대략의 진행률 0~100"),
@@ -120,7 +121,9 @@ class PipelineFlowIntegrationTest {
     fieldWithPath("sourceTitle")
         .type(JsonFieldType.STRING)
         .optional()
-        .description("기사로 만든 대화의 기사 제목")
+        .description("기사로 만든 대화의 기사 제목"),
+    fieldWithPath("voiced")
+        .description("대사 읽기(SPEAKING) 단계가 있는 대화인지. 진행 화면에 \"목소리 입히는 중\"을 보일지 정한다")
   };
 
   @Autowired private MockMvc mvc;

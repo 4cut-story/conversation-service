@@ -138,6 +138,12 @@ public class PipelineService {
     return (int) steps.retries(conversationId);
   }
 
+  /** 이 대화가 그 단계를 한 번이라도 시작했는지. */
+  @Transactional(readOnly = true)
+  public boolean reached(Long conversationId, Step step) {
+    return steps.existsByConversationIdAndStep(conversationId, step);
+  }
+
   /** GPU 작업이 대기 중인데 최근에 연락한 워커가 없는지. 그렇다면 GPU_WAITING으로 보여 준다. */
   @Transactional(readOnly = true)
   public boolean waitingForGpu(Long conversationId) {
