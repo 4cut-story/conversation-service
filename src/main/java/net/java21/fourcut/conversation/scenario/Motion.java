@@ -173,9 +173,12 @@ public enum Motion {
     return !outdoorOnly || !INDOOR.matcher(text).find();
   }
 
-  /** 콘티가 고른 움직임이 맞지 않을 때 배경 낱말로 고르는 차례. 날씨처럼 화면을 크게 차지하는 것부터, 끝은 BREEZE. */
+  /**
+   * 배경 낱말로 고르는 차례. 날씨처럼 화면을 크게 차지하는 것부터, 끝은 BREEZE. 별빛은 물결보다 앞이다: 옥상 밤하늘 배경에 멀리 강이 함께 쓰이면 물결이 골라져
+   * 하늘이 회색으로 다시 그려졌다.
+   */
   private static final List<Motion> FALLBACK =
-      List.of(RAIN, SNOW, PETALS, FLICKER, SHIMMER, TWINKLE, BREEZE);
+      List.of(RAIN, SNOW, PETALS, FLICKER, TWINKLE, SHIMMER, BREEZE);
 
   /**
    * 맞는 움직임이 없는 컷에 배경 문구로 움직임을 고른다(FR-049). 비 오는 컷에 바람을 쓰면 빗줄기가 지워지고 다른 것이 흔들려 번갈아 볼 때 비가 깜빡이므로, 배경에
