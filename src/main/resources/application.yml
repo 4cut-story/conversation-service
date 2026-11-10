@@ -106,6 +106,9 @@ comic:
   cast-portrait-backfill: ${COMIC_CAST_PORTRAIT_BACKFILL:false}
   summary-backfill: ${COMIC_SUMMARY_BACKFILL:false}
   live-backfill: ${COMIC_LIVE_BACKFILL:false}
+  # 라이브 모드 대사 음성(SPEAK 단계). 대사 읽기를 켠 GPU 워커(SPEECH_ENABLED)가 있을 때 켠다. 끄면 그림 뒤 바로 합성한다
+  speech:
+    enabled: ${COMIC_SPEECH_ENABLED:false}
 
 # 캐릭터 DB (REQ-018). 콘티 인물을 이름이나 설명 임베딩(pgvector, BGE-M3 1024차원)으로 찾아 IP-Adapter 참조로 그린다
 characters:

@@ -125,6 +125,25 @@ public final class WorkKeys {
     return comicPrefix(conversationId) + livePanelPath(index, frame);
   }
 
+  /** 대사 읽기 결과(대사 키 → 음성 길이). */
+  public static String speech(String conversationId) {
+    return work(conversationId, "speech.json");
+  }
+
+  /** 워커가 올리는 대사 음성. key는 "p{컷}-{대사 순번}"이다. */
+  public static String speechAudio(String conversationId, String key) {
+    return work(conversationId, "live/voice/" + key + ".mp3");
+  }
+
+  /** 라이브 모드 대사 음성 경로 (만화 폴더 기준, common live-mode.yaml CaptionVoice). */
+  public static String liveVoicePath(int panel, int line) {
+    return "voice/" + panel + "-" + line + ".mp3";
+  }
+
+  public static String liveVoice(String conversationId, int panel, int line) {
+    return comicPrefix(conversationId) + liveVoicePath(panel, line);
+  }
+
   /** 라이브 모드 재생 정보. */
   public static String liveJson(String conversationId) {
     return comicPrefix(conversationId) + "live.json";

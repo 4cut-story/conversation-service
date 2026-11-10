@@ -34,7 +34,12 @@ public class PipelineService {
   static final int SCRIPT_MAX_ATTEMPTS = 5;
 
   public static int maxAttempts(Step step) {
-    return step == Step.SCRIPT ? SCRIPT_MAX_ATTEMPTS : MAX_ATTEMPTS;
+    return switch (step) {
+      case SCRIPT -> SCRIPT_MAX_ATTEMPTS;
+      // 대사 음성이 없어도 만화는 나온다. 다시 하지 않고 소리 없이 합성으로 넘어간다
+      case SPEAK -> 1;
+      default -> MAX_ATTEMPTS;
+    };
   }
 
   private static final Logger log = LoggerFactory.getLogger(PipelineService.class);
@@ -196,6 +201,17 @@ public class PipelineService {
         failStep(conversation, step, "서버 단계 시간 초과");
       }
     }
+    // 대사 읽기는 워커가 가져가지 않으면(대사 읽기를 끈 워커) 기다리지 않고 소리 없이 넘어간다
+    for (PipelineStep step :
+        steps.runningSince(Step.SPEAK, now().minus(properties.speechTimeout()))) {
+      ConversationInfo conversation = observer.find(step.getConversationId());
+      if (conversation == null) {
+        continue;
+      }
+      jobs.findByConversationIdAndStepAndState(conversation.id(), Step.SPEAK, GpuJob.State.QUEUED)
+          .forEach(j -> j.fail("CANCELLED", "대사 읽기를 가져간 워커가 없다", now()));
+      failStep(conversation, step, "대사 읽기 시간 초과");
+    }
   }
 
   private void withCurrentStep(GpuJob job, StepAction action) {
@@ -289,6 +305,10 @@ public class PipelineService {
         step.getAttempt(),
         reason);
     step.fail(reason, now());
+    if (step.getStep() == Step.SPEAK) {
+      startStep(conversation, Step.COMPOSE, 1);
+      return;
+    }
     if (step.getAttempt() < maxAttempts(step.getStep())) {
       startStep(conversation, step.getStep(), step.getAttempt() + 1);
     } else {
@@ -368,6 +388,7 @@ public class PipelineService {
       case EXTRACT, SELECT -> "대화에서 장면을 고르지 못했어요.";
       case SCRIPT, REVIEW -> "콘티를 만들지 못했어요.";
       case DRAW -> "그림을 그리지 못했어요.";
+      case SPEAK -> "대사를 읽지 못했어요.";
       case COMPOSE -> "만화를 합치지 못했어요.";
     };
   }

@@ -3,6 +3,7 @@ package net.java21.fourcut.conversation.comic;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.java21.fourcut.conversation.pipeline.PipelineObserver;
 import net.java21.fourcut.conversation.pipeline.Production;
@@ -130,7 +131,24 @@ class LiveBackfill {
         wide,
         third,
         depth,
-        fourth);
+        fourth,
+        voices(old));
+  }
+
+  /** 예전 재생 정보 자막에 붙어 있던 대사 음성(FR-050)을 그대로 쓴다. 음성 파일은 이미 만화 폴더에 있다. */
+  static Map<String, Integer> voices(JsonNode old) {
+    Map<String, Integer> out = new java.util.LinkedHashMap<>();
+    JsonNode panels = old.path("panels");
+    for (int i = 0; i < panels.size(); i++) {
+      JsonNode captions = panels.get(i).path("captions");
+      for (int k = 0; k < captions.size(); k++) {
+        int ms = captions.get(k).path("voice").path("durationMs").asInt(0);
+        if (ms > 0) {
+          out.put(SpeechCast.key(i + 1, k + 1), ms);
+        }
+      }
+    }
+    return out;
   }
 
   private void mark(String id) {
