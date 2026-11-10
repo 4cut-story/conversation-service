@@ -38,14 +38,16 @@ class StirTest {
   }
 
   @Test
-  @DisplayName("FR-049: 세 장은 움직임의 처음·중간·끝이고, 새 물건을 그리지 말라고 함께 적는다")
+  @DisplayName("FR-049·051: 세 장은 움직임의 처음·중간·끝이고, 나머지는 그대로 두라고만 적는다(없는 물건 이름을 쓰지 않는다)")
   void frames() {
     String s = "steam curls up from the soup pot";
     assertThat(Stir.change(s)).contains("just beginning").contains(s);
     assertThat(Stir.next(s)).contains("halfway").contains(s);
     assertThat(Stir.last(s)).contains("further along").contains(s);
     for (String f : List.of(Stir.change(s), Stir.next(s), Stir.last(s))) {
-      assertThat(f).contains("no flying or falling leaves").contains("no new objects");
+      assertThat(f)
+          .contains("stays exactly as it is")
+          .doesNotContainPattern("(?i)\\b(leaf|leaves|grass|plants?|wind|no|not)\\b");
     }
   }
 

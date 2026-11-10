@@ -134,6 +134,11 @@ public final class Stir {
     return grounded ? Optional.of(text) : Optional.empty();
   }
 
+  /** 인물을 움직이는 구절인지(대명사·사람 낱말·자리 표시). */
+  public static boolean touchesPerson(String text) {
+    return text != null && PERSON.matcher(text.toLowerCase(Locale.ROOT)).find();
+  }
+
   /** 앞 컷과 같은 것을 움직이는지(물건 낱말이 겹치는지). 이웃한 컷은 다른 것을 움직여야 이어 볼 때 새롭다. */
   public static boolean same(String stir, String previous) {
     if (stir == null || previous == null) {
@@ -155,12 +160,13 @@ public final class Stir {
     return out;
   }
 
-  /** 새로 그리지 말 것. 그림에 없는 것을 그리면 그림마다 자리가 달라 깜빡인다. */
+  /**
+   * 나머지는 그대로 둘 것. 그림 모델은 부정문("잎을 넣지 마라")을 무시하고 오히려 그 낱말에 끌려 그 물건을 그려 넣으므로, 없는 물건 이름은 쓰지 않고 그대로 둘 것만
+   * 쓴다(FR-051).
+   */
   static final String ONLY_THAT =
-      "Change only that one thing in the background. Do not add anything that is not already in"
-          + " the picture: no flying or falling leaves, no new plants, no wind lines, streaks or"
-          + " ribbons in the air, no new objects. Keep the colors and the lighting exactly the"
-          + " same, and keep any rain streaks or snowflakes as they are";
+      "Change only that one thing. Everything else in the picture stays exactly as it is, with"
+          + " the same colors and the same lighting";
 
   /** 두 번째 그림: 움직임의 처음. */
   public static String change(String stir) {

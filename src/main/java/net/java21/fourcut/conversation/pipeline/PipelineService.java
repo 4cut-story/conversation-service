@@ -182,11 +182,16 @@ public class PipelineService {
     }
     withCurrentStep(
         job,
-        (conversation, step) ->
-            failStep(
-                conversation,
-                step,
-                "GPU 작업 실패 " + job.getErrorCode() + ": " + job.getErrorMessage()));
+        (conversation, step) -> {
+          String reason = "GPU 작업 실패 " + job.getErrorCode() + ": " + job.getErrorMessage();
+          StepContext context =
+              new StepContext(
+                  conversation, step.getStep(), step.getAttempt(), json.readTree(job.getPayload()));
+          apply(
+              conversation,
+              step,
+              safely(() -> handler(step.getStep()).onJobFailed(context, reason)));
+        });
   }
 
   /**
@@ -207,6 +212,20 @@ public class PipelineService {
         failStep(conversation, step, "서버 단계 시간 초과");
       }
     }
+    // 그림 결과를 받은 뒤 서버 작업(움직임 그림 정하기, FR-051)이 끝나지 않은 그리기 단계. 그림을 다시 그리지 않게 처리기가 정한다
+    for (PipelineStep step : steps.runningSince(Step.DRAW, before)) {
+      ConversationInfo conversation = observer.find(step.getConversationId());
+      GpuJob job = finishedJob(step);
+      if (conversation != null
+          && job != null
+          && job.getFinishedAt() != null
+          && job.getFinishedAt().isBefore(before)) {
+        StepContext context =
+            new StepContext(
+                conversation, step.getStep(), step.getAttempt(), json.readTree(job.getPayload()));
+        apply(conversation, step, safely(() -> handler(step.getStep()).onStalled(context)));
+      }
+    }
     // 대사 읽기는 워커가 가져가지 않으면(대사 읽기를 끈 워커) 기다리지 않고 소리 없이 넘어간다
     for (PipelineStep step :
         steps.runningSince(Step.SPEAK, now().minus(properties.speechTimeout()))) {
@@ -217,6 +236,20 @@ public class PipelineService {
       jobs.findByConversationIdAndStepAndState(conversation.id(), Step.SPEAK, GpuJob.State.QUEUED)
           .forEach(j -> j.fail("CANCELLED", "대사 읽기를 가져간 워커가 없다", now()));
       failStep(conversation, step, "대사 읽기 시간 초과");
+    }
+  }
+
+  /** 단계가 마지막으로 넣은 GPU 작업이 이미 성공했으면 그 작업. 아니면 null. */
+  private GpuJob finishedJob(PipelineStep step) {
+    if (step.getRuntimeJobId() == null) {
+      return null;
+    }
+    try {
+      return jobs.findById(Long.valueOf(step.getRuntimeJobId()))
+          .filter(j -> j.getState() == GpuJob.State.SUCCEEDED)
+          .orElse(null);
+    } catch (NumberFormatException e) {
+      return null;
     }
   }
 

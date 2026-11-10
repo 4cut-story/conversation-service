@@ -68,16 +68,17 @@ class MotionTest {
   }
 
   @Test
-  @DisplayName("FR-049: 가벼운 바람은 그림에 이미 있는 것만 흔들고 날리는 잎·바람 띠·새 화분을 그려 넣지 않는다")
+  @DisplayName(
+      "FR-051: 가벼운 움직임은 배경 빛만 옮기고, 그림에 없는 잎·풀·바람 같은 낱말을 쓰지 않는다(그림 모델이 부정문을 무시하고 그 낱말에 끌린다)")
   void breezeAddsNothingNew() {
     for (String prompt :
         List.of(Motion.BREEZE.change(), Motion.BREEZE.next(), Motion.BREEZE.last())) {
       assertThat(prompt)
-          .contains("already in the background")
-          .contains("no flying or falling leaves")
-          .contains("no wind lines")
-          .contains("no new plants")
-          .contains("keep any rain streaks or snowflakes as they are");
+          .contains("light and shadows")
+          .contains("stays exactly as it is")
+          .contains("the same weather")
+          .doesNotContainPattern(
+              "(?i)\\b(leaf|leaves|grass|plants?|wind|breeze|curtains?|no|not)\\b");
     }
     assertThat(Motion.BREEZE.next()).isNotEqualTo(Motion.BREEZE.change());
   }
