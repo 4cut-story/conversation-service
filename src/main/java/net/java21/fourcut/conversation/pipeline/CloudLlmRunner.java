@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ class CloudLlmRunner implements DirectLlm {
   private final Map<Long, Lease> inFlight = new ConcurrentHashMap<>();
 
   /** 서버가 내려가는 중. 끊긴 호출을 API 실패로 보지 않는다(쉬게 하거나 GPU 워커로 넘기지 않는다). */
-  private volatile boolean closing;
+  private final AtomicBoolean closing = new AtomicBoolean();
 
   @Autowired
   CloudLlmRunner(
@@ -163,7 +164,7 @@ class CloudLlmRunner implements DirectLlm {
    */
   @EventListener(ContextClosedEvent.class)
   void handOff() {
-    closing = true;
+    closing.set(true);
     List<Lease> leases = List.copyOf(inFlight.values());
     if (leases.isEmpty()) {
       return;
@@ -281,14 +282,14 @@ class CloudLlmRunner implements DirectLlm {
       return;
     }
     for (Provider provider : providers) {
-      if (closing) {
+      if (closing.get()) {
         break;
       }
       if (provider.active() && attempt(provider, lease, payload)) {
         return;
       }
     }
-    if (closing) {
+    if (closing.get()) {
       // 내려가며 끊긴 호출이다. 임대를 내려놓으면 GPU 워커가 바로 가져가므로, 끝난 임대를 다음 서버가 거두게 둔다
       log.info("서버 종료 중이라 LLM 작업을 다음 서버에 넘김: job={}", lease.jobId());
       return;
@@ -304,7 +305,7 @@ class CloudLlmRunner implements DirectLlm {
     try {
       result = provider.client.chat(payload);
     } catch (RuntimeException e) {
-      if (closing) {
+      if (closing.get()) {
         return false;
       }
       provider.pause();
