@@ -81,4 +81,13 @@ class SpeakStepTest {
     verify(compose).start(any());
     verify(observer, never()).failed(any(), any());
   }
+
+  @Test
+  @DisplayName("RSS 구독이 만든 만화의 GPU 작업은 사람이 만든 만화 뒤로 미룬다")
+  void feedComicsWaitBehindPeople() {
+    assertThat(PipelineService.priorityOf(conversation)).isEqualTo(GpuJob.NORMAL);
+    ConversationInfo feed =
+        new ConversationInfo(2L, "c2", "u", "ko", 0, null, null, false, null, true, true);
+    assertThat(PipelineService.priorityOf(feed)).isEqualTo(GpuJob.LOW);
+  }
 }

@@ -250,7 +250,8 @@ public class PipelineService {
                 step.getStep(),
                 e.type(),
                 json.writeValueAsString(e.payload()),
-                now());
+                now(),
+                priorityOf(conversation));
         boolean manual = e.type() == JobType.LLM && conversation.manualLlm();
         if (manual) {
           created.markManual();
@@ -383,6 +384,14 @@ public class PipelineService {
 
   private Instant now() {
     return clock.instant();
+  }
+
+  /**
+   * GPU 작업 우선순위. RSS 구독이 한꺼번에 만든 만화(뉴스 수십 편)는 사람이 만든 만화 뒤로 미룬다. 같은 차례면 먼저 넣은 작업부터라, 뉴스가 몰리면 사람이 만든
+   * 만화가 그 뒤에서 수십 분을 기다렸다.
+   */
+  static short priorityOf(ConversationInfo conversation) {
+    return conversation.fromFeed() ? GpuJob.LOW : GpuJob.NORMAL;
   }
 
   /** 기사를 대화로 각색하지 못했을 때 사용자에게 보여 줄 문장. */
