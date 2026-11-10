@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -123,6 +125,37 @@ class CloudLlmRunner implements DirectLlm {
     }
   }
 
+  /**
+   * 서버가 다시 뜨면(배포) 앞 서버가 외부 API로 처리하던 LLM 작업과, 넣었지만 아직 못 부른 작업을 이어 받는다. 그냥 두면 임대가 끝날 때까지 약 5분을 기다렸다가
+   * GPU 워커(qwen)가 가져가, 대사가 늦고 로컬 모델로 써진다. 앞 서버가 끝내 보고하면 임대 토큰이 달라 받아들이지 않는다.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  void resumeAfterRestart() {
+    if (!active()) {
+      return;
+    }
+    List<Long> orphans =
+        tx.execute(
+            status ->
+                jobs
+                    .findByTypeAndManualFalseAndStateIn(
+                        JobType.LLM, List.of(GpuJob.State.QUEUED, GpuJob.State.LEASED))
+                    .stream()
+                    .filter(CloudLlmRunner::resumable)
+                    .map(GpuJob::getId)
+                    .toList());
+    if (orphans == null || orphans.isEmpty()) {
+      return;
+    }
+    log.info("서버 재시작: 외부 API로 이어 받는 LLM 작업 {}", orphans);
+    orphans.forEach(id -> executor.execute(() -> run(id, true)));
+  }
+
+  private static boolean resumable(GpuJob job) {
+    return job.getState() == GpuJob.State.QUEUED
+        || (job.getState() == GpuJob.State.LEASED && WORKER_ID.equals(job.getWorkerId()));
+  }
+
   /** 지금 부를 수 있는 API가 하나라도 있는지. */
   boolean active() {
     return providers.stream().anyMatch(Provider::active);
@@ -198,7 +231,12 @@ class CloudLlmRunner implements DirectLlm {
 
   /** 작업 하나를 외부 API로 처리해 본다. 이미 GPU 워커가 가져갔으면 아무것도 하지 않는다. */
   void run(Long jobId) {
-    Optional<Lease> lease = Optional.ofNullable(tx.execute(status -> lease(jobId)));
+    run(jobId, false);
+  }
+
+  /** takeOver면 앞 서버(같은 이름의 외부 API 워커)가 임대한 작업도 다시 임대한다. */
+  private void run(Long jobId, boolean takeOver) {
+    Optional<Lease> lease = Optional.ofNullable(tx.execute(status -> lease(jobId, takeOver)));
     lease.ifPresent(this::process);
   }
 
@@ -253,12 +291,12 @@ class CloudLlmRunner implements DirectLlm {
     return true;
   }
 
-  private Lease lease(Long jobId) {
+  private Lease lease(Long jobId, boolean takeOver) {
     GpuJob job =
         jobs.lockById(jobId)
             .filter(
                 j ->
-                    j.getState() == GpuJob.State.QUEUED
+                    (takeOver ? resumable(j) : j.getState() == GpuJob.State.QUEUED)
                         && j.getType() == JobType.LLM
                         && !j.isManual())
             .orElse(null);

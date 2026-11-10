@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 
 interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
 
+  /** 손으로 넣지 않은 작업 가운데 이 종류·상태인 것. */
+  List<GpuJob> findByTypeAndManualFalseAndStateIn(JobType type, Collection<GpuJob.State> states);
+
   /**
    * 대기 중인 작업 한 건을 잠근다. 보통 작업을 낮은 우선순위(녹음 중 구간 전사)보다 먼저, 그 안에서는 워커가 올려 둔 모델 묶음을 쓰는 종류(preferred)를
    * 먼저, 그 안에서는 대사 읽기(SPEECH)를 먼저, 그 다음은 들어온 순서. 대사 읽기는 몇 초면 끝나고 그림이 끝난 만화를 완성하는 마지막 GPU 작업이라, 다른
