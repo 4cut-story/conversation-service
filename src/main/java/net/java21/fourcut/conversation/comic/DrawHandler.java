@@ -910,7 +910,8 @@ class DrawHandler implements StepHandler {
   static String motionPrompt(String style, String change) {
     return style
         + ", edit this picture: keep the characters, the faces, the poses, the clothes, the"
-        + " objects, the composition and the drawing style exactly the same, and only "
+        + " objects, the composition, the drawing style, the sky and the weather exactly the"
+        + " same, and only "
         + change;
   }
 

@@ -74,20 +74,20 @@ public enum Motion {
           + " them closer to the ground",
       "redraw only the falling petals and leaves in the air in new places again, a few of them"
           + " drifting sideways"),
-  /** 맞는 움직임이 없는 컷의 가벼운 바람(FR-049). 색·빛은 그대로 두고 작은 것만 흔든다. 어느 배경에나 맞는다. */
+  /** 맞는 움직임이 없는 컷의 가벼운 바람(FR-049). 하늘·날씨·색·빛은 그대로 두고 잎·풀·머리카락·천만 흔든다. 어느 배경에나 맞는다. */
   BREEZE(
       "\\w+",
       false,
       900,
-      "move only small things in the background slightly as if in a light breeze: the clouds"
-          + " drift a little, the leaves, grass and curtains sway slightly. Keep exactly the same"
-          + " colors, lighting, brightness and time of day",
-      "move only small things in the background slightly the other way: the clouds drift a"
-          + " little further, the leaves, grass and curtains sway to the other side. Keep exactly"
-          + " the same colors, lighting, brightness and time of day",
-      "move only small things in the background a little again: the clouds drift back, the"
-          + " leaves, grass and curtains sway gently. Keep exactly the same colors, lighting,"
-          + " brightness and time of day");
+      "let the leaves, grass, hair and fabric in the background sway slightly as if in a light"
+          + " breeze. Keep the colors and the lighting exactly the same, and keep any rain or"
+          + " snow as it is",
+      "let the leaves, grass, hair and fabric in the background sway slightly to the other side"
+          + " as if in a light breeze. Keep the colors and the lighting exactly the same, and keep"
+          + " any rain or snow as it is",
+      "let the leaves, grass, hair and fabric in the background sway gently back as if in a"
+          + " light breeze. Keep the colors and the lighting exactly the same, and keep any rain"
+          + " or snow as it is");
 
   /** 한 만화에 움직이는 컷 최대 수(컷 수와 같다, FR-049). 움직이는 넓은 그림 컷마다 GPU 그림이 세 장 더 든다. */
   public static final int MAX_PER_COMIC = 10;
