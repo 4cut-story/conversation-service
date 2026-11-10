@@ -77,15 +77,25 @@ public class VoiceLibrary {
    * 찾을 인물. description은 콘티 인물 설명(영어나 한국어), gender는 FEMALE·MALE, ageGroup은 CHILD·YOUNG·MIDDLE·OLD,
    * dialect는 대화의 사투리 코드(없으면 표준어). 모르는 값은 null.
    */
-  public record Query(String description, String gender, String ageGroup, String dialect) {}
+  public record Query(
+      String description, String gender, String ageGroup, String dialect, String concept) {
 
-  private record Filter(String gender, String ageGroup, String dialect) {}
+    public Query(String description, String gender, String ageGroup, String dialect) {
+      this(description, gender, ageGroup, dialect, null);
+    }
+  }
+
+  /** concept이 {@link #ANY_CONCEPT}이면 컨셉을 보지 않는다. */
+  private record Filter(String gender, String ageGroup, String dialect, String concept) {}
+
+  private static final String ANY_CONCEPT = "*";
 
   private static final String COLUMNS = "voice_id, name, gender, age_group, dialect, tone";
 
   private static final String WHERE =
       "active and (:g = '' or gender = :g) and (:a = '' or age_group = :a) and"
-          + " coalesce(dialect, '') = :d";
+          + " coalesce(dialect, '') = :d and (:c = '*' or coalesce(concepts, '') = '' or concepts"
+          + " like '%DAILY%' or (:c <> '' and concepts like '%' || :c || '%'))";
 
   private final JdbcClient jdbc;
   private final TextEmbedder embedder;
@@ -254,14 +264,17 @@ public class VoiceLibrary {
     String age = code(q.ageGroup());
     String dialect =
         blank(q.dialect()) || "SEOUL".equals(code(q.dialect())) ? "" : code(q.dialect());
+    // 사극 목소리처럼 일상(DAILY)에 안 맞는 목소리는 그 컨셉의 만화에만 준다. 아무도 없으면 마지막에 컨셉을 풀어 준다
+    String concept = blank(q.concept()) ? "" : code(q.concept());
     List<Filter> tries = new ArrayList<>();
-    tries.add(new Filter(gender, age, dialect));
+    tries.add(new Filter(gender, age, dialect, concept));
     if (!dialect.isEmpty()) {
-      tries.add(new Filter(gender, age, ""));
+      tries.add(new Filter(gender, age, "", concept));
     }
-    tries.add(new Filter(gender, "", dialect));
-    tries.add(new Filter(gender, "", ""));
-    tries.add(new Filter("", "", ""));
+    tries.add(new Filter(gender, "", dialect, concept));
+    tries.add(new Filter(gender, "", "", concept));
+    tries.add(new Filter("", "", "", concept));
+    tries.add(new Filter("", "", "", ANY_CONCEPT));
     Optional<float[]> v = Optional.empty();
     Optional<String> schema = schema();
     if (schema.isPresent() && !blank(q.description())) {
@@ -313,6 +326,7 @@ public class VoiceLibrary {
               .param("g", f.gender())
               .param("a", f.ageGroup())
               .param("d", f.dialect())
+              .param("c", f.concept())
               .param("v", Vectors.literal(v.get()))
               .param("n", CANDIDATES)
               .query(
@@ -336,6 +350,7 @@ public class VoiceLibrary {
         .param("g", f.gender())
         .param("a", f.ageGroup())
         .param("d", f.dialect())
+        .param("c", f.concept())
         .param("n", CANDIDATES)
         .query(ROW)
         .list();
