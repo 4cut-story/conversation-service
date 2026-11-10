@@ -150,6 +150,35 @@ class FeedCheckerTest {
   }
 
   @Test
+  @DisplayName("004 FR-069: 칼럼·사설·인터뷰·사진·영상 기사는 읽지 않고 건너뛰고, 읽은 뒤 알게 된 것도 건너뜀으로 남긴다")
+  void skipsOpinion() {
+    serve(
+        "<item><link>https://news.example.com/a/3</link><title>[사설] 물가 대책</title></item>",
+        item(2, null),
+        item(1, null));
+    when(items.existsByFeedId(7L)).thenReturn(true);
+    when(reader.read("https://news.example.com/a/2"))
+        .thenThrow(new ArticleException(ArticleException.Reason.EXCLUDED, "분류"));
+
+    assertThat(checker.check(7L)).isEqualTo(1);
+
+    verify(reader, never()).read("https://news.example.com/a/3");
+    assertThat(saved)
+        .extracting(RssFeedItem::getLink, RssFeedItem::getStatus, RssFeedItem::getReason)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/1", RssFeedItem.Status.MADE, null),
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/2",
+                RssFeedItem.Status.SKIPPED,
+                FeedChecker.EXCLUDED_REASON),
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/3",
+                RssFeedItem.Status.SKIPPED,
+                FeedChecker.EXCLUDED_REASON));
+  }
+
+  @Test
   @DisplayName("004 FR-068: 최근에 만든 기사와 주제가 비슷하면 만들지 않고 건너뛴 이유를 남긴다")
   void skipsSimilar() {
     serve(item(2, null), item(1, null));
