@@ -6,9 +6,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import org.slf4j.Logger;
@@ -17,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
@@ -49,6 +53,10 @@ class CloudLlmRunner implements DirectLlm {
   private final TransactionTemplate tx;
   private final List<Provider> providers;
   private final LlmCache cache;
+  private final Map<Long, Lease> inFlight = new ConcurrentHashMap<>();
+
+  /** 서버가 내려가는 중. 끊긴 호출을 API 실패로 보지 않는다(쉬게 하거나 GPU 워커로 넘기지 않는다). */
+  private final AtomicBoolean closing = new AtomicBoolean();
 
   @Autowired
   CloudLlmRunner(
@@ -126,34 +134,54 @@ class CloudLlmRunner implements DirectLlm {
   }
 
   /**
-   * 서버가 다시 뜨면(배포) 앞 서버가 외부 API로 처리하던 LLM 작업과, 넣었지만 아직 못 부른 작업을 이어 받는다. 그냥 두면 임대가 끝날 때까지 약 5분을 기다렸다가
-   * GPU 워커(qwen)가 가져가, 대사가 늦고 로컬 모델로 써진다. 앞 서버가 끝내 보고하면 임대 토큰이 달라 받아들이지 않는다.
+   * 서버가 다시 뜨면(배포) 넣었지만 아직 못 부른 LLM 작업을 외부 API로 처리한다. 앞 서버가 처리하던 작업은 앞 서버가 내려가며 임대를 끝내고({@link
+   * #handOff()}), 임대 정리({@link GpuJobService#recover()})가 외부 API에 다시 넘긴다. 새 서버가 뜰 때 앞 서버는 아직 일하는 중일
+   * 수 있어 여기서 뺏지 않는다.
    */
   @EventListener(ApplicationReadyEvent.class)
   void resumeAfterRestart() {
     if (!active()) {
       return;
     }
-    List<Long> orphans =
+    List<Long> queued =
         tx.execute(
             status ->
                 jobs
-                    .findByTypeAndManualFalseAndStateIn(
-                        JobType.LLM, List.of(GpuJob.State.QUEUED, GpuJob.State.LEASED))
+                    .findByTypeAndManualFalseAndStateIn(JobType.LLM, List.of(GpuJob.State.QUEUED))
                     .stream()
-                    .filter(CloudLlmRunner::resumable)
                     .map(GpuJob::getId)
                     .toList());
-    if (orphans == null || orphans.isEmpty()) {
+    if (queued == null || queued.isEmpty()) {
       return;
     }
-    log.info("서버 재시작: 외부 API로 이어 받는 LLM 작업 {}", orphans);
-    orphans.forEach(id -> executor.execute(() -> run(id, true)));
+    log.info("서버 시작: 외부 API로 처리할 대기 LLM 작업 {}", queued);
+    queued.forEach(id -> executor.execute(() -> run(id)));
   }
 
-  private static boolean resumable(GpuJob job) {
-    return job.getState() == GpuJob.State.QUEUED
-        || (job.getState() == GpuJob.State.LEASED && WORKER_ID.equals(job.getWorkerId()));
+  /**
+   * 서버가 내려갈 때 외부 API로 처리 중인 작업의 임대를 바로 끝낸다. 그냥 두면 임대가 끝날 때까지(약 5분) 기다렸다가 GPU 워커(qwen)가 가져가 대사가 늦고
+   * 로컬 모델로 써졌다. 끝낸 임대는 다음 서버의 임대 정리가 30초 안에 거둬 외부 API로 다시 넘긴다. 내려가는 서버가 늦게 보고해도 새 임대 토큰과 달라 받지 않는다.
+   */
+  @EventListener(ContextClosedEvent.class)
+  void handOff() {
+    closing.set(true);
+    List<Lease> leases = List.copyOf(inFlight.values());
+    if (leases.isEmpty()) {
+      return;
+    }
+    Instant ended = clock.instant().minusSeconds(1);
+    try {
+      tx.executeWithoutResult(
+          status ->
+              leases.forEach(
+                  l ->
+                      jobs.lockById(l.jobId())
+                          .filter(j -> j.heldBy(l.token()))
+                          .ifPresent(j -> j.extend(ended, Duration.ZERO))));
+      log.info("서버 종료: 외부 API로 처리 중이던 LLM 작업의 임대를 끝냄 {}", inFlight.keySet());
+    } catch (RuntimeException e) {
+      log.warn("서버 종료: LLM 작업의 임대를 끝내지 못함 {}", inFlight.keySet(), e);
+    }
   }
 
   /** 지금 부를 수 있는 API가 하나라도 있는지. */
@@ -231,13 +259,16 @@ class CloudLlmRunner implements DirectLlm {
 
   /** 작업 하나를 외부 API로 처리해 본다. 이미 GPU 워커가 가져갔으면 아무것도 하지 않는다. */
   void run(Long jobId) {
-    run(jobId, false);
-  }
-
-  /** takeOver면 앞 서버(같은 이름의 외부 API 워커)가 임대한 작업도 다시 임대한다. */
-  private void run(Long jobId, boolean takeOver) {
-    Optional<Lease> lease = Optional.ofNullable(tx.execute(status -> lease(jobId, takeOver)));
-    lease.ifPresent(this::process);
+    Optional<Lease> lease = Optional.ofNullable(tx.execute(status -> lease(jobId)));
+    lease.ifPresent(
+        l -> {
+          inFlight.put(l.jobId(), l);
+          try {
+            process(l);
+          } finally {
+            inFlight.remove(l.jobId());
+          }
+        });
   }
 
   private void process(Lease lease) {
@@ -251,9 +282,17 @@ class CloudLlmRunner implements DirectLlm {
       return;
     }
     for (Provider provider : providers) {
+      if (closing.get()) {
+        break;
+      }
       if (provider.active() && attempt(provider, lease, payload)) {
         return;
       }
+    }
+    if (closing.get()) {
+      // 내려가며 끊긴 호출이다. 임대를 내려놓으면 GPU 워커가 바로 가져가므로, 끝난 임대를 다음 서버가 거두게 둔다
+      log.info("서버 종료 중이라 LLM 작업을 다음 서버에 넘김: job={}", lease.jobId());
+      return;
     }
     log.warn("외부 LLM API가 모두 실패, GPU 워커(qwen)로 넘김: job={}", lease.jobId());
     tx.executeWithoutResult(status -> release(lease));
@@ -266,6 +305,9 @@ class CloudLlmRunner implements DirectLlm {
     try {
       result = provider.client.chat(payload);
     } catch (RuntimeException e) {
+      if (closing.get()) {
+        return false;
+      }
       provider.pause();
       log.warn(
           "{} 실패, 다음으로 넘김: job={} reason={} ({} 동안 쉼)",
@@ -291,12 +333,12 @@ class CloudLlmRunner implements DirectLlm {
     return true;
   }
 
-  private Lease lease(Long jobId, boolean takeOver) {
+  private Lease lease(Long jobId) {
     GpuJob job =
         jobs.lockById(jobId)
             .filter(
                 j ->
-                    (takeOver ? resumable(j) : j.getState() == GpuJob.State.QUEUED)
+                    j.getState() == GpuJob.State.QUEUED
                         && j.getType() == JobType.LLM
                         && !j.isManual())
             .orElse(null);
