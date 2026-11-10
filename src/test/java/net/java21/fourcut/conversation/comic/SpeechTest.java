@@ -262,7 +262,7 @@ class SpeechTest {
             Map.of("p1-1", 30000));
     assertThat(capped.path("panels").get(0).path("durationMs").asInt())
         .isEqualTo(LivePlayback.VOICE_MAX_MS);
-    // 1:1 컷(말풍선 그림)은 자막이 없어 음성도 붙이지 않는다
+    // 1:1 컷(말풍선 그림)도 음성을 붙인다. 글자는 화면이 보여 주지 않는다
     var square =
         LivePlayback.build(
             json,
@@ -275,11 +275,16 @@ class SpeechTest {
             List.of(),
             List.of(),
             Map.of("p1-1", 1000));
-    assertThat(square.path("panels").get(0).has("captions")).isFalse();
+    var squareFirst = square.path("panels").get(0);
+    assertThat(squareFirst.path("aspect").asString()).isEqualTo("1:1");
+    assertThat(squareFirst.path("captions").get(0).path("voice").path("path").asString())
+        .isEqualTo("voice/1-1.mp3");
+    // 음성이 없는 1:1 컷은 예전처럼 자막을 두지 않는다
+    assertThat(square.path("panels").get(1).has("captions")).isFalse();
   }
 
   @Test
-  @DisplayName("FR-050: 합성은 읽은 대사 음성을 만화 폴더로 옮기고, 파일이 없는 대사와 넓은 그림이 아닌 컷은 뺀다")
+  @DisplayName("FR-050: 합성은 읽은 대사 음성을 만화 폴더로 옮기고, 파일이 없는 대사는 뺀다(1:1 컷도 옮긴다)")
   void composeCopies() {
     store.put(
         WorkKeys.speech(ID), "{\"lines\":{\"p1-1\":1200,\"p1-3\":800,\"p2-1\":700}}".getBytes());
@@ -289,12 +294,13 @@ class SpeechTest {
         new ComposeHandler(
             scenarios, storage, null, null, null, null, json, null, mock(SoundMatcher.class));
 
-    var got = handler.voices(ID, script, List.of(true, false));
+    var got = handler.voices(ID, script);
 
-    assertThat(got).containsExactly(Map.entry("p1-1", 1200));
+    // 1:1 컷(2컷)의 대사 음성도 옮긴다. 파일이 없는 대사(p1-3)는 뺀다
+    assertThat(got).containsExactly(Map.entry("p1-1", 1200), Map.entry("p2-1", 700));
     assertThat(store.get(WorkKeys.liveVoice(ID, 1, 1))).containsExactly(1);
-    assertThat(store).doesNotContainKey(WorkKeys.liveVoice(ID, 2, 1));
-    assertThat(handler.voices("none", script, List.of(true, true))).isEmpty();
+    assertThat(store.get(WorkKeys.liveVoice(ID, 2, 1))).containsExactly(2);
+    assertThat(handler.voices("none", script)).isEmpty();
   }
 
   @Test

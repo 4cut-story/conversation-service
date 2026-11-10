@@ -138,8 +138,8 @@ final class LivePlayback {
   static final double DUCK_VOLUME = 0.2;
 
   /**
-   * @param voices 읽은 대사 음성 길이. 키는 "p{컷}-{대사 순번}"({@link SpeechCast#key}). 넓은 그림 컷 자막에 음성을 붙이고, 자막
-   *     시간을 음성 길이에 맞추고, 컷이 끝까지 들리도록 길이를 늘린다. 음성이 있는 컷은 말하는 동안 배경음을 줄인다
+   * @param voices 읽은 대사 음성 길이. 키는 "p{컷}-{대사 순번}"({@link SpeechCast#key}). 컷 자막에 음성을 붙이고(1:1 컷은 음성이
+   *     있을 때만 자막을 둔다), 자막 시간을 음성 길이에 맞추고, 컷이 끝까지 들리도록 길이를 늘린다. 음성이 있는 컷은 말하는 동안 배경음을 줄인다
    */
   static ObjectNode build(
       JsonMapper json,
@@ -164,7 +164,8 @@ final class LivePlayback {
       panel.put("image", WorkKeys.livePanelPath(n, false));
       int duration = durationMs(p);
       boolean isWide = i < wide.size() && Boolean.TRUE.equals(wide.get(i));
-      List<Integer> spoken = isWide ? voiced(p, n, voices) : List.of();
+      // 1:1 컷도 대사 음성을 튼다. 말풍선이 그림에 있어 화면은 글자를 보여 주지 않는다(common live-mode.yaml)
+      List<Integer> spoken = voiced(p, n, voices);
       boolean speaks = spoken.stream().anyMatch(ms -> ms != null);
       if (speaks) {
         duration = voicedDuration(p, spoken, duration);
@@ -182,6 +183,9 @@ final class LivePlayback {
         }
       } else {
         panel.put("aspect", "1:1");
+        if (speaks) {
+          voiceCaptions(panel.putArray("captions"), p, n, script.callNames(), spoken, duration);
+        }
       }
       panel.put("camera", CAMERAS.get(i % CAMERAS.size()));
       Optional<SoundMatcher.Picked> sound = i < sounds.size() ? sounds.get(i) : Optional.empty();
