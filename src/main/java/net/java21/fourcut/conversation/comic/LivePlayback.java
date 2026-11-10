@@ -230,7 +230,7 @@ final class LivePlayback {
 
   /** 대사 자막. 컷 시간을 대사 글자 수 비율로 나눠 차례로 보여 준다. 화자는 호칭(없으면 null, 해설). */
   static void captions(
-      ArrayNode out, ComicScript.Panel p, java.util.Map<String, String> names, int durationMs) {
+      ArrayNode out, ComicScript.Panel p, Map<String, String> names, int durationMs) {
     List<ComicScript.Line> lines =
         p.lines() == null
             ? List.of()
@@ -292,7 +292,7 @@ final class LivePlayback {
       ArrayNode out,
       ComicScript.Panel p,
       int n,
-      java.util.Map<String, String> names,
+      Map<String, String> names,
       List<Integer> spoken,
       int durationMs) {
     List<ComicScript.Line> lines = SpeechCast.lines(p);
