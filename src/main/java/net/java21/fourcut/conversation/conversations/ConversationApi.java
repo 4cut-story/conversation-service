@@ -116,6 +116,7 @@ public final class ConversationApi {
    * @param comicId 완성된 만화 공개 ID (content-service 만화함)
    * @param sourceUrl 기사로 만든 대화의 원문 주소. 녹음이면 null
    * @param sourceTitle 기사 제목. 녹음이면 null
+   * @param voiced 대사 읽기(SPEAKING) 단계가 있는 대화인지. 진행 화면이 "목소리 입히는 중"을 보일지 정한다
    */
   public record View(
       String id,
@@ -132,5 +133,6 @@ public final class ConversationApi {
       Integer durationSec,
       Instant createdAt,
       String sourceUrl,
-      String sourceTitle) {}
+      String sourceTitle,
+      boolean voiced) {}
 }
