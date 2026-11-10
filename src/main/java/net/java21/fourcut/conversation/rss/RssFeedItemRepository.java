@@ -22,5 +22,9 @@ interface RssFeedItemRepository extends JpaRepository<RssFeedItem, Long> {
 
   long countByFeedIdAndStatus(Long feedId, RssFeedItem.Status status);
 
+  /** 그 피드에서 그 시각 뒤에 그 상태로 남긴 기사 수. 하루에 만드는 편수를 셀 때 쓴다. */
+  long countByFeedIdAndStatusAndCreatedAtAfter(
+      Long feedId, RssFeedItem.Status status, Instant after);
+
   List<RssFeedItem> findTop5ByFeedIdOrderByCreatedAtDescIdDesc(Long feedId);
 }
