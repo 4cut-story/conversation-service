@@ -221,6 +221,24 @@ class CloudLlmRunnerTest {
   }
 
   @Test
+  @DisplayName("서버가 내려가며 끊긴 Claude 호출은 실패로 보지 않고, GPU 워커(qwen)에 넘기지 않고 임대를 남겨 다음 서버가 거두게 한다")
+  void keepsLeaseWhenCutByShutdown() {
+    when(claude.chat(any()))
+        .thenAnswer(
+            i -> {
+              runner.handOff();
+              throw new IllegalStateException("I/O error: interrupted");
+            });
+
+    runner.onQueued(new LlmJobQueued(5L));
+
+    assertThat(job.getState()).isEqualTo(GpuJob.State.LEASED);
+    assertThat(job.getWorkerId()).isEqualTo(CloudLlmRunner.WORKER_ID);
+    assertThat(job.getLeaseExpiresAt()).isBefore(NOW);
+    verify(gemini, never()).chat(any());
+  }
+
+  @Test
   @DisplayName("GPU 워커가 이미 가져간 작업이나 LLM이 아닌 작업은 건드리지 않는다")
   void skipsTakenJobs() {
     job.lease("gpu-pc-1", NOW, Duration.ofSeconds(90));

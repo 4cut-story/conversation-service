@@ -54,6 +54,9 @@ class CloudLlmRunner implements DirectLlm {
   private final LlmCache cache;
   private final Map<Long, Lease> inFlight = new ConcurrentHashMap<>();
 
+  /** 서버가 내려가는 중. 끊긴 호출을 API 실패로 보지 않는다(쉬게 하거나 GPU 워커로 넘기지 않는다). */
+  private volatile boolean closing;
+
   @Autowired
   CloudLlmRunner(
       ClaudeProperties claude,
@@ -160,6 +163,7 @@ class CloudLlmRunner implements DirectLlm {
    */
   @EventListener(ContextClosedEvent.class)
   void handOff() {
+    closing = true;
     List<Lease> leases = List.copyOf(inFlight.values());
     if (leases.isEmpty()) {
       return;
@@ -277,9 +281,17 @@ class CloudLlmRunner implements DirectLlm {
       return;
     }
     for (Provider provider : providers) {
+      if (closing) {
+        break;
+      }
       if (provider.active() && attempt(provider, lease, payload)) {
         return;
       }
+    }
+    if (closing) {
+      // 내려가며 끊긴 호출이다. 임대를 내려놓으면 GPU 워커가 바로 가져가므로, 끝난 임대를 다음 서버가 거두게 둔다
+      log.info("서버 종료 중이라 LLM 작업을 다음 서버에 넘김: job={}", lease.jobId());
+      return;
     }
     log.warn("외부 LLM API가 모두 실패, GPU 워커(qwen)로 넘김: job={}", lease.jobId());
     tx.executeWithoutResult(status -> release(lease));
@@ -292,6 +304,9 @@ class CloudLlmRunner implements DirectLlm {
     try {
       result = provider.client.chat(payload);
     } catch (RuntimeException e) {
+      if (closing) {
+        return false;
+      }
       provider.pause();
       log.warn(
           "{} 실패, 다음으로 넘김: job={} reason={} ({} 동안 쉼)",
