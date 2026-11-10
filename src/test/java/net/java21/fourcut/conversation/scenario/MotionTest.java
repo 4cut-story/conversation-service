@@ -62,6 +62,8 @@ class MotionTest {
     assertThat(Motion.BREEZE.fits("")).isFalse();
     assertThat(Motion.fallback("living room, fireplace")).contains(Motion.FLICKER);
     assertThat(Motion.fallback("")).isEmpty();
+    assertThat(Motion.fallback("apartment rooftop, starry sky, river in the distance"))
+        .contains(Motion.TWINKLE);
     assertThat(Motion.BREEZE.last()).isNotBlank();
   }
 
