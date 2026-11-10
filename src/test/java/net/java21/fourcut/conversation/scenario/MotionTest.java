@@ -35,7 +35,7 @@ class MotionTest {
   }
 
   @Test
-  @DisplayName("FR-013·049: 콘티 움직임은 맞지 않는 값을 breeze로 바꾸고 모든 컷이 움직인다")
+  @DisplayName("FR-013·049: 콘티 움직임이 맞지 않으면 배경 낱말로 고르고, 없으면 breeze로 모든 컷이 움직인다")
   void limits() {
     ComicScript script =
         new ComicScript(
@@ -46,15 +46,18 @@ class MotionTest {
                 panel("승", "{A} waves", "bright daylight", "petals"),
                 panel("승", "{A} looks up", "night, stars", "twinkle"),
                 panel("전", "{A} gasps", "rainy street, rain", "rain"),
-                panel("결", "{A} smiles", "night, stars", "none")),
+                panel("결", "{A} smiles", "night, stars", "none"),
+                panel("결", "{A} runs", "bus stop in the rain", "petals")),
             true,
             List.of());
 
     List<String> motions =
         script.withMotionLimits().panels().stream().map(ComicScript.Panel::motion).toList();
 
-    assertThat(motions).containsExactly("twinkle", "breeze", "twinkle", "rain", "breeze");
+    assertThat(motions).containsExactly("twinkle", "breeze", "twinkle", "rain", "twinkle", "rain");
     assertThat(Motion.BREEZE.fits("")).isFalse();
+    assertThat(Motion.fallback("living room, fireplace")).contains(Motion.FLICKER);
+    assertThat(Motion.fallback("")).isEmpty();
     assertThat(Motion.BREEZE.last()).isNotBlank();
   }
 

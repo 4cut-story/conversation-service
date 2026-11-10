@@ -74,20 +74,20 @@ public enum Motion {
           + " them closer to the ground",
       "redraw only the falling petals and leaves in the air in new places again, a few of them"
           + " drifting sideways"),
-  /** 맞는 움직임이 없는 컷의 가벼운 바람(FR-049). 하늘·날씨·색·빛은 그대로 두고 잎·풀·머리카락·천만 흔든다. 어느 배경에나 맞는다. */
+  /** 맞는 움직임이 없는 컷의 가벼운 바람(FR-049). 하늘·날씨·색·빛은 그대로 두고 잎·풀·천만 흔든다. 어느 배경에나 맞는다. */
   BREEZE(
       "\\w+",
       false,
       900,
-      "let the leaves, grass, hair and fabric in the background sway slightly as if in a light"
-          + " breeze. Keep the colors and the lighting exactly the same, and keep any rain or"
-          + " snow as it is",
-      "let the leaves, grass, hair and fabric in the background sway slightly to the other side"
-          + " as if in a light breeze. Keep the colors and the lighting exactly the same, and keep"
-          + " any rain or snow as it is",
-      "let the leaves, grass, hair and fabric in the background sway gently back as if in a"
-          + " light breeze. Keep the colors and the lighting exactly the same, and keep any rain"
-          + " or snow as it is");
+      "let the leaves, grass and fabric in the background sway slightly as if in a light"
+          + " breeze. Keep the colors and the lighting exactly the same, and keep any rain"
+          + " streaks or snowflakes as they are",
+      "let the leaves, grass and fabric in the background sway slightly to the other side as if"
+          + " in a light breeze. Keep the colors and the lighting exactly the same, and keep any"
+          + " rain streaks or snowflakes as they are",
+      "let the leaves, grass and fabric in the background sway gently back as if in a light"
+          + " breeze. Keep the colors and the lighting exactly the same, and keep any rain"
+          + " streaks or snowflakes as they are");
 
   /** 한 만화에 움직이는 컷 최대 수(컷 수와 같다, FR-049). 움직이는 넓은 그림 컷마다 GPU 그림이 세 장 더 든다. */
   public static final int MAX_PER_COMIC = 10;
@@ -169,6 +169,18 @@ public enum Motion {
       return false;
     }
     return !outdoorOnly || !INDOOR.matcher(text).find();
+  }
+
+  /** 콘티가 고른 움직임이 맞지 않을 때 배경 낱말로 고르는 차례. 날씨처럼 화면을 크게 차지하는 것부터, 끝은 BREEZE. */
+  private static final List<Motion> FALLBACK =
+      List.of(RAIN, SNOW, PETALS, FLICKER, SHIMMER, TWINKLE, BREEZE);
+
+  /**
+   * 맞는 움직임이 없는 컷에 배경 문구로 움직임을 고른다(FR-049). 비 오는 컷에 바람을 쓰면 빗줄기가 지워지고 다른 것이 흔들려 번갈아 볼 때 비가 깜빡이므로, 배경에
+   * 맞는 움직임을 먼저 쓰고 없으면 BREEZE다.
+   */
+  public static Optional<Motion> fallback(String sceneAndSetting) {
+    return FALLBACK.stream().filter(m -> m.fits(sceneAndSetting)).findFirst();
   }
 
   /** 콘티 지시에 넣는 목록 줄. BREEZE는 코드가 채운다. */
