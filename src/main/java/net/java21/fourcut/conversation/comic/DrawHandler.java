@@ -19,6 +19,7 @@ import net.java21.fourcut.conversation.pipeline.StepOutcome;
 import net.java21.fourcut.conversation.scenario.ComicScript;
 import net.java21.fourcut.conversation.scenario.Concept;
 import net.java21.fourcut.conversation.scenario.ScenarioStore;
+import net.java21.fourcut.conversation.scenario.Stir;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
@@ -806,17 +807,19 @@ class DrawHandler implements StepHandler {
         .liveMotion()
         .map(
             m -> {
+              // 가벼운 바람 컷에 콘티가 쓴 배경 움직임이 있으면 그 움직임의 처음·중간·끝을 그린다(FR-049)
+              java.util.Optional<String> stir = panel.liveStir();
               ObjectNode node = json.createObjectNode();
               node.put("type", m.code());
-              node.put("prompt", motionPrompt(style, m));
+              node.put("prompt", motionPrompt(style, stir.map(Stir::change).orElseGet(m::change)));
               node.put("uploadPutKey", WorkKeys.panelB(conversationId, index + 1));
               // 세 번째 그림(FR-044): 같은 바탕에서 다르게 바꾼 한 장. 예전 워커는 이 필드를 모르고 두 장만 그린다
               ObjectNode next = node.putObject("next");
-              next.put("prompt", motionPrompt(style, m.next()));
+              next.put("prompt", motionPrompt(style, stir.map(Stir::next).orElseGet(m::next)));
               next.put("uploadPutKey", WorkKeys.panelC(conversationId, index + 1));
               // 네 번째 그림(FR-049): 넓은 그림 컷만 워커가 그린다
               ObjectNode last = next.putObject("next");
-              last.put("prompt", motionPrompt(style, m.last()));
+              last.put("prompt", motionPrompt(style, stir.map(Stir::last).orElseGet(m::last)));
               last.put("uploadPutKey", WorkKeys.panelD(conversationId, index + 1));
               return node;
             })

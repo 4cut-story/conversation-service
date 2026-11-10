@@ -138,6 +138,8 @@ public record ComicScript(
    *     위에 한 번 트는 효과음을 고르는 질의가 된다. 예전 콘티에는 없다
    * @param ambient 라이브 모드 화면 효과 층({@link Ambient} 코드, 많아야 {@link Ambient#MAX_PER_PANEL}개). 예전 콘티에는
    *     없다
+   * @param stir 라이브 모드에서 그 컷 배경의 무엇이 어떻게 움직이는지 영어 한 구절(예: "the wall clock's hands tick forward").
+   *     맞는 {@link Motion}이 없어 가벼운 바람으로 채우는 컷에서 움직임 그림 지시로 쓴다({@link Stir}). 예전 콘티에는 없다
    */
   public record Panel(
       String role,
@@ -149,7 +151,22 @@ public record ComicScript(
       String sound,
       String motion,
       String effect,
-      List<String> ambient) {
+      List<String> ambient,
+      String stir) {
+
+    public Panel(
+        String role,
+        String shot,
+        String scene,
+        List<Line> lines,
+        String setting,
+        List<Face> faces,
+        String sound,
+        String motion,
+        String effect,
+        List<String> ambient) {
+      this(role, shot, scene, lines, setting, faces, sound, motion, effect, ambient, null);
+    }
 
     public Panel(
         String role,
@@ -192,22 +209,36 @@ public record ComicScript(
 
     /** 대사만 바꾼 컷. */
     public Panel withLines(List<Line> next) {
-      return new Panel(role, shot, scene, next, setting, faces, sound, motion, effect, ambient);
+      return new Panel(
+          role, shot, scene, next, setting, faces, sound, motion, effect, ambient, stir);
     }
 
     /** 장면만 바꾼 컷. */
     public Panel withScene(String next) {
-      return new Panel(role, shot, next, lines, setting, faces, sound, motion, effect, ambient);
+      return new Panel(
+          role, shot, next, lines, setting, faces, sound, motion, effect, ambient, stir);
     }
 
     /** 움직임만 바꾼 컷. */
     public Panel withMotion(String next) {
-      return new Panel(role, shot, scene, lines, setting, faces, sound, next, effect, ambient);
+      return new Panel(
+          role, shot, scene, lines, setting, faces, sound, next, effect, ambient, stir);
     }
 
     /** 화면 효과 층만 바꾼 컷. */
     public Panel withAmbient(List<String> next) {
-      return new Panel(role, shot, scene, lines, setting, faces, sound, motion, effect, next);
+      return new Panel(role, shot, scene, lines, setting, faces, sound, motion, effect, next, stir);
+    }
+
+    /** 배경 움직임 구절만 바꾼 컷. */
+    public Panel withStir(String next) {
+      return new Panel(
+          role, shot, scene, lines, setting, faces, sound, motion, effect, ambient, next);
+    }
+
+    /** 움직임 그림 지시로 쓸 배경 움직임. 가벼운 바람 컷이고 구절이 걸러져 남았을 때만 있다. */
+    public java.util.Optional<String> liveStir() {
+      return liveMotion().filter(m -> m == Motion.BREEZE).flatMap(m -> Stir.clean(stir, setting));
     }
 
     /** 걸러진 움직임. 없거나 목록 밖이면 빈 값. */
@@ -226,6 +257,7 @@ public record ComicScript(
       return this;
     }
     List<Panel> out = new java.util.ArrayList<>();
+    List<String> previous = List.of();
     for (Panel p : panels) {
       if (p.ambient() == null) {
         out.add(p);
@@ -237,8 +269,9 @@ public record ComicScript(
               + java.util.Objects.toString(p.setting(), "");
       List<String> kept = Ambient.filter(p.ambient(), background);
       if (kept.isEmpty()) {
-        kept = Ambient.fallback(background);
+        kept = Ambient.fallback(background, previous);
       }
+      previous = kept;
       out.add(kept.equals(p.ambient()) ? p : p.withAmbient(kept));
     }
     return out.equals(panels)
@@ -309,9 +342,26 @@ public record ComicScript(
         out.add(p.motion() == null ? p : p.withMotion(null));
       }
     }
+    out = withStirs(out);
     return out.equals(panels)
         ? this
         : new ComicScript(title, characters, out, reviewed, nameWarnings, concept, summary, mood);
+  }
+
+  /**
+   * 배경 움직임 구절을 거른다(FR-049): 가벼운 바람 컷이 아니거나, 컷 배경에 없는 물건이거나, 인물을 움직이거나, 앞 컷과 같은 것을 움직이는 구절은 지운다. 지워진
+   * 컷은 예전처럼 잎·풀·천을 흔드는 가벼운 바람으로 그린다.
+   */
+  private static List<Panel> withStirs(List<Panel> panels) {
+    List<Panel> out = new java.util.ArrayList<>();
+    String previous = null;
+    for (Panel p : panels) {
+      String before = previous;
+      String kept = p.liveStir().filter(s -> !Stir.same(s, before)).orElse(null);
+      out.add(java.util.Objects.equals(kept, p.stir()) ? p : p.withStir(kept));
+      previous = kept;
+    }
+    return out;
   }
 
   /**
