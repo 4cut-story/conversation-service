@@ -17,13 +17,15 @@ interface GpuJobRepository extends JpaRepository<GpuJob, Long> {
   /**
    * 대기 중인 작업 한 건을 잠근다. 보통 작업을 낮은 우선순위(녹음 중 구간 전사)보다 먼저, 그 안에서는 워커가 올려 둔 모델 묶음을 쓰는 종류(preferred)를
    * 먼저, 그 안에서는 대사 읽기(SPEECH)를 먼저, 그 다음은 들어온 순서. 대사 읽기는 몇 초면 끝나고 그림이 끝난 만화를 완성하는 마지막 GPU 작업이라, 다른
-   * 만화의 그림(몇 분)보다 먼저 준다. 다른 워커가 잠근 행은 건너뛴다(SKIP LOCKED).
+   * 만화의 그림(몇 분)보다 먼저 준다. 대사 읽기는 낮은 순위로 들어갔어도 보통 순위로 본다(그림 뒤에서 기다리다 시간 초과되지 않게). 다른 워커가 잠근 행은
+   * 건너뛴다(SKIP LOCKED).
    */
   @Query(
       value =
           "select * from {h-schema}gpu_jobs where state = 'QUEUED' and manual = false"
               + " and type in (:types)"
-              + " order by priority, case when type in (:preferred) then 0 else 1 end,"
+              + " order by case when type = 'SPEECH' then 0 else priority end,"
+              + " case when type in (:preferred) then 0 else 1 end,"
               + " case when type = 'SPEECH' then 0 else 1 end, enqueued_at"
               + " limit 1 for update skip locked",
       nativeQuery = true)
