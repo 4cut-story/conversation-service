@@ -178,4 +178,20 @@ class VoiceLibraryIntegrationTest {
     library.fillMissingEmbeddings();
     assertThat(count("ko_embedding is not null")).isZero();
   }
+
+  @Test
+  @DisplayName("임베딩은 몇 개씩 나눠 보내고, 실패한 묶음만 다음에 다시 채운다")
+  void embedsInBatches() {
+    when(embedder.embedAll(anyList()))
+        .thenAnswer(
+            i -> {
+              List<String> texts = i.getArgument(0);
+              assertThat(texts).hasSizeLessThanOrEqualTo(2 * VoiceLibrary.EMBED_BATCH);
+              return texts.stream().map(VoiceLibraryIntegrationTest::vector).toList();
+            })
+        .thenReturn(List.of());
+    library.seed(voices);
+    assertThat(library.reindex()).isEqualTo(VoiceLibrary.EMBED_BATCH);
+    assertThat(count("ko_embedding is not null")).isEqualTo(VoiceLibrary.EMBED_BATCH);
+  }
 }

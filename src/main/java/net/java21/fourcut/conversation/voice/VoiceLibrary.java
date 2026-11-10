@@ -40,6 +40,9 @@ public class VoiceLibrary {
   /** 찾기마다 받는 후보 수. 이미 다른 인물에 쓴 목소리를 건너뛰려고 넉넉히 받는다. */
   static final int CANDIDATES = 10;
 
+  /** 임베딩 요청 한 번에 넣는 목소리 수(검색 글은 두 배). */
+  static final int EMBED_BATCH = 4;
+
   /** 목록 한 줄 (voices.json). */
   record Entry(
       String id,
@@ -197,35 +200,38 @@ public class VoiceLibrary {
             .param("m", embedder.model())
             .query((rs, n) -> new Todo(rs.getString(1), rs.getString(2), rs.getString(3)))
             .list();
-    if (todo.isEmpty()) {
-      return 0;
-    }
-    List<String> texts = new ArrayList<>();
-    todo.forEach(
-        t -> {
-          texts.add(t.ko());
-          texts.add(t.en());
-        });
-    List<float[]> v = embedder.embedAll(texts);
-    if (v.size() != texts.size()) {
-      return 0;
-    }
     String s = Vectors.quote(schema.get());
-    for (int i = 0; i < todo.size(); i++) {
-      jdbc.sql(
-              "update voices set ko_embedding = cast(:ko as "
-                  + s
-                  + ".vector), en_embedding = cast(:en as "
-                  + s
-                  + ".vector), embedding_model = :m, updated_at = current_timestamp where voice_id"
-                  + " = :id")
-          .param("ko", Vectors.literal(v.get(2 * i)))
-          .param("en", Vectors.literal(v.get(2 * i + 1)))
-          .param("m", embedder.model())
-          .param("id", todo.get(i).id())
-          .update();
+    int done = 0;
+    // 한 번에 모두 보내면 임베딩 서버가 읽기 제한 시간(10초) 안에 답하지 못해 하나도 채우지 못한다. 몇 개씩 나눠 보내고, 실패한 묶음은 다음 주기에 다시 한다
+    for (int from = 0; from < todo.size(); from += EMBED_BATCH) {
+      List<Todo> batch = todo.subList(from, Math.min(from + EMBED_BATCH, todo.size()));
+      List<String> texts = new ArrayList<>();
+      batch.forEach(
+          t -> {
+            texts.add(t.ko());
+            texts.add(t.en());
+          });
+      List<float[]> v = embedder.embedAll(texts);
+      if (v.size() != texts.size()) {
+        continue;
+      }
+      for (int i = 0; i < batch.size(); i++) {
+        jdbc.sql(
+                "update voices set ko_embedding = cast(:ko as "
+                    + s
+                    + ".vector), en_embedding = cast(:en as "
+                    + s
+                    + ".vector), embedding_model = :m, updated_at = current_timestamp where"
+                    + " voice_id = :id")
+            .param("ko", Vectors.literal(v.get(2 * i)))
+            .param("en", Vectors.literal(v.get(2 * i + 1)))
+            .param("m", embedder.model())
+            .param("id", batch.get(i).id())
+            .update();
+      }
+      done += batch.size();
     }
-    return todo.size();
+    return done;
   }
 
   /**
