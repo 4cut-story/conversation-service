@@ -254,20 +254,26 @@ public record ComicScript(
           java.util.Objects.toString(p.scene(), "")
               + ", "
               + java.util.Objects.toString(p.setting(), "");
+      java.util.Optional<Motion> fromSetting =
+          Motion.fallback(p.setting()).filter(f -> f != Motion.BREEZE);
       java.util.Optional<Motion> fill =
-          Motion.fallback(p.setting())
-              .or(
-                  () ->
-                      Motion.BREEZE.fits(background)
-                          ? java.util.Optional.of(Motion.BREEZE)
-                          : java.util.Optional.empty());
-      // 물결은 배경(setting)에 물이 있을 때만 쓴다. 장면 문장의 waves(손 흔들기)·water(물병)에 걸려 옥상 밤하늘
-      // 컷에 물결을 넣으면 하늘이 회색으로 바뀌어 어긋남 검사에서 빠진다(FR-049)
+          fromSetting.or(
+              () ->
+                  Motion.BREEZE.fits(background)
+                      ? java.util.Optional.of(Motion.BREEZE)
+                      : java.util.Optional.empty());
+      // 배경(setting)에 비·눈·꽃잎·불빛·물·별이 있으면 콘티가 고른 움직임보다 그것을 먼저 쓴다. 별이 가득한 옥상
+      // 밤하늘 컷에 콘티가 바람·물결을 고르자 하늘이 회색으로 다시 그려져 어긋남 검사에서 빠졌다(FR-049).
+      // 물결은 배경에 물이 있을 때만 쓴다(장면 문장의 waves·water에 걸리지 않게)
       String where =
           m.isPresent() && m.get() == Motion.SHIMMER
               ? java.util.Objects.toString(p.setting(), "")
               : background;
-      if (m.isPresent() && kept < Motion.MAX_PER_COMIC && m.get().fits(where)) {
+      if (fromSetting.isPresent() && p.motion() != null && kept < Motion.MAX_PER_COMIC) {
+        kept++;
+        String code = fromSetting.get().code();
+        out.add(code.equals(p.motion()) ? p : p.withMotion(code));
+      } else if (m.isPresent() && kept < Motion.MAX_PER_COMIC && m.get().fits(where)) {
         kept++;
         out.add(p.motion().equals(m.get().code()) ? p : p.withMotion(m.get().code()));
       } else if (p.motion() != null && kept < Motion.MAX_PER_COMIC && fill.isPresent()) {

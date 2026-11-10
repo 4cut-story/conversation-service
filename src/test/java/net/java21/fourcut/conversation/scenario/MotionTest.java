@@ -35,7 +35,8 @@ class MotionTest {
   }
 
   @Test
-  @DisplayName("FR-013·049: 콘티 움직임이 맞지 않으면 배경 낱말로 고르고, 없으면 breeze로 모든 컷이 움직인다. 물결은 배경에 물이 있을 때만")
+  @DisplayName(
+      "FR-013·049: 콘티 움직임이 맞지 않으면 배경 낱말로 고르고, 없으면 breeze로 모든 컷이 움직인다. 물결은 배경에 물이 있을 때만, 배경 낱말이 콘티 선택보다 먼저")
   void limits() {
     ComicScript script =
         new ComicScript(
