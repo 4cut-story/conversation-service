@@ -129,6 +129,16 @@ class SpeakHandler implements StepHandler {
           x -> {
             out.put(c.speaker(), x.id());
             taken.add(x.id());
+            // 벡터로 골랐는지(distance) 등록 순으로 골랐는지(null) 확인하려고 남긴다. 인물 설명은 남기지 않는다
+            log.info(
+                "목소리 배정: speaker={} gender={} age={} voice={} distance={}",
+                c.speaker(),
+                SpeechCast.gender(c),
+                SpeechCast.ageGroup(c),
+                x.id(),
+                x.distance() == null
+                    ? "없음"
+                    : String.format(java.util.Locale.ROOT, "%.3f", x.distance()));
           });
     }
     return out;
