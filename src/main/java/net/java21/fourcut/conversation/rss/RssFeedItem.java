@@ -68,6 +68,12 @@ class RssFeedItem extends BaseEntity {
     this.conversationId = conversationId;
   }
 
+  /** 만들지 않고 건너뛴다 (칼럼·사설·인터뷰 등). */
+  void skipped(String reason) {
+    this.status = Status.SKIPPED;
+    this.reason = cut(reason);
+  }
+
   /** 최근 기사와 비슷해서 건너뛴다. */
   void similar(String reason) {
     this.status = Status.SIMILAR;

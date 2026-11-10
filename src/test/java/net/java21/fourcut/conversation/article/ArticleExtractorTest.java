@@ -101,6 +101,24 @@ class ArticleExtractorTest {
   }
 
   @Test
+  @DisplayName("004 FR-069: 칼럼·사설·인터뷰·사진·영상 기사는 본문을 읽기 전에 만들지 않는다고 알린다")
+  void opinion() {
+    String html =
+        "<html><head><meta property=\"article:section\" content=\"오피니언\"></head><body><article><p>"
+            + PARAGRAPH
+            + "</p></article></body></html>";
+    assertThatThrownBy(
+            () ->
+                ArticleExtractor.extract(
+                    "https://news.example.com/a/1",
+                    "news.example.com",
+                    html.getBytes(StandardCharsets.UTF_8)))
+        .isInstanceOf(ArticleException.class)
+        .extracting(e -> ((ArticleException) e).reason())
+        .isEqualTo(ArticleException.Reason.EXCLUDED);
+  }
+
+  @Test
   @DisplayName("기사로 만들기: 본문은 길이 한도에서 줄 경계로 자른다")
   void cutsLongBody() {
     StringBuilder body = new StringBuilder("<html><body><article>");

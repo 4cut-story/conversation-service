@@ -113,6 +113,9 @@ final class ArticleExtractor {
             site);
     String language =
         language(doc.selectFirst("html") == null ? "" : doc.selectFirst("html").attr("lang"));
+    if (ExcludedArticle.matches(title, url, meta(doc, "article:section"))) {
+      throw new ArticleException(ArticleException.Reason.EXCLUDED, "제외 기사");
+    }
     clean(doc);
     String text = body(doc);
     if (text.length() < MIN_CHARS) {

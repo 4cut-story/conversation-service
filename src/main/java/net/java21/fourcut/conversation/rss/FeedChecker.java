@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import net.java21.fourcut.conversation.article.Article;
 import net.java21.fourcut.conversation.article.ArticleException;
 import net.java21.fourcut.conversation.article.ArticleReader;
+import net.java21.fourcut.conversation.article.ExcludedArticle;
 import net.java21.fourcut.conversation.article.FeedDocument;
 import net.java21.fourcut.conversation.conversations.ConversationService;
 import org.slf4j.Logger;
@@ -35,6 +36,9 @@ class FeedChecker {
   static String similarReason(String title) {
     return "최근에 만든 기사와 주제가 비슷해서 건너뛰었어요" + (title == null ? "." : ": " + title);
   }
+
+  /** 칼럼·사설·인터뷰나 사진·영상 위주 기사라 건너뛴 이유 (004 FR-069). */
+  static final String EXCLUDED_REASON = "칼럼·사설·인터뷰나 사진·영상 위주 기사라 건너뛰었어요.";
 
   private static final Logger log = LoggerFactory.getLogger(FeedChecker.class);
 
@@ -174,6 +178,11 @@ class FeedChecker {
     if (item == null) {
       return false;
     }
+    if (ExcludedArticle.matches(entry.title(), entry.link(), null)) {
+      item.skipped(EXCLUDED_REASON);
+      items.save(item);
+      return false;
+    }
     try {
       Article article = reader.read(entry.link());
       float[] vector = similar.embed(article);
@@ -193,7 +202,11 @@ class FeedChecker {
               feed.getDialect(),
               article));
     } catch (ArticleException e) {
-      item.failed(e.userMessage());
+      if (e.reason() == ArticleException.Reason.EXCLUDED) {
+        item.skipped(EXCLUDED_REASON);
+      } else {
+        item.failed(e.userMessage());
+      }
     } catch (RuntimeException e) {
       log.warn("RSS 기사로 대화를 시작하지 못했다: feed={} link={}", feed.getId(), entry.link(), e);
       item.failed(START_FAILED);
