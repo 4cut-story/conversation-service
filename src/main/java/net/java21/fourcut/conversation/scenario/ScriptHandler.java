@@ -152,6 +152,7 @@ class ScriptHandler implements StepHandler {
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
             .withRoleCalls()
             .withCleanSummary()
+            .withCleanMood()
             .withConcept(concept)
             .withMotionLimits()
             .withAmbientLimits();

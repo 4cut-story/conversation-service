@@ -263,8 +263,8 @@ class SoundMatcherTest {
   }
 
   @Test
-  @DisplayName("FR-008c: 유사도 0.70보다 먼 장소 소리는 장면이 그 장소·소리를 말할 때만 쓴다 (햄버거 가게의 기계실 웅웅거림)")
-  void graySoundNeedsSceneWord() {
+  @DisplayName("FR-008c: 유사도 0.70보다 먼 장소 소리는 장면 문장이 그 장소·소리를 말해도 쓰지 않고 배경음악을 깐다 (공용실 형광등 웅웅에 환풍구)")
+  void graySoundNotUsed() {
     var hum = described("hhhhhhhhhhhhhhhhhhhhh", "기계실 웅웅거림", "", "기계실", "지하");
     var diner = described("ddddddddddddddddddddd", "식당 손님들 말소리", "", "식당");
     var piano = music("mmmmmmmmmmmmmmmmmmmmm");
@@ -275,17 +275,64 @@ class SoundMatcherTest {
             (q, n) -> List.of(),
             (q, n) -> List.of(new SoundMatcher.Scored(piano, 0.5)));
 
-    var kiosk =
-        matcher.match(
-            List.of(new SoundMatcher.Query("낮 햄버거 가게 안, 손님들이 웅성이는 소리", "burger shop", "")));
-    var restaurant =
-        matcher.match(List.of(new SoundMatcher.Query("저녁 식당 안, 손님들 말소리", "restaurant", "")));
-    var basement =
-        matcher.match(List.of(new SoundMatcher.Query("밤 지하 기계실, 낮게 웅웅거림", "basement", "")));
+    for (String scene :
+        List.of("낮 햄버거 가게 안, 손님들이 웅성이는 소리", "저녁 식당 안, 손님들 말소리", "밤 지하 기계실, 낮게 웅웅거림")) {
+      var picked = matcher.match(List.of(new SoundMatcher.Query(scene, "room", "")));
+      assertThat(picked.get(0).orElseThrow().publicId()).isEqualTo("mmmmmmmmmmmmmmmmmmmmm");
+    }
+  }
 
-    assertThat(kiosk.get(0).orElseThrow().music()).isTrue();
-    assertThat(restaurant.get(0).orElseThrow().publicId()).isEqualTo("ddddddddddddddddddddd");
-    assertThat(basement.get(0).orElseThrow().publicId()).isEqualTo("hhhhhhhhhhhhhhhhhhhhh");
+  @Test
+  @DisplayName("FR-008d: 맞는 장소 소리가 없는 컷에는 만화 분위기의 배경음악 한 곡을 이어 깐다")
+  void storyMoodMusic() {
+    var vent = described("vvvvvvvvvvvvvvvvvvvvv", "환풍구 웅웅", "", "사무실", "복도");
+    var sad = music("sssssssssssssssssssss");
+    var sad2 = music("ttttttttttttttttttttt");
+    List<String> asked = new ArrayList<>();
+    SoundMatcher matcher =
+        SoundMatcher.scored(
+            (q, n) -> List.of(new SoundMatcher.Scored(vent, 0.38)),
+            (mood, q, n) -> {
+              asked.add(mood + "|" + q);
+              return "SAD".equals(mood)
+                  ? List.of(new SoundMatcher.Scored(sad, 0.30), new SoundMatcher.Scored(sad2, 0.45))
+                  : List.of();
+            },
+            t -> Optional.of("SOLEMN"));
+    List<SoundMatcher.Query> panels =
+        List.of(
+            new SoundMatcher.Query("저녁 빌라 공용실 안, 형광등이 낮게 웅웅거리는 소리", "community room", ""),
+            new SoundMatcher.Query("저녁 빌라 공용실 안, 형광등이 낮게 웅웅거리는 소리", "community room", ""));
+
+    var picked = matcher.match(panels, 7, new SoundMatcher.Story("SAD", "세입자가 억울함을 털어놓는다."));
+
+    assertThat(picked)
+        .allSatisfy(p -> assertThat(p.orElseThrow().publicId()).isEqualTo("sssssssssssssssssssss"));
+    assertThat(asked).containsExactly("SAD|세입자가 억울함을 털어놓는다.");
+  }
+
+  @Test
+  @DisplayName("FR-008d: 분위기를 적지 않은 예전 콘티는 줄거리로 분위기를 짐작한다")
+  void guessedMood() {
+    var calm = music("ccccccccccccccccccccc");
+    List<String> moods = new ArrayList<>();
+    SoundMatcher matcher =
+        SoundMatcher.scored(
+            (q, n) -> List.of(),
+            (mood, q, n) -> {
+              moods.add(mood);
+              return List.of(new SoundMatcher.Scored(calm, 0.4));
+            },
+            t -> Optional.of("SAD"));
+
+    var picked =
+        matcher.match(
+            List.of(new SoundMatcher.Query("저녁 방 안, 조용함", "room", "")),
+            1,
+            new SoundMatcher.Story(null, "힘든 일을 털어놓는다."));
+
+    assertThat(picked.get(0).orElseThrow().publicId()).isEqualTo("ccccccccccccccccccccc");
+    assertThat(moods).containsExactly("SAD");
   }
 
   @Test
@@ -299,7 +346,5 @@ class SoundMatcherTest {
         .isPresent();
     assertThat(SoundMatcher.head("밤바다에 밀려오는 잔잔한 파도 소리")).isEqualTo("파도");
     assertThat(SoundMatcher.head("기계실 웅웅거림")).isEqualTo("웅웅거림");
-    assertThat(SoundMatcher.supported("밤 바닷가, 잔잔한 파도", waves)).isTrue();
-    assertThat(SoundMatcher.supported("", waves)).isFalse();
   }
 }

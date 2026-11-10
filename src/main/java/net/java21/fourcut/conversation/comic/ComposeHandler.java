@@ -196,7 +196,7 @@ class ComposeHandler implements StepHandler {
           LivePlayback.build(
               json,
               script,
-              sounds.match(queries(script), DrawHandler.seedOf(script)),
+              sounds.match(queries(script), DrawHandler.seedOf(script), story(script)),
               sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
               moving,
               wide,
@@ -315,6 +315,11 @@ class ComposeHandler implements StepHandler {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  /** 배경음악을 고를 만화 분위기: 콘티 mood와 줄거리 요약. */
+  static SoundMatcher.Story story(ComicScript script) {
+    return new SoundMatcher.Story(script.mood(), script.summary());
   }
 
   /** 컷별 배경음 질의: 소리 장면, 배경 문구의 첫 마디(장소), 대사. */

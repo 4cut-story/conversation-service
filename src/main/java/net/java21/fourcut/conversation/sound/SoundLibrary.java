@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.java21.fourcut.conversation.character.TextEmbedder;
 import net.java21.fourcut.conversation.error.ApiException;
 import net.java21.fourcut.conversation.error.ErrorCode;
+import net.java21.fourcut.conversation.scenario.StoryMood;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.support.Cursor;
 import net.java21.fourcut.conversation.support.CursorPage;
@@ -186,6 +187,49 @@ class SoundLibrary {
         .collect(
             java.util.stream.Collectors.collectingAndThen(
                 java.util.stream.Collectors.toList(), SoundMatcher::byRank));
+  }
+
+  /** 분위기 기준 글 임베딩. 처음 짐작할 때 한 번 만든다. */
+  private final AtomicReference<List<float[]>> moodAnchors = new AtomicReference<>();
+
+  /**
+   * 글(줄거리)과 가장 가까운 분위기({@link StoryMood} 이름). 분위기를 적지 않은 예전 콘티의 배경음악을 고를 때 쓴다. 임베딩을 쓸 수 없으면 빈 값.
+   */
+  Optional<String> guessMood(String text) {
+    if (text == null || text.isBlank()) {
+      return Optional.empty();
+    }
+    StoryMood[] moods = StoryMood.values();
+    List<float[]> anchors = moodAnchors.get();
+    if (anchors == null || anchors.size() != moods.length) {
+      anchors = embedder.embedAll(Arrays.stream(moods).map(StoryMood::anchor).toList());
+      if (anchors.size() != moods.length) {
+        return Optional.empty();
+      }
+      moodAnchors.set(anchors);
+    }
+    Optional<float[]> v = embedder.embed(text.strip());
+    if (v.isEmpty()) {
+      return Optional.empty();
+    }
+    int best = 0;
+    double bestScore = Double.NEGATIVE_INFINITY;
+    for (int i = 0; i < moods.length; i++) {
+      double score = dot(v.get(), anchors.get(i));
+      if (score > bestScore) {
+        best = i;
+        bestScore = score;
+      }
+    }
+    return Optional.of(moods[best].name());
+  }
+
+  private static double dot(float[] a, float[] b) {
+    double sum = 0;
+    for (int i = 0; i < Math.min(a.length, b.length); i++) {
+      sum += a[i] * b[i];
+    }
+    return sum;
   }
 
   /** 종류·카테고리별 수와 분위기별 수. 둘러보기 필터에 쓴다. */

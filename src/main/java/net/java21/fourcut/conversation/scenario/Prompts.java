@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-09.29";
+  static final String VERSION = "2026-11-10.30";
 
   private Prompts() {}
 
@@ -350,12 +350,20 @@ final class Prompts {
       대화]에서 있었던 일 전체를 3~4문장(250자 이내)으로 쓴다: 어떤 상황에서 시작해 무슨 일이 생겼고 어떻게 끝났는지. 인물은
       role 호칭으로만 부르고(예: "손녀가 할머니에게…") 실명·가명·화자 표시(A, B)·자리표({A})는 쓰지 않는다. 대화에 없는 일을
       지어 넣지 않고, 대사를 길게 옮기지 않는다. 대화와 같은 언어로, 맞춤법·띄어쓰기를 지켜 평서문(~다)으로 쓴다.
+
+      mood는 이야기 전체의 분위기 하나다. 라이브 모드에서 장면에 꼭 맞는 장소 소리가 없는 컷에 이 분위기의 배경음악을 깐다.
+      아래에서 하나만 고른다. 대화의 감정과 사정을 보고 고르고, 장소나 컨셉만 보고 고르지 않는다(억울하거나 힘든 처지를
+      털어놓으면 SAD, 끝이 다짐이라도 이야기 대부분이 무거우면 SAD나 SOLEMN).
+        · PEACEFUL 평온한 일상 · JOYFUL 기쁨·축하 · COMIC 웃긴 해프닝 · EXCITING 신나는 모험 · PARTY 떠들썩한 잔치
+        · ROMANTIC 설렘·사랑 · NOSTALGIC 추억·그리움 · LONELY 쓸쓸함·외로움 · SAD 슬픔·우울·억울함 · SOLEMN 엄숙한 다짐·이별
+        · TENSE 긴장·갈등 · MYSTERIOUS 수상함·비밀 · SCARY 공포 · EPIC 벅찬 승리·극복
       """;
 
   static final String SCRIPT_SCHEMA =
       """
-      {"type":"object","required":["title","summary","characters","props","places","panels","nameWarnings"],"properties":{
+      {"type":"object","required":["title","summary","mood","characters","props","places","panels","nameWarnings"],"properties":{
        "title":{"type":"string"},"summary":{"type":"string"},
+       "mood":{"type":"string","enum":["PEACEFUL","JOYFUL","COMIC","EXCITING","PARTY","ROMANTIC","NOSTALGIC","LONELY","SAD","SOLEMN","TENSE","MYSTERIOUS","SCARY","EPIC"]},
        "characters":{"type":"array","minItems":1,"items":{"type":"object",
         "required":["speaker","name","role","persona","look","bottom","shoes"],"properties":{"speaker":{"type":"string"},
          "name":{"type":"string"},"role":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"},
