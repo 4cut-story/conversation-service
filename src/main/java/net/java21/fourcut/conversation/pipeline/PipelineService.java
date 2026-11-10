@@ -251,7 +251,7 @@ public class PipelineService {
                 e.type(),
                 json.writeValueAsString(e.payload()),
                 now(),
-                priorityOf(conversation));
+                priorityOf(conversation, e.type()));
         boolean manual = e.type() == JobType.LLM && conversation.manualLlm();
         if (manual) {
           created.markManual();
@@ -390,7 +390,11 @@ public class PipelineService {
    * GPU 작업 우선순위. RSS 구독이 한꺼번에 만든 만화(뉴스 수십 편)는 사람이 만든 만화 뒤로 미룬다. 같은 차례면 먼저 넣은 작업부터라, 뉴스가 몰리면 사람이 만든
    * 만화가 그 뒤에서 수십 분을 기다렸다.
    */
-  static short priorityOf(ConversationInfo conversation) {
+  static short priorityOf(ConversationInfo conversation, JobType type) {
+    // 대사 읽기는 몇 초면 끝나는 마지막 GPU 작업이다. 낮은 순위로 두면 그림 뒤에서 기다리다 시간 초과로 소리 없이 넘어간다
+    if (type == JobType.SPEECH) {
+      return GpuJob.NORMAL;
+    }
     return conversation.fromFeed() ? GpuJob.LOW : GpuJob.NORMAL;
   }
 

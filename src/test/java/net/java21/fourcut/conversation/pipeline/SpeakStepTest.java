@@ -85,9 +85,18 @@ class SpeakStepTest {
   @Test
   @DisplayName("RSS 구독이 만든 만화의 GPU 작업은 사람이 만든 만화 뒤로 미룬다")
   void feedComicsWaitBehindPeople() {
-    assertThat(PipelineService.priorityOf(conversation)).isEqualTo(GpuJob.NORMAL);
+    assertThat(PipelineService.priorityOf(conversation, JobType.IMAGE)).isEqualTo(GpuJob.NORMAL);
     ConversationInfo feed =
         new ConversationInfo(2L, "c2", "u", "ko", 0, null, null, false, null, true, true);
-    assertThat(PipelineService.priorityOf(feed)).isEqualTo(GpuJob.LOW);
+    assertThat(PipelineService.priorityOf(feed, JobType.IMAGE)).isEqualTo(GpuJob.LOW);
+    assertThat(PipelineService.priorityOf(feed, JobType.LLM)).isEqualTo(GpuJob.LOW);
+  }
+
+  @Test
+  @DisplayName("FR-050: RSS 구독 만화의 대사 읽기는 그림 뒤에서 시간 초과되지 않게 보통 순위로 넣는다")
+  void feedSpeechKeepsNormalPriority() {
+    ConversationInfo feed =
+        new ConversationInfo(2L, "c2", "u", "ko", 0, null, null, false, null, true, true);
+    assertThat(PipelineService.priorityOf(feed, JobType.SPEECH)).isEqualTo(GpuJob.NORMAL);
   }
 }
