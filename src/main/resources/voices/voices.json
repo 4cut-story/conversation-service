@@ -1,0 +1,686 @@
+[
+  {
+    "id": "f-child-bright",
+    "name": "하늘",
+    "gender": "female",
+    "ageGroup": "CHILD",
+    "dialect": null,
+    "tone": "씩씩한 꼬마",
+    "traits": [
+      "아주 높음",
+      "맑음",
+      "밝음",
+      "억양 풍부",
+      "호기심",
+      "보통 속도",
+      "어린 여자아이"
+    ],
+    "description": "일곱 살쯤 된 여자아이 목소리로, 아주 높고 맑으며 억양이 크게 오르내리고 말은 보통 빠르기다.",
+    "searchText": "아주 높고 맑은 어린 여자아이 목소리로, 음이 크게 오르내려 생기 있고 표정이 풍부하게 들린다. 말 속도는 너무 빠르지 않아 아이 말투인데도 또렷하게 알아듣기 쉽다. 호기심 많고 씩씩한 유치원생이나 초등학교 저학년 딸, 동생, 그림책 속 꼬마 주인공에 잘 맞는다. 일상 만화, 그림책, 수채화풍 동화, 작고 귀여운 동물 캐릭터에도 어울린다. 어른 여성, 엄한 인물, 사극이나 무협의 무게 있는 역할에는 맞지 않는다.",
+    "searchTextEn": "A very high, clear and bright little girl's voice with lively, wide-ranging intonation, spoken at a moderate pace so it stays easy to understand. Sounds like a curious, cheerful kindergarten or early elementary school girl. Fits a little daughter, younger sister, child hero of a picture book, or a cute small animal character. Good for everyday comics, children's picture books and soft watercolor stories. Not suitable for adult women, stern characters, or serious historical or martial-arts roles.",
+    "roles": [
+      "유치원생 여자아이",
+      "어린 딸",
+      "막내 동생",
+      "그림책 꼬마 주인공",
+      "귀여운 아기 동물"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "WATERCOLOR",
+      "ANIMALS"
+    ],
+    "f0Hz": 413.1,
+    "rate": 5.18
+  },
+  {
+    "id": "f-young-bright",
+    "name": "서연",
+    "gender": "female",
+    "ageGroup": "YOUNG",
+    "dialect": null,
+    "tone": "밝은 대학생",
+    "traits": [
+      "높음",
+      "맑고 경쾌함",
+      "또렷함",
+      "억양 풍부",
+      "활발함",
+      "20대 여성"
+    ],
+    "description": "20대 여성으로, 높고 밝은 목소리에 억양이 크게 움직이며 발음이 또렷하고 보통 빠르기로 말한다.",
+    "searchText": "20대 여성의 높고 밝은 목소리로, 음의 오르내림이 커서 생기 있고 표정이 풍부하다. 발음이 또렷하고 말 속도는 보통이라 대사가 깔끔하게 들린다. 장난스러운 유나보다 더 맑고 단정하며, 차분한 지원보다 훨씬 높고 활발하다. 밝은 여대생, 신입 사원, 카페 아르바이트생, 쾌활한 여자 주인공, 진행자에 잘 맞는다. 일상 만화와 그림책 내레이션, 밝은 동물 캐릭터에 어울리며 나이 든 여성, 엄한 인물, 사극의 위엄 있는 역할에는 맞지 않는다.",
+    "searchTextEn": "A bright, high-pitched young woman in her twenties with crisp pronunciation and lively, expressive intonation at a moderate pace. Clearer and neater than the playful Yuna, and much higher and livelier than the calm Jiwon. Fits a cheerful college girl, young office worker, cafe part-timer, upbeat female lead, or a friendly host. Good for everyday comics, picture book narration and bright animal characters. Not suitable for older women, stern characters or dignified historical roles.",
+    "roles": [
+      "밝은 여대생",
+      "신입 사원",
+      "카페 아르바이트생",
+      "쾌활한 여주인공",
+      "명랑한 진행자",
+      "친한 언니"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "ANIMALS"
+    ],
+    "f0Hz": 339.4,
+    "rate": 5.29
+  },
+  {
+    "id": "f-young-calm",
+    "name": "지원",
+    "gender": "female",
+    "ageGroup": "YOUNG",
+    "dialect": null,
+    "tone": "차분한 직장인",
+    "traits": [
+      "중저음",
+      "숨소리",
+      "부드러움",
+      "차분함",
+      "안정됨",
+      "보통 속도",
+      "20대 여성"
+    ],
+    "description": "20대 후반 여성으로, 여성치고 낮은 편의 부드러운 목소리에 숨소리가 섞여 있으며 말은 보통 빠르기다.",
+    "searchText": "20대 후반 여성의 낮은 편의 부드러운 목소리로, 숨소리가 섞여 조용하고 편안하게 들린다. 들뜨지 않고 차분하며, 말 속도는 느리지 않고 보통이다. 밝고 높은 서연이나 유나와 달리 낮고 가라앉은 톤이라 어른스러운 분위기를 준다. 차분한 직장인 여성, 상담사, 심야 라디오 진행자, 조용한 언니, 사려 깊은 여자 주인공에 잘 맞는다. 일상 만화와 수채화풍의 잔잔한 이야기, 그림책 내레이션에 어울리며 아이, 수다스럽고 들뜬 인물, 무협의 거친 역할에는 맞지 않는다.",
+    "searchTextEn": "A calm young woman in her late twenties with a soft, slightly low voice and audible breathiness, quiet and soothing, speaking at a normal pace. Lower and more settled than the bright Seoyeon or Yuna, giving a mature, composed feel. Fits a calm female office worker, counselor, late-night radio host, quiet older sister, or thoughtful heroine. Good for everyday comics, gentle watercolor stories and picture book narration. Not suitable for children, hyper chatty characters or rough martial-arts roles.",
+    "roles": [
+      "차분한 직장인 여성",
+      "상담사",
+      "라디오 진행자",
+      "조용한 언니",
+      "사려 깊은 여주인공",
+      "간호사"
+    ],
+    "concepts": [
+      "DAILY",
+      "WATERCOLOR",
+      "PICTURE_BOOK"
+    ],
+    "f0Hz": 192.7,
+    "rate": 5.67
+  },
+  {
+    "id": "f-young-playful",
+    "name": "유나",
+    "gender": "female",
+    "ageGroup": "YOUNG",
+    "dialect": null,
+    "tone": "장난꾸러기 친구",
+    "traits": [
+      "높음",
+      "톡톡 튐",
+      "콧소리",
+      "귀여움",
+      "장난기",
+      "보통 속도",
+      "20대 여성"
+    ],
+    "description": "20대 초반 여성으로, 높고 귀여운 콧소리가 섞인 장난스러운 목소리지만 속도와 억양 폭은 보통이다.",
+    "searchText": "20대 초반 여성의 높고 귀여운 목소리로, 살짝 콧소리가 섞여 장난스럽고 애교 있게 들린다. 말 속도는 보통이고 억양 폭은 서연보다 좁아 크게 출렁이기보다 일정하게 톡톡 튄다. 맑고 단정한 서연에 비해 더 귀엽고 장난기 있는 느낌이다. 장난꾸러기 여자 친구, 애교 많은 여동생, 수다스러운 친구, 귀여운 마스코트, 작은 동물 캐릭터에 잘 맞는다. 일상 만화와 동물 만화, 그림책에 어울리며 진지한 직장인, 엄한 인물, 사극이나 신문 풍자의 무게 있는 역할에는 맞지 않는다.",
+    "searchTextEn": "A high, cute young woman in her early twenties with a slightly nasal, playful and teasing tone, at a moderate pace with a narrower pitch range than Seoyeon. Cuter and more mischievous than the clear, neat Seoyeon. Fits a playful girlfriend or female friend, a cute younger sister, a chatty friend, a cute animal mascot or small animal character. Good for everyday comics, animal comics and picture books. Not suitable for serious office workers, stern figures, or weighty historical or newspaper satire roles.",
+    "roles": [
+      "장난꾸러기 여자 친구",
+      "애교 많은 여동생",
+      "수다쟁이 친구",
+      "귀여운 마스코트",
+      "작은 동물 캐릭터"
+    ],
+    "concepts": [
+      "DAILY",
+      "ANIMALS",
+      "PICTURE_BOOK"
+    ],
+    "f0Hz": 307.7,
+    "rate": 5.64
+  },
+  {
+    "id": "f-middle-warm",
+    "name": "미경",
+    "gender": "female",
+    "ageGroup": "MIDDLE",
+    "dialect": null,
+    "tone": "따뜻한 엄마",
+    "traits": [
+      "따뜻함",
+      "부드러움",
+      "약간 높음",
+      "밝음",
+      "다정함",
+      "보통 속도",
+      "40대 여성"
+    ],
+    "description": "40대 여성으로, 따뜻하고 다정한 엄마 목소리지만 생각보다 약간 높고 밝은 톤으로 보통 빠르기로 말한다.",
+    "searchText": "40대 여성의 따뜻하고 다정한 목소리로, 낮게 깔리기보다 약간 높고 밝은 톤이라 친근하게 들린다. 억양이 적당히 움직이고 말 속도는 보통이라 편안하다. 높고 날카로우며 빠른 혜숙과 달리 부드럽고 상냥하다. 다정한 엄마, 동네 가게 아주머니, 친절한 이웃, 담임 선생님, 반찬 가게 사장님에 잘 맞는다. 일상 만화, 그림책, 수채화풍의 따뜻한 이야기에 어울리며 엄한 인물, 노인, 무협의 거친 역할에는 맞지 않는다.",
+    "searchTextEn": "A warm, kind middle-aged woman in her forties whose voice is a little higher and brighter than a typical low mother voice, friendly and easygoing at a normal pace. Softer and gentler than the sharp, fast Hyesuk. Fits a loving mother, middle-aged woman running a neighborhood shop, kind neighbor, homeroom teacher, or friendly shop owner. Good for everyday comics, picture books and warm watercolor stories. Not suitable for stern characters, elderly women or rough martial-arts roles.",
+    "roles": [
+      "다정한 엄마",
+      "동네 가게 아주머니",
+      "친절한 이웃",
+      "담임 선생님",
+      "반찬 가게 사장님"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "WATERCOLOR"
+    ],
+    "f0Hz": 263.2,
+    "rate": 5.55
+  },
+  {
+    "id": "f-middle-stern",
+    "name": "혜숙",
+    "gender": "female",
+    "ageGroup": "MIDDLE",
+    "dialect": null,
+    "tone": "엄한 선생님",
+    "traits": [
+      "높음",
+      "날카로움",
+      "빠름",
+      "단호함",
+      "또박또박",
+      "깐깐함",
+      "50대 여성"
+    ],
+    "description": "50대 여성으로, 높고 날카로운 목소리로 빠르고 또박또박 끊어 말하는 깐깐한 톤이다.",
+    "searchText": "50대 여성의 높고 날카로운 목소리로, 빠르게 또박또박 끊어 말해 깐깐하고 단호하게 들린다. 낮고 묵직한 엄함이 아니라 높은 음으로 쏘아붙이는 듯한 날 선 느낌이다. 따뜻하고 부드러운 미경과 달리 차갑고 다그치는 분위기다. 깐깐한 여자 선생님, 엄한 교감 선생님, 잔소리 많은 시어머니, 까다로운 여자 상사, 따지는 아주머니에 잘 맞는다. 일상 만화와 신문 풍자 만화에 어울리며 다정한 엄마, 차분한 내레이션, 그림책이나 수채화풍의 잔잔한 이야기에는 맞지 않는다.",
+    "searchTextEn": "A middle-aged woman in her fifties with a high, sharp voice, speaking fast in clipped, precise phrases that sound strict and no-nonsense. Her sternness comes from a sharp, high, scolding tone rather than a low heavy one, colder and more pushy than the warm Migyeong. Fits a strict female teacher or vice principal, a nagging mother-in-law, a demanding female boss, or a fussy middle-aged woman complaining. Good for everyday comics and newspaper-style satire. Not suitable for a gentle mother, calm narration, picture books or soft watercolor stories.",
+    "roles": [
+      "깐깐한 여자 선생님",
+      "엄한 교감 선생님",
+      "잔소리 시어머니",
+      "까다로운 여자 상사",
+      "따지는 아주머니"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER"
+    ],
+    "f0Hz": 335.5,
+    "rate": 6.29
+  },
+  {
+    "id": "f-old-warm",
+    "name": "옥순",
+    "gender": "female",
+    "ageGroup": "OLD",
+    "dialect": null,
+    "tone": "다정한 할머니",
+    "traits": [
+      "낮음",
+      "부드러움",
+      "다정함",
+      "느림",
+      "잔잔함",
+      "약간 허스키",
+      "할머니"
+    ],
+    "description": "70대 할머니로, 낮고 부드러운 목소리에 억양이 잔잔하며 천천히 다정하게 말한다.",
+    "searchText": "70대 할머니의 낮고 부드러운 목소리로, 살짝 허스키하며 억양이 크게 오르내리지 않아 잔잔하고 편안하다. 말이 느려 여유롭고 다정하게 들린다. 높고 째지는 금자와 달리 조용하고 온화하며, 사투리 없이 표준어로 말한다. 다정한 외할머니, 옛이야기를 들려주는 할머니, 시골 마을 할머니, 한복 입은 인자한 노부인, 손주를 돌보는 할머니에 잘 맞는다. 그림책, 수채화풍 이야기, 일상 만화, 사극의 온화한 노부인에 어울리며 젊은 여성, 큰 소리로 다그치는 역할, 빠르고 활발한 인물에는 맞지 않는다.",
+    "searchTextEn": "A grandmother in her seventies with a low, soft, slightly husky voice and calm, even intonation, speaking slowly and kindly in standard Korean. Quieter and gentler than the shrill, loud Geumja. Fits a kind grandmother, a storytelling grandma, an old woman in a country village, a gentle elderly lady in hanbok, or a grandmother caring for grandchildren. Good for picture books, watercolor stories, everyday comics and gentle Joseon-era elders. Not suitable for young women, loud scolding roles or fast energetic characters.",
+    "roles": [
+      "다정한 할머니",
+      "옛이야기 할머니",
+      "시골 할머니",
+      "인자한 노부인",
+      "손주 돌보는 할머니"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "WATERCOLOR",
+      "JOSEON"
+    ],
+    "f0Hz": 156.5,
+    "rate": 4.58
+  },
+  {
+    "id": "f-old-gruff",
+    "name": "금자",
+    "gender": "female",
+    "ageGroup": "OLD",
+    "dialect": null,
+    "tone": "깐깐한 할머니",
+    "traits": [
+      "매우 높음",
+      "째지는 소리",
+      "큰 목소리",
+      "날카로움",
+      "잔소리",
+      "깐깐함",
+      "할머니"
+    ],
+    "description": "80대 할머니로, 매우 높고 째지는 큰 목소리로 외치듯 말하는 깐깐한 톤이다.",
+    "searchText": "80대 할머니의 매우 높고 째지는 목소리로, 소리를 지르듯 크게 말해 날카롭고 극적으로 들린다. 낮고 걸걸한 쉰 목소리라기보다 높은 음으로 쩌렁쩌렁 외치는 느낌이라 만화적인 과장이 있다. 낮고 잔잔한 옥순과 정반대로 시끄럽고 깐깐하다. 잔소리 많은 할머니, 성질 급한 시어머니, 시장에서 호통치는 할머니, 심술궂은 노파, 동화 속 마귀할멈에 잘 맞는다. 일상 만화의 코믹한 장면, 신문 풍자, 동물 우화의 심술궂은 캐릭터에 어울리며 다정한 할머니, 잔잔한 내레이션, 수채화풍 이야기에는 맞지 않는다.",
+    "searchTextEn": "A grandmother in her eighties with a very high, shrill, shouting voice that sounds sharp, loud and cartoonish rather than low and raspy. The opposite of the quiet, gentle Oksun. Fits a fussy nagging grandmother, a hot-tempered mother-in-law, an old woman yelling at the market, a grumpy old hag, or a fairy-tale witch. Good for comic everyday scenes, newspaper satire, and mean characters in animal fables. Not suitable for a kind grandmother, calm narration or soft watercolor stories.",
+    "roles": [
+      "잔소리 할머니",
+      "성질 급한 시어머니",
+      "시장 호통 할머니",
+      "심술궂은 노파",
+      "마귀할멈"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER",
+      "ANIMALS"
+    ],
+    "f0Hz": 379.9,
+    "rate": 5.37
+  },
+  {
+    "id": "f-middle-gyeongsang",
+    "name": "영자",
+    "gender": "female",
+    "ageGroup": "MIDDLE",
+    "dialect": "GYEONGSANG",
+    "tone": "경상도 아주머니",
+    "traits": [
+      "매우 높음",
+      "째지는 소리",
+      "큰 목소리",
+      "느림",
+      "억셈",
+      "경상도",
+      "50대 여성"
+    ],
+    "description": "50대 부산 아주머니로, 매우 높고 쩌렁쩌렁한 목소리에 경상도 말투를 쓰며 말은 느리고 늘어진다.",
+    "searchText": "50대 경상도 아주머니의 매우 높고 쩌렁쩌렁한 목소리로, 외치듯 날카롭게 울려 만화적으로 과장되게 들린다. 부산 사투리를 쓰지만 말이 빠르지 않고 느리게 늘어지며, 음 높이가 높은 채로 크게 변하지 않는다. 같은 나이대의 미경이나 혜숙보다 훨씬 높고 시끄러우며 사투리가 뚜렷하다. 시장 생선 가게 아주머니, 억척스러운 부산 엄마, 목청 큰 동네 아지매, 식당 사장님, 코믹한 조연에 잘 맞는다. 일상 만화의 코믹한 장면과 신문 풍자에 어울리며 차분한 표준어 인물, 잔잔한 내레이션, 그림책이나 수채화풍 이야기에는 맞지 않는다.",
+    "searchTextEn": "A middle-aged woman in her fifties from Busan with Gyeongsang-do dialect and a very high, shrill, booming voice that sounds like shouting and is cartoonishly exaggerated. She speaks slowly and drags her words rather than talking fast, with the pitch staying high, and she is much higher, louder and more dialect-heavy than Migyeong or Hyesuk. Fits a fish seller at the market, a tough Busan mother, a loud neighborhood auntie, a restaurant owner, or a comic side character. Good for comic everyday scenes and newspaper satire. Not suitable for calm standard-Korean characters, soft narration, picture books or watercolor stories.",
+    "roles": [
+      "시장 생선 가게 아주머니",
+      "억척스러운 부산 엄마",
+      "목청 큰 동네 아지매",
+      "식당 사장님",
+      "코믹 조연"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER"
+    ],
+    "f0Hz": 458.3,
+    "rate": 4.0
+  },
+  {
+    "id": "f-old-jeolla",
+    "name": "말순",
+    "gender": "female",
+    "ageGroup": "OLD",
+    "dialect": "JEOLLA",
+    "tone": "전라도 할머니",
+    "traits": [
+      "정겨움",
+      "따뜻함",
+      "중간 높이",
+      "억양 평평",
+      "보통 속도",
+      "전라도",
+      "할머니"
+    ],
+    "description": "70대 전라도 할머니로, 정겹고 따뜻한 목소리에 전라도 말투를 쓰지만 억양은 비교적 평평하고 말은 보통 빠르기다.",
+    "searchText": "70대 전라도 할머니의 정겹고 따뜻한 목소리로, 할머니치고 낮지 않은 중간 높이에 억양 폭이 좁아 노래하듯 출렁이기보다 고르게 들린다. 말 속도는 보통이고 전라도 사투리 어미가 정감을 더한다. 낮고 느린 옥순보다 높고 덜 느리며, 째지는 금자보다 훨씬 부드럽다. 전라도 시골 할머니, 인심 좋은 장터 할머니, 손주 반기는 외할머니, 국밥집 할머니, 마을 어르신에 잘 맞는다. 일상 만화, 그림책, 수채화풍의 정겨운 시골 이야기에 어울리며 표준어가 필요한 역할, 젊은 인물, 날카롭게 다그치는 역할에는 맞지 않는다.",
+    "searchTextEn": "A grandmother in her seventies speaking Jeolla-do dialect with a warm, homey voice at a medium pitch, with fairly even intonation rather than a strong sing-song, at a normal pace. Higher and less slow than the low, slow Oksun, and much softer than the shrill Geumja. Fits a countryside grandmother from Jeolla, a generous old woman at the market, a grandmother welcoming her grandchildren, an old lady running a soup restaurant, or a village elder. Good for everyday comics, picture books and warm rural watercolor stories. Not suitable for roles needing standard Korean, young characters or sharp scolding roles.",
+    "roles": [
+      "전라도 시골 할머니",
+      "장터 할머니",
+      "외할머니",
+      "국밥집 할머니",
+      "마을 어르신"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "WATERCOLOR"
+    ],
+    "f0Hz": 242.8,
+    "rate": 5.41
+  },
+  {
+    "id": "m-child-bright",
+    "name": "도윤",
+    "gender": "male",
+    "ageGroup": "CHILD",
+    "dialect": null,
+    "tone": "개구쟁이 꼬마",
+    "traits": [
+      "높음",
+      "아주 빠름",
+      "큰 목소리",
+      "씩씩함",
+      "장난기",
+      "어린 남자아이"
+    ],
+    "description": "여덟 살쯤 된 남자아이로, 높고 씩씩한 목소리에 말이 아주 빠르다.",
+    "searchText": "여덟 살쯤 된 남자아이의 높고 씩씩한 목소리로, 말이 아주 빨라 들뜨고 정신없이 활발하게 들린다. 하늘보다 음이 낮고 억양 폭이 좁은 대신 훨씬 빠르게 쏟아낸다. 빠른 탓에 발음이 조금 뭉개질 때가 있다. 개구쟁이 남자아이, 장난꾸러기 아들, 초등학생 남동생, 축구 좋아하는 꼬마, 동물 만화의 까불이 새끼 동물에 잘 맞는다. 일상 만화, 그림책, 동물 캐릭터에 어울리며 어른 남성, 차분하고 또박또박한 설명, 사극이나 무협의 무게 있는 역할에는 맞지 않는다.",
+    "searchTextEn": "A high, energetic young boy around eight years old who talks very fast, sounding excited, loud and restless. Lower in pitch and less melodic than the girl Haneul, but much faster, and the speed sometimes blurs his pronunciation. Fits a mischievous little boy, a naughty son, an elementary school younger brother, a kid who loves soccer, or a hyper baby animal in an animal comic. Good for everyday comics, picture books and animal characters. Not suitable for adult men, calm clear explanations, or serious historical or martial-arts roles.",
+    "roles": [
+      "개구쟁이 남자아이",
+      "장난꾸러기 아들",
+      "초등학생 남동생",
+      "씩씩한 꼬마",
+      "까불이 새끼 동물"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "ANIMALS"
+    ],
+    "f0Hz": 305.9,
+    "rate": 7.08
+  },
+  {
+    "id": "m-young-bright",
+    "name": "준호",
+    "gender": "male",
+    "ageGroup": "YOUNG",
+    "dialect": null,
+    "tone": "밝은 대학생",
+    "traits": [
+      "약간 높음",
+      "맑음",
+      "또렷함",
+      "억양 풍부",
+      "자신감",
+      "약간 빠름",
+      "20대 남성"
+    ],
+    "description": "20대 남성으로, 남성치고 약간 높고 맑은 목소리에 억양이 생기 있고 또렷하게 조금 빠르게 말한다.",
+    "searchText": "20대 남성의 약간 높고 맑은 목소리로, 억양이 크게 움직여 밝고 자신감 있게 들린다. 발음이 또렷하고 말 속도는 보통보다 조금 빠르다. 낮고 차분한 현우보다 밝고 생기 있으며, 장난스러운 태민보다 단정하고 믿음직하다. 밝은 남자 대학생, 성실한 신입 사원, 상큼한 남자 주인공, 운동부 선배, 뉴스 리포터에 잘 맞는다. 일상 만화, 신문 만화의 젊은 기자나 화자, 그림책 내레이션에 어울리며 노인, 묵직하고 엄한 인물, 무협의 거친 고수 역할에는 맞지 않는다.",
+    "searchTextEn": "A young man in his twenties with a slightly high, clear tenor voice and lively, expressive intonation, speaking crisply and a bit fast, upbeat and confident. Brighter than the low, calm Hyunwoo and neater and more reliable than the playful Taemin. Fits a cheerful male college student, a diligent new office worker, a fresh young male lead, a sports club senior, or a young reporter. Good for everyday comics, newspaper-style comics as a young reporter or narrator, and picture book narration. Not suitable for old men, heavy stern figures or rough martial-arts masters.",
+    "roles": [
+      "밝은 남자 대학생",
+      "신입 사원",
+      "남자 주인공",
+      "운동부 선배",
+      "젊은 기자"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER",
+      "PICTURE_BOOK"
+    ],
+    "f0Hz": 147.3,
+    "rate": 6.07
+  },
+  {
+    "id": "m-young-calm",
+    "name": "현우",
+    "gender": "male",
+    "ageGroup": "YOUNG",
+    "dialect": null,
+    "tone": "차분한 직장인",
+    "traits": [
+      "중저음",
+      "부드러움",
+      "차분함",
+      "안정감",
+      "약간 빠름",
+      "20대 남성"
+    ],
+    "description": "20대 후반 남성으로, 낮고 부드러운 차분한 목소리지만 말은 보통보다 조금 빠르다.",
+    "searchText": "20대 후반 남성의 낮고 부드러운 목소리로, 억양이 크게 튀지 않아 차분하고 안정감 있게 들린다. 말 속도는 느리지 않고 보통보다 조금 빠른 편이라 담담하고 깔끔하다. 높고 밝은 준호나 가벼운 태민보다 낮고 점잖다. 차분한 직장인, 믿음직한 남자 친구, 조용한 선배, 의사, 상담하는 남자 주인공에 잘 맞는다. 일상 만화, 수채화풍의 잔잔한 이야기, 신문 만화의 정돈된 화자에 어울리며 아이, 노인, 들뜨고 시끄러운 인물에는 맞지 않는다.",
+    "searchTextEn": "A young man in his late twenties with a low, soft, smooth baritone voice and steady intonation, calm and reassuring, speaking at a slightly brisk pace rather than slowly. Lower and more composed than the bright Junho or the light, playful Taemin. Fits a calm office worker, a dependable boyfriend, a quiet senior colleague, a doctor, or a gentle male lead. Good for everyday comics, soft watercolor stories and a composed narrator in newspaper-style comics. Not suitable for children, old men or loud, excitable characters.",
+    "roles": [
+      "차분한 직장인",
+      "믿음직한 남자 친구",
+      "조용한 선배",
+      "의사",
+      "다정한 남자 주인공"
+    ],
+    "concepts": [
+      "DAILY",
+      "WATERCOLOR",
+      "NEWSPAPER"
+    ],
+    "f0Hz": 111.3,
+    "rate": 6.1
+  },
+  {
+    "id": "m-young-playful",
+    "name": "태민",
+    "gender": "male",
+    "ageGroup": "YOUNG",
+    "dialect": null,
+    "tone": "장난꾸러기 친구",
+    "traits": [
+      "높음",
+      "가벼움",
+      "빠름",
+      "능청",
+      "장난기",
+      "억양 풍부",
+      "20대 남성"
+    ],
+    "description": "20대 초반 남성으로, 남성치고 높고 가벼운 목소리에 억양이 크게 움직이며 빠르고 능청스럽게 말한다.",
+    "searchText": "20대 초반 남성의 높고 가벼운 목소리로, 음이 크게 오르내리고 말이 빨라 능청스럽고 장난기 있게 들린다. 또렷하고 단정한 준호보다 더 높고 경박하며, 낮고 차분한 현우와는 정반대다. 장난꾸러기 남자 친구, 수다스러운 남동생, 능글맞은 동기, 철없는 막내 사원, 코믹한 조연에 잘 맞는다. 일상 만화의 코믹한 장면, 신문 풍자, 동물 만화의 약삭빠른 캐릭터에 어울리며 진지한 가장, 노인, 사극이나 무협의 위엄 있는 역할에는 맞지 않는다.",
+    "searchTextEn": "A young man in his early twenties with a light, fairly high voice, wide bouncy intonation and fast speech, sounding cheeky and playful as if he is grinning. Higher and more flippant than the neat Junho, and the opposite of the low, calm Hyunwoo. Fits a prankster friend, a chatty younger brother, a sly classmate, a careless junior employee, or a comic side character. Good for comic everyday scenes, newspaper satire and sly characters in animal comics. Not suitable for a serious father, old men, or dignified historical or martial-arts roles.",
+    "roles": [
+      "장난꾸러기 친구",
+      "수다쟁이 남동생",
+      "능글맞은 동기",
+      "철없는 막내 사원",
+      "코믹 조연",
+      "약삭빠른 동물"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER",
+      "ANIMALS"
+    ],
+    "f0Hz": 169.2,
+    "rate": 6.21
+  },
+  {
+    "id": "m-middle-warm",
+    "name": "상철",
+    "gender": "male",
+    "ageGroup": "MIDDLE",
+    "dialect": null,
+    "tone": "다정한 아빠",
+    "traits": [
+      "따뜻함",
+      "푸근함",
+      "중저음",
+      "친근함",
+      "빠름",
+      "40대 남성"
+    ],
+    "description": "40대 남성으로, 따뜻하고 푸근한 중저음 아빠 목소리지만 말은 꽤 빠른 편이다.",
+    "searchText": "40대 남성의 따뜻하고 푸근한 중저음 목소리로, 친근하고 다정하게 들린다. 느긋하기보다는 말이 꽤 빠른 편이라 활기 있는 동네 아저씨 느낌도 난다. 아주 낮고 엄한 광수보다 높고 부드러우며, 경상도 칠성과 달리 표준어로 상냥하게 말한다. 다정한 아빠, 동네 가게 아저씨, 친절한 이웃, 회사 과장님, 사람 좋은 담임 선생님에 잘 맞는다. 일상 만화, 그림책, 신문 만화의 평범한 가장 역할에 어울리며 아이, 노인, 엄하게 호통치는 역할, 무협의 거친 고수에는 맞지 않는다.",
+    "searchTextEn": "A middle-aged man in his forties with a warm, mellow mid-low fatherly voice, friendly and kind, though he speaks fairly fast rather than in a relaxed drawl. Higher and softer than the very deep, stern Gwangsu, and unlike Chilseong he speaks gentle standard Korean. Fits a loving father, a neighborhood shop owner, a kind neighbor, a middle manager at the office, or a good-natured teacher. Good for everyday comics, picture books and an ordinary family man in newspaper-style comics. Not suitable for children, old men, scolding roles or rough martial-arts masters.",
+    "roles": [
+      "다정한 아빠",
+      "동네 가게 아저씨",
+      "친절한 이웃",
+      "회사 과장님",
+      "사람 좋은 선생님"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "NEWSPAPER"
+    ],
+    "f0Hz": 119.3,
+    "rate": 6.63
+  },
+  {
+    "id": "m-middle-stern",
+    "name": "광수",
+    "gender": "male",
+    "ageGroup": "MIDDLE",
+    "dialect": null,
+    "tone": "엄한 부장님",
+    "traits": [
+      "매우 낮음",
+      "묵직함",
+      "위압적",
+      "엄함",
+      "빠름",
+      "50대 남성"
+    ],
+    "description": "50대 남성으로, 아주 낮고 묵직한 엄한 목소리지만 말은 느리지 않고 빠른 편이다.",
+    "searchText": "50대 남성의 아주 낮고 묵직한 목소리로, 위압적이고 엄하게 들린다. 천천히 끊어 말하기보다 빠른 편으로 몰아붙이듯 말해 다그치는 느낌이 있다. 푸근한 상철보다 훨씬 낮고 차가우며, 경상도 칠성과 달리 표준어를 쓴다. 엄한 부장님, 무서운 아버지, 회사 사장님, 깐깐한 교장 선생님, 조직의 보스, 무협의 냉정한 문주에 잘 맞는다. 일상 만화, 신문 풍자의 권위적인 인물, 사극의 엄한 대감, 무협에 어울리며 아이, 다정한 아빠, 그림책이나 수채화풍의 잔잔한 이야기에는 맞지 않는다.",
+    "searchTextEn": "A middle-aged man in his fifties with a very low, deep, heavy voice that sounds authoritative and stern, speaking briskly as if pressing someone rather than slowly. Much deeper and colder than the warm Sangcheol, and he uses standard Korean unlike Chilseong. Fits a strict boss, a stern father, a company president, a strict principal, a gang boss, or a cold sect leader in martial-arts stories. Good for everyday comics, authority figures in newspaper satire, a stern nobleman in Joseon-era stories and wuxia. Not suitable for children, a gentle father, picture books or soft watercolor stories.",
+    "roles": [
+      "엄한 부장님",
+      "엄한 아버지",
+      "회사 사장님",
+      "교장 선생님",
+      "조직 보스",
+      "무협 문주",
+      "사극 대감"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER",
+      "JOSEON",
+      "WUXIA"
+    ],
+    "f0Hz": 92.0,
+    "rate": 6.36
+  },
+  {
+    "id": "m-old-warm",
+    "name": "만석",
+    "gender": "male",
+    "ageGroup": "OLD",
+    "dialect": null,
+    "tone": "다정한 할아버지",
+    "traits": [
+      "매우 낮음",
+      "굵음",
+      "약간 쉰 목소리",
+      "느림",
+      "잔잔함",
+      "따뜻함",
+      "할아버지"
+    ],
+    "description": "70대 할아버지로, 아주 낮고 굵은 목소리에 억양이 잔잔하며 천천히 따뜻하게 말한다.",
+    "searchText": "70대 할아버지의 아주 낮고 굵은 목소리로, 살짝 쉰 느낌이 있고 억양이 크게 오르내리지 않아 차분하고 묵직하다. 말이 느려 여유롭고 인자하게 들린다. 큰 소리로 호통치는 덕수보다 훨씬 낮고 조용하며, 전라도 봉수와 달리 표준어를 쓴다. 인자한 할아버지, 옛이야기를 들려주는 노인, 시골 마을 어르신, 한복 입은 선비 할아버지, 지혜로운 스승에 잘 맞는다. 그림책, 수채화풍 이야기, 사극의 노학자나 원로, 일상 만화에 어울리며 젊은 인물, 빠르고 활발한 역할, 날카롭게 다그치는 역할에는 맞지 않는다.",
+    "searchTextEn": "A grandfather in his seventies with a very low, deep, slightly hoarse voice and calm, even intonation, speaking slowly, warm and wise. Much deeper and quieter than the shouting Deoksu, and he speaks standard Korean unlike Bongsu. Fits a kind grandfather, an old storyteller, a village elder, an old scholar in hanbok, or a wise old master. Good for picture books, watercolor stories, elder scholars in Joseon-era stories and everyday comics. Not suitable for young characters, fast energetic roles or sharp scolding roles.",
+    "roles": [
+      "인자한 할아버지",
+      "옛이야기 노인",
+      "동네 어르신",
+      "선비 할아버지",
+      "지혜로운 스승"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "WATERCOLOR",
+      "JOSEON"
+    ],
+    "f0Hz": 78.7,
+    "rate": 4.35
+  },
+  {
+    "id": "m-old-gruff",
+    "name": "덕수",
+    "gender": "male",
+    "ageGroup": "OLD",
+    "dialect": null,
+    "tone": "호통 할아버지",
+    "traits": [
+      "걸걸함",
+      "큰 목소리",
+      "거침",
+      "호통",
+      "엄함",
+      "보통 속도",
+      "할아버지"
+    ],
+    "description": "80대 할아버지로, 걸걸하고 거친 큰 목소리로 음을 높여 호통치듯 말한다.",
+    "searchText": "80대 할아버지의 걸걸하고 거친 목소리로, 큰 소리로 음을 끌어올리며 호통치듯 말해 엄하고 고집스럽게 들린다. 말 속도는 보통이고 억양이 세게 치솟는 순간이 있다. 낮고 잔잔한 만석보다 높고 시끄러우며 다그치는 느낌이 강하다. 호통치는 할아버지, 고집 센 영감님, 엄한 집안 어른, 사극의 노장군이나 대감, 무협의 괴팍한 노고수에 잘 맞는다. 일상 만화의 코믹한 장면, 사극, 무협, 신문 풍자의 완고한 노인에 어울리며 다정한 내레이션, 그림책이나 수채화풍의 잔잔한 이야기, 젊은 인물에는 맞지 않는다.",
+    "searchTextEn": "A grandfather in his eighties with a rough, gravelly, loud voice that rises sharply as if he is scolding, gruff and stubborn, at a moderate pace. Higher, louder and more scolding than the low, calm Manseok. Fits a shouting grandfather, a stubborn old man, a strict family elder, an old general or nobleman in hanbok, or an eccentric old martial-arts master. Good for comic everyday scenes, Joseon-era stories, wuxia and stubborn old men in newspaper satire. Not suitable for gentle narration, picture books, soft watercolor stories or young characters.",
+    "roles": [
+      "호통 할아버지",
+      "고집 센 영감님",
+      "엄한 집안 어른",
+      "사극 노장군",
+      "괴팍한 노고수"
+    ],
+    "concepts": [
+      "DAILY",
+      "JOSEON",
+      "WUXIA",
+      "NEWSPAPER"
+    ],
+    "f0Hz": 115.2,
+    "rate": 5.74
+  },
+  {
+    "id": "m-middle-gyeongsang",
+    "name": "칠성",
+    "gender": "male",
+    "ageGroup": "MIDDLE",
+    "dialect": "GYEONGSANG",
+    "tone": "경상도 아저씨",
+    "traits": [
+      "낮음",
+      "굵음",
+      "무뚝뚝함",
+      "평평한 억양",
+      "약간 느림",
+      "경상도",
+      "50대 남성"
+    ],
+    "description": "50대 부산 남성으로, 낮고 굵은 목소리에 경상도 말투를 쓰며 억양이 평평하고 무뚝뚝하게 약간 느리게 말한다.",
+    "searchText": "50대 경상도 남성의 낮고 굵은 목소리로, 억양이 크게 움직이지 않아 무뚝뚝하고 덤덤하게 들린다. 부산 사투리를 쓰며 말은 약간 느린 편이다. 표준어를 쓰는 광수보다 덜 낮고 덜 빠르며, 다그치기보다 툭툭 던지듯 말한다. 무뚝뚝한 경상도 아버지, 시장 생선 가게 아저씨, 부산 뱃사람, 공사장 반장, 말수 적은 동네 아저씨에 잘 맞는다. 일상 만화, 신문 만화의 투박한 서민, 무협의 과묵한 무사에 어울리며 표준어가 필요한 역할, 다정하고 상냥한 인물, 그림책 내레이션에는 맞지 않는다.",
+    "searchTextEn": "A middle-aged man in his fifties from Busan with Gyeongsang-do dialect and a low, thick voice with flat intonation, sounding blunt and gruff, speaking a little slowly. Not as deep or fast as the standard-Korean Gwangsu, and he tosses words out curtly rather than pressing. Fits a taciturn Gyeongsang father, a fish seller at the market, a Busan fisherman, a construction foreman, or a quiet neighborhood man. Good for everyday comics, a plain working-class man in newspaper-style comics, and a silent swordsman in wuxia. Not suitable for roles needing standard Korean, sweet gentle characters or picture book narration.",
+    "roles": [
+      "무뚝뚝한 경상도 아버지",
+      "생선 가게 아저씨",
+      "부산 뱃사람",
+      "공사장 반장",
+      "과묵한 무사"
+    ],
+    "concepts": [
+      "DAILY",
+      "NEWSPAPER",
+      "WUXIA"
+    ],
+    "f0Hz": 99.2,
+    "rate": 4.85
+  },
+  {
+    "id": "m-old-jeolla",
+    "name": "봉수",
+    "gender": "male",
+    "ageGroup": "OLD",
+    "dialect": "JEOLLA",
+    "tone": "전라도 할아버지",
+    "traits": [
+      "구수함",
+      "높은 편",
+      "약간 쉰 목소리",
+      "억양 풍부",
+      "보통 속도",
+      "전라도",
+      "할아버지"
+    ],
+    "description": "70대 전라도 할아버지로, 남성치고 높은 편의 구수한 목소리에 억양이 크게 오르내리며 보통 빠르기로 말한다.",
+    "searchText": "70대 전라도 할아버지의 구수하고 살짝 쉰 목소리로, 남성치고 높은 편이며 억양이 크게 오르내려 노래하듯 흥겹게 들린다. 말 속도는 느리지 않고 보통이며 전라도 사투리가 정감을 더한다. 아주 낮고 잔잔한 만석보다 높고 유쾌하며, 호통치는 덕수와 달리 익살스럽다. 전라도 시골 할아버지, 장터 영감님, 농사짓는 할아버지, 입담 좋은 동네 어르신, 우화 속 늙은 동물에 잘 맞는다. 일상 만화, 그림책, 수채화풍의 시골 이야기, 신문 풍자의 입담꾼에 어울리며 표준어가 필요한 역할, 젊은 인물, 위엄 있는 사극 인물에는 맞지 않는다.",
+    "searchTextEn": "A grandfather in his seventies speaking Jeolla-do dialect with an earthy, slightly hoarse voice that is fairly high for a man, with wide sing-song intonation and a normal pace, sounding humorous and homey. Higher and more cheerful than the very deep, calm Manseok, and playful rather than scolding like Deoksu. Fits a countryside grandfather from Jeolla, an old man at the market, a farmer grandpa, a witty village elder, or an old animal in a fable. Good for everyday comics, picture books, rural watercolor stories and a joking old man in newspaper satire. Not suitable for roles needing standard Korean, young characters or dignified historical figures.",
+    "roles": [
+      "전라도 시골 할아버지",
+      "장터 영감님",
+      "농부 할아버지",
+      "입담 좋은 어르신",
+      "우화 속 늙은 동물"
+    ],
+    "concepts": [
+      "DAILY",
+      "PICTURE_BOOK",
+      "WATERCOLOR",
+      "NEWSPAPER"
+    ],
+    "f0Hz": 164.9,
+    "rate": 5.15
+  }
+]
