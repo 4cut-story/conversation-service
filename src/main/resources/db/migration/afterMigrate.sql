@@ -1,5 +1,5 @@
 -- 마이그레이션이 끝날 때마다 돈다 (Flyway 콜백). 여러 번 돌아도 같다.
--- 아래 두 블록: 캐릭터 설명 임베딩(REQ-018), 배경음 소리·설명 임베딩.
+-- 아래 세 블록: 캐릭터 설명 임베딩(REQ-018), 배경음 소리·설명 임베딩, 목소리 설명 임베딩.
 -- pgvector가 있으면 character_looks에 설명 임베딩 컬럼(BGE-M3, 1024차원)과 HNSW 인덱스를 둔다 (REQ-018).
 -- 확장이 없고 만들 권한도 없으면 건너뛴다. 그동안 캐릭터는 이름으로만 찾는다.
 -- DB 관리자가 나중에 `CREATE EXTENSION vector;`를 실행하면, 서비스를 다시 띄울 때 컬럼이 생긴다.
@@ -86,6 +86,29 @@ BEGIN
             EXCEPTION WHEN OTHERS THEN
                 RAISE WARNING '배경음 임베딩 인덱스를 만들지 못해 인덱스 없이 찾는다: %', SQLERRM;
             END;
+        END IF;
+    END LOOP;
+END $$;
+
+-- 목소리: 한국어·영어 검색 글의 설명 임베딩(BGE-M3, 1024차원). pgvector가 없으면 건너뛴다.
+-- 목소리는 수십 개라 순차 검색으로 충분해 HNSW 인덱스는 두지 않는다.
+DO $$
+DECLARE
+    vector_schema TEXT;
+    col TEXT;
+BEGIN
+    SELECT n.nspname INTO vector_schema
+    FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'vector';
+    IF vector_schema IS NULL OR to_regclass('voices') IS NULL THEN
+        RETURN;
+    END IF;
+    FOREACH col IN ARRAY ARRAY['ko_embedding', 'en_embedding']
+    LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = 'voices' AND column_name = col) THEN
+            EXECUTE format('ALTER TABLE voices ADD COLUMN %I %I.vector(1024)', col, vector_schema);
         END IF;
     END LOOP;
 END $$;
