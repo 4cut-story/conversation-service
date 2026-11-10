@@ -42,7 +42,7 @@ class FeedCheckerTest {
   private final SimilarArticles similar = mock(SimilarArticles.class);
   private final FeedChecker checker =
       new FeedChecker(
-          feeds, items, reader, conversations, similar, Clock.fixed(NOW, ZoneOffset.UTC));
+          feeds, items, reader, conversations, similar, Clock.fixed(NOW, ZoneOffset.UTC), 3, 10);
   private final List<RssFeedItem> saved = new ArrayList<>();
   private final RssFeed feed = new RssFeed("owner", URL, "예시신문", null);
 
@@ -113,11 +113,14 @@ class FeedCheckerTest {
         .singleElement()
         .extracting(RssFeedItem::getConversationId)
         .isEqualTo("conv-3");
+    assertThat(saved.stream().filter(i -> i.getStatus() == RssFeedItem.Status.SKIPPED))
+        .extracting(RssFeedItem::getReason)
+        .containsOnly(FeedChecker.BEFORE_SUBSCRIBE_REASON);
     verify(feeds).checked(7L, NOW, null);
   }
 
   @Test
-  @DisplayName("004 FR-057·FR-058: 확인한 적 있는 피드는 처음 보는 기사를 모두 오래된 것부터 만들고, 본 기사는 다시 만들지 않는다")
+  @DisplayName("004 FR-057·FR-058: 확인한 적 있는 피드는 처음 보는 기사를 최신 것부터 만들고, 본 기사는 다시 만들지 않는다")
   void laterChecks() {
     serve(item(5, null), item(4, null), item(3, null));
     when(items.existsByFeedId(7L)).thenReturn(true);
@@ -127,8 +130,73 @@ class FeedCheckerTest {
 
     assertThat(saved)
         .extracting(RssFeedItem::getLink)
-        .containsExactly("https://news.example.com/a/4", "https://news.example.com/a/5");
+        .containsExactly("https://news.example.com/a/5", "https://news.example.com/a/4");
     assertThat(statuses()).containsOnly(RssFeedItem.Status.MADE);
+  }
+
+  @Test
+  @DisplayName("한 번 확인에 최신 3편까지만 만들고, 나머지는 이유를 남겨 건너뛴다")
+  void perCheckLimit() {
+    serve(item(6, null), item(5, null), item(4, null), item(3, null), item(2, null));
+    when(items.existsByFeedId(7L)).thenReturn(true);
+
+    assertThat(checker.check(7L)).isEqualTo(3);
+
+    assertThat(saved)
+        .extracting(RssFeedItem::getLink, RssFeedItem::getStatus, RssFeedItem::getReason)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/6", RssFeedItem.Status.MADE, null),
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/5", RssFeedItem.Status.MADE, null),
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/4", RssFeedItem.Status.MADE, null),
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/3",
+                RssFeedItem.Status.SKIPPED,
+                FeedChecker.perCheckReason(3)),
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/2",
+                RssFeedItem.Status.SKIPPED,
+                FeedChecker.perCheckReason(3)));
+  }
+
+  @Test
+  @DisplayName("하루(24시간)에 만드는 편수를 다 쓰면 남은 만큼만 만들고 나머지는 건너뛴다")
+  void perDayLimit() {
+    serve(item(3, null), item(2, null), item(1, null));
+    when(items.existsByFeedId(7L)).thenReturn(true);
+    when(items.countByFeedIdAndStatusAndCreatedAtAfter(
+            7L, RssFeedItem.Status.MADE, NOW.minus(java.time.Duration.ofDays(1))))
+        .thenReturn(9L);
+
+    assertThat(checker.check(7L)).isEqualTo(1);
+
+    assertThat(statuses())
+        .containsExactly(
+            RssFeedItem.Status.MADE, RssFeedItem.Status.SKIPPED, RssFeedItem.Status.SKIPPED);
+    assertThat(saved.get(1).getReason()).isEqualTo(FeedChecker.perDayReason(10));
+  }
+
+  @Test
+  @DisplayName("본문을 못 찾은 기사가 이어지면 다음 기사를 읽어 보되, 한 번 확인에 읽는 기사 수는 제한한다")
+  void triesLimit() {
+    String[] entries = new String[12];
+    for (int i = 0; i < 12; i++) {
+      entries[i] = item(100 - i, null);
+    }
+    serve(entries);
+    when(items.existsByFeedId(7L)).thenReturn(false);
+    when(reader.read(anyString()))
+        .thenThrow(new ArticleException(ArticleException.Reason.NO_BODY, "짧다"));
+
+    assertThat(checker.check(7L)).isZero();
+
+    verify(reader, org.mockito.Mockito.times(FeedChecker.TRIES_PER_SLOT)).read(anyString());
+    assertThat(statuses())
+        .containsOnly(RssFeedItem.Status.FAILED, RssFeedItem.Status.SKIPPED)
+        .filteredOn(st -> st == RssFeedItem.Status.FAILED)
+        .hasSize(FeedChecker.TRIES_PER_SLOT);
   }
 
   @Test
@@ -144,9 +212,9 @@ class FeedCheckerTest {
     assertThat(saved)
         .extracting(RssFeedItem::getStatus, RssFeedItem::getReason)
         .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(RssFeedItem.Status.MADE, null),
             org.assertj.core.groups.Tuple.tuple(
-                RssFeedItem.Status.FAILED, ArticleException.Reason.NO_BODY.message()),
-            org.assertj.core.groups.Tuple.tuple(RssFeedItem.Status.MADE, null));
+                RssFeedItem.Status.FAILED, ArticleException.Reason.NO_BODY.message()));
   }
 
   @Test
@@ -167,15 +235,15 @@ class FeedCheckerTest {
         .extracting(RssFeedItem::getLink, RssFeedItem::getStatus, RssFeedItem::getReason)
         .containsExactly(
             org.assertj.core.groups.Tuple.tuple(
-                "https://news.example.com/a/1", RssFeedItem.Status.MADE, null),
+                "https://news.example.com/a/3",
+                RssFeedItem.Status.SKIPPED,
+                FeedChecker.EXCLUDED_REASON),
             org.assertj.core.groups.Tuple.tuple(
                 "https://news.example.com/a/2",
                 RssFeedItem.Status.SKIPPED,
                 FeedChecker.EXCLUDED_REASON),
             org.assertj.core.groups.Tuple.tuple(
-                "https://news.example.com/a/3",
-                RssFeedItem.Status.SKIPPED,
-                FeedChecker.EXCLUDED_REASON));
+                "https://news.example.com/a/1", RssFeedItem.Status.MADE, null));
   }
 
   @Test
@@ -271,6 +339,11 @@ class FeedCheckerTest {
     FeedParser.Entry b = new FeedParser.Entry("b", "https://x/b", null, null);
     assertThat(FeedChecker.latest(List.of(a, b))).isEqualTo(a);
     assertThat(FeedChecker.latest(List.of())).isNull();
-    assertThat(FeedChecker.oldestFirst(List.of(a, b))).containsExactly(b, a);
+    assertThat(FeedChecker.newestFirst(List.of(a, b))).containsExactly(a, b);
+    FeedParser.Entry c =
+        new FeedParser.Entry("c", "https://x/c", null, Instant.parse("2026-11-09T00:00:00Z"));
+    FeedParser.Entry d =
+        new FeedParser.Entry("d", "https://x/d", null, Instant.parse("2026-11-10T00:00:00Z"));
+    assertThat(FeedChecker.newestFirst(List.of(c, d))).containsExactly(d, c);
   }
 }

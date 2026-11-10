@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.rss;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -19,13 +20,16 @@ import net.java21.fourcut.conversation.article.FeedDocument;
 import net.java21.fourcut.conversation.conversations.ConversationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
  * 켜진 피드를 30분마다(설정 {@code rss.check-interval}) 확인한다 (004 FR-055~060). 처음 확인하는 피드는 가장 최근 기사 1편만 만들고
- * 나머지는 건너뛴다. 그 뒤로는 처음 보는 기사를 모두 오래된 것부터 만든다(편수 제한 없음). 기사마다 기록을 먼저 남겨 같은 기사로 두 번 만들지 않는다.
+ * 나머지는 건너뛴다. 그 뒤로는 처음 보는 기사를 최신 것부터 만들되, 한 번 확인에 {@code rss.max-per-check}편, 하루(24시간)에 {@code
+ * rss.max-per-day}편까지만 만든다. 남는 기사는 건너뜀으로 남긴다. 본문을 못 찾는 등 만들지 못한 기사가 있으면 다음 기사로 넘어가되, 한 번 확인에 읽어 보는
+ * 기사 수도 제한한다. 기사마다 기록을 먼저 남겨 같은 기사로 두 번 만들지 않는다.
  */
 @Component
 class FeedChecker {
@@ -40,6 +44,22 @@ class FeedChecker {
   /** 칼럼·사설·인터뷰나 사진·영상 위주 기사라 건너뛴 이유 (004 FR-069). */
   static final String EXCLUDED_REASON = "칼럼·사설·인터뷰나 사진·영상 위주 기사라 건너뛰었어요.";
 
+  /** 구독하기 전에 올라온 기사라 건너뛴 이유. */
+  static final String BEFORE_SUBSCRIBE_REASON = "구독하기 전에 올라온 기사라 건너뛰었어요.";
+
+  /** 한 번 확인에 만드는 편수를 넘어 건너뛴 이유. */
+  static String perCheckReason(int max) {
+    return "한 번에 만드는 편수(" + max + "편)를 넘어 건너뛰었어요.";
+  }
+
+  /** 하루에 만드는 편수를 다 써서 건너뛴 이유. */
+  static String perDayReason(int max) {
+    return "이 구독으로 하루에 만드는 편수(" + max + "편)를 다 써서 건너뛰었어요.";
+  }
+
+  /** 만들 자리 하나마다 읽어 볼 수 있는 기사 수. 본문을 못 찾는 기사가 이어져도 피드 전체를 읽지 않는다. */
+  static final int TRIES_PER_SLOT = 3;
+
   private static final Logger log = LoggerFactory.getLogger(FeedChecker.class);
 
   private final RssFeedRepository feeds;
@@ -48,6 +68,8 @@ class FeedChecker {
   private final ConversationService conversations;
   private final SimilarArticles similar;
   private final Clock clock;
+  private final int maxPerCheck;
+  private final int maxPerDay;
   private final Set<Long> running = ConcurrentHashMap.newKeySet();
   private final ExecutorService background = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -57,13 +79,17 @@ class FeedChecker {
       ArticleReader reader,
       ConversationService conversations,
       SimilarArticles similar,
-      Clock clock) {
+      Clock clock,
+      @Value("${rss.max-per-check:3}") int maxPerCheck,
+      @Value("${rss.max-per-day:10}") int maxPerDay) {
     this.feeds = feeds;
     this.items = items;
     this.reader = reader;
     this.conversations = conversations;
     this.similar = similar;
     this.clock = clock;
+    this.maxPerCheck = Math.max(1, maxPerCheck);
+    this.maxPerDay = Math.max(1, maxPerDay);
   }
 
   /** 켜진 피드를 모두 확인한다. 시작한 대화 수를 돌려준다. */
@@ -114,20 +140,29 @@ class FeedChecker {
       feeds.checked(feedId, clock.instant(), e.userMessage());
       return 0;
     }
-    List<FeedParser.Entry> fresh = fresh(feedId, parsed.entries());
-    List<FeedParser.Entry> toMake;
-    if (items.existsByFeedId(feedId)) {
-      toMake = oldestFirst(fresh);
+    List<FeedParser.Entry> fresh = newestFirst(fresh(feedId, parsed.entries()));
+    int limit;
+    String overReason;
+    if (!items.existsByFeedId(feedId)) {
+      limit = 1;
+      overReason = BEFORE_SUBSCRIBE_REASON;
     } else {
-      FeedParser.Entry latest = latest(fresh);
-      toMake = latest == null ? List.of() : List.of(latest);
-      fresh.stream()
-          .filter(e -> !e.equals(latest))
-          .forEach(e -> record(feedId, e, RssFeedItem.Status.SKIPPED));
+      long today =
+          items.countByFeedIdAndStatusAndCreatedAtAfter(
+              feedId, RssFeedItem.Status.MADE, clock.instant().minus(Duration.ofDays(1)));
+      int left = (int) Math.max(0, maxPerDay - today);
+      limit = Math.min(maxPerCheck, left);
+      overReason = left <= maxPerCheck ? perDayReason(maxPerDay) : perCheckReason(maxPerCheck);
     }
     feeds.checked(feedId, clock.instant(), null);
     int made = 0;
-    for (FeedParser.Entry entry : toMake) {
+    int tried = 0;
+    for (FeedParser.Entry entry : fresh) {
+      if (made >= limit || tried >= limit * TRIES_PER_SLOT) {
+        skip(feedId, entry, overReason);
+        continue;
+      }
+      tried++;
       if (make(feed, entry)) {
         made++;
       }
@@ -153,15 +188,24 @@ class FeedChecker {
         .orElse(entries.isEmpty() ? null : entries.get(0));
   }
 
-  /** 오래된 것부터: 모두 발행 시각이 있으면 시각 순, 아니면 피드 순서를 뒤집는다(피드는 보통 최신순). */
-  static List<FeedParser.Entry> oldestFirst(List<FeedParser.Entry> entries) {
+  /** 최신 것부터: 모두 발행 시각이 있으면 늦은 시각 순, 아니면 피드 순서 그대로(피드는 보통 최신순). */
+  static List<FeedParser.Entry> newestFirst(List<FeedParser.Entry> entries) {
     List<FeedParser.Entry> out = new ArrayList<>(entries);
     if (out.stream().map(FeedParser.Entry::published).allMatch(Objects::nonNull)) {
-      out.sort(Comparator.comparing(FeedParser.Entry::published));
-    } else {
-      java.util.Collections.reverse(out);
+      out.sort(Comparator.comparing(FeedParser.Entry::published).reversed());
     }
     return out;
+  }
+
+  /** 만들지 않고 건너뜀으로 남긴다. */
+  private void skip(Long feedId, FeedParser.Entry entry, String reason) {
+    RssFeedItem item = new RssFeedItem(feedId, entry, RssFeedItem.Status.SKIPPED);
+    item.skipped(reason);
+    try {
+      items.saveAndFlush(item);
+    } catch (DataIntegrityViolationException e) {
+      log.debug("다른 확인이 먼저 남긴 기사: feed={} link={}", feedId, entry.link());
+    }
   }
 
   /** 기록을 먼저 남긴다. 이미 있으면(다른 확인이 먼저 남김) null. */
