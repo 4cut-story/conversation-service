@@ -204,7 +204,7 @@ class FeedChecker {
     try {
       items.saveAndFlush(item);
     } catch (DataIntegrityViolationException e) {
-      // 다른 확인이 먼저 남겼다
+      log.debug("다른 확인이 먼저 남긴 기사: feed={} link={}", feedId, entry.link());
     }
   }
 
