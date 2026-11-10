@@ -23,6 +23,8 @@ public enum ErrorCode {
   AUDIO_MISSING(HttpStatus.BAD_REQUEST, "올라오지 않은 녹음 조각이 있어요. 다시 시도해 주세요."),
   DAILY_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "오늘 만들 수 있는 만화를 다 만들었어요. 내일 다시 만들어 주세요."),
   ARTICLE_UNREADABLE(HttpStatus.UNPROCESSABLE_CONTENT, "기사를 읽지 못했어요. 다른 기사 주소를 넣어 주세요."),
+  RSS_UNREADABLE(HttpStatus.UNPROCESSABLE_CONTENT, "RSS 피드를 읽지 못했어요. 피드 주소를 확인해 주세요."),
+  RSS_DUPLICATE(HttpStatus.CONFLICT, "이미 구독하고 있는 피드예요."),
   LEASE_LOST(HttpStatus.CONFLICT, "작업 임대가 끝났어요."),
   ;
 

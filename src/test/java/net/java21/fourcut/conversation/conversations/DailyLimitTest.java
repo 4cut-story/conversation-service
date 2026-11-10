@@ -85,4 +85,18 @@ class DailyLimitTest {
         .doesNotThrowAnyException();
     assertThatCode(() -> limit(0, "", now).check(owner, "ROLE_MEMBER")).doesNotThrowAnyException();
   }
+
+  @Test
+  @DisplayName("004 FR-061: RSS 구독으로 만든 대화는 하루 제한에 세지 않는다")
+  void rssNotCounted() {
+    String owner = PublicId.generate();
+    for (int i = 0; i < 3; i++) {
+      Conversation c = new Conversation(owner, Conversation.Source.ARTICLE, "ko", Instant.now());
+      c.fromFeed(1L, i % 2 == 0);
+      c.queue(0);
+      conversations.saveAndFlush(c);
+    }
+    assertThatCode(() -> limit(1, "", Instant.now()).check(owner, "ROLE_MEMBER"))
+        .doesNotThrowAnyException();
+  }
 }

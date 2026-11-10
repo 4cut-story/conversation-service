@@ -108,6 +108,35 @@ class ComposeManualTest {
     assertThat(storage.exists(WorkKeys.castPortrait(ID, 0))).isTrue();
   }
 
+  @Test
+  @DisplayName("004 FR-062: 바로 공개(RSS) 대화는 만화 등록에 autoPublish를 보내고, 그 밖의 대화는 보내지 않는다")
+  void autoPublish() throws Exception {
+    when(content.register(any())).thenReturn(new ContentClient.Registered("comic1"));
+    scenarios.saveScript(ID, script());
+    for (int i = 1; i <= 4; i++) {
+      storage.put(WorkKeys.panel(ID, i), png(), "image/png");
+    }
+    storage.put(
+        ComposeHandler.placementAnswer(ID),
+        "{\"panels\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+        "application/json");
+    StepContext rss =
+        new StepContext(
+            new ConversationInfo(1L, ID, "u", "ko", 1, null, null, true, null, true),
+            Step.COMPOSE,
+            1,
+            null);
+
+    assertThat(handler.runLocal(rss)).isInstanceOf(StepOutcome.Completed.class);
+    assertThat(handler.runLocal(context)).isInstanceOf(StepOutcome.Completed.class);
+
+    var sent = org.mockito.ArgumentCaptor.forClass(ContentClient.RegisterComic.class);
+    verify(content, org.mockito.Mockito.times(2)).register(sent.capture());
+    assertThat(sent.getAllValues())
+        .extracting(ContentClient.RegisterComic::autoPublish)
+        .containsExactly(true, false);
+  }
+
   private static ComicScript script() {
     List<ComicScript.Character> cast =
         List.of(
