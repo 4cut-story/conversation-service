@@ -40,6 +40,9 @@ public class VoiceLibrary {
   /** 찾기마다 받는 후보 수. 이미 다른 인물에 쓴 목소리를 건너뛰려고 넉넉히 받는다. */
   static final int CANDIDATES = 10;
 
+  /** 이 차이 안의 거리는 같은 점수로 본다(배경음 찾기와 같은 값). */
+  static final double TIE_MARGIN = 0.02;
+
   /** 임베딩 요청 한 번에 넣는 목소리 수(검색 글은 두 배). */
   static final int EMBED_BATCH = 4;
 
@@ -239,6 +242,14 @@ public class VoiceLibrary {
    * 성별을 아무 성별로 차례로 푼다. 목소리가 하나도 없으면 빈 값.
    */
   public Optional<Voice> match(Query q, Set<String> taken) {
+    return match(q, taken, 0);
+  }
+
+  /**
+   * {@link #match(Query, Set)}와 같고, 거리가 사실상 같은 후보({@link #TIE_MARGIN} 안)가 여럿이면 seed로 그중 하나를 고른다.
+   * 임베딩 없이 찾았으면 조건에 맞는 후보가 모두 동점이다. seed가 같으면 결과도 같아 한 만화를 다시 만들어도 같은 목소리가 나온다.
+   */
+  public Optional<Voice> match(Query q, Set<String> taken, long seed) {
     String gender = code(q.gender());
     String age = code(q.ageGroup());
     String dialect =
@@ -259,11 +270,24 @@ public class VoiceLibrary {
     for (Filter f : tries) {
       List<Voice> found = candidates(f, schema, v);
       if (!found.isEmpty()) {
-        return Optional.of(
-            found.stream().filter(x -> !taken.contains(x.id())).findFirst().orElse(found.get(0)));
+        List<Voice> free = found.stream().filter(x -> !taken.contains(x.id())).toList();
+        return Optional.of(pick(free.isEmpty() ? found : free, seed));
       }
     }
     return Optional.empty();
+  }
+
+  /** 첫 후보와 거리 차이가 {@link #TIE_MARGIN} 안인 후보들(거리가 없으면 모두) 중 seed로 하나. */
+  static Voice pick(List<Voice> ranked, long seed) {
+    Voice best = ranked.get(0);
+    List<Voice> tied =
+        ranked.stream()
+            .filter(
+                x ->
+                    best.distance() == null
+                        || x.distance() != null && x.distance() - best.distance() <= TIE_MARGIN)
+            .toList();
+    return tied.get((int) Math.floorMod(seed, (long) tied.size()));
   }
 
   private List<Voice> candidates(Filter f, Optional<String> schema, Optional<float[]> v) {
