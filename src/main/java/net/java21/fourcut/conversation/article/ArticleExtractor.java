@@ -3,10 +3,8 @@ package net.java21.fourcut.conversation.article;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -16,8 +14,8 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
 /**
- * 기사 HTML에서 제목과 본문만 골라낸다. 스크립트·메뉴·광고·댓글·관련 기사 블록을 먼저 걷어 내고, 알려진 본문 자리(articleBody, article 등)를 찾는다.
- * 없으면 긴 문단이 가장 많이 모인 블록을 본문으로 본다. 기자 이름·전자우편·저작권 줄은 뺀다.
+ * 기사 HTML에서 제목과 본문만 골라낸다. 스크립트·메뉴·광고·댓글·관련 기사 블록을 걷어 낸 뒤, 본문 찾는 방법({@link BodySource})을 차례로 써 본다.
+ * 기자 이름·전자우편·저작권 줄은 뺀다.
  */
 final class ArticleExtractor {
 
@@ -26,6 +24,13 @@ final class ArticleExtractor {
 
   /** 이보다 짧으면 본문을 못 찾은 것으로 본다 (유료 기사 미리 보기, 목록 페이지 등). */
   static final int MIN_CHARS = 200;
+
+  /**
+   * 본문 찾는 방법. 앞에 있을수록 먼저 쓴다: 본문 자리를 아는 사이트, 일반 HTML 규칙, 스크립트 속 데이터(브라우저에서 본문을 그리는 사이트, 예: JTBC).
+   */
+  static final List<BodySource> SOURCES =
+      List.of(
+          new SiteBody(Set.of("mods.go.kr"), ".board_content"), new MarkupBody(), new ScriptBody());
 
   private static final String JUNK_TAGS =
       "script, style, noscript, template, iframe, svg, canvas, form, nav, header, footer, aside,"
@@ -39,25 +44,6 @@ final class ArticleExtractor {
               + "|cookie|gnb|lnb|menu|nav\\w*|sidebar|side|breadcrumb\\w*|footer|copyright|tag\\w*"
               + "|byline|reporter|journalist|keyword\\w*|hidden|sr-only|blind)([\\s_-]|$)",
           Pattern.CASE_INSENSITIVE);
-
-  /** 알려진 본문 자리. 앞에 있을수록 먼저 본다. */
-  private static final List<String> BODY_SELECTORS =
-      List.of(
-          "[itemprop=articleBody]",
-          "#dic_area",
-          "#articleBodyContents",
-          "#article-view-content-div",
-          "#articletxt",
-          "#articleBody",
-          "#news_body_area",
-          ".article_body",
-          ".article-body",
-          ".article_view",
-          ".news_body",
-          ".story-body",
-          "article",
-          "[role=main]",
-          "main");
 
   private static final Set<String> BLOCKS =
       Set.of(
@@ -116,17 +102,31 @@ final class ArticleExtractor {
     if (ExcludedArticle.matches(title, url, meta(doc, "article:section"))) {
       throw new ArticleException(ArticleException.Reason.EXCLUDED, "제외 기사");
     }
-    // 브라우저에서 본문을 그리는 사이트(예: JTBC)는 본문이 스크립트 속 데이터에만 있다. 스크립트를 지우기 전에 찾아 둔다
-    String scripted = ScriptBody.find(doc);
-    clean(doc);
-    String text = body(doc);
-    if (text.length() < MIN_CHARS && scripted.length() > text.length()) {
-      text = scripted;
-    }
+    Document cleaned = doc.clone();
+    clean(cleaned);
+    String text = body(new ArticlePage(host, doc, cleaned));
     if (text.length() < MIN_CHARS) {
       throw new ArticleException(ArticleException.Reason.NO_BODY, text.length() + "자");
     }
     return new Article(url, cut(collapse(title), 200), cut(collapse(site), 100), language, text);
+  }
+
+  /** 쓸 수 있는 방법을 차례로 써 보고, 처음으로 {@link #MIN_CHARS} 이상인 본문을 낸다. 모두 짧으면 가장 긴 것. */
+  static String body(ArticlePage page) {
+    String best = "";
+    for (BodySource source : SOURCES) {
+      if (!source.supports(page)) {
+        continue;
+      }
+      String text = source.find(page);
+      if (text.length() >= MIN_CHARS) {
+        return text;
+      }
+      if (text.length() > best.length()) {
+        best = text;
+      }
+    }
+    return best;
   }
 
   private static void clean(Document doc) {
@@ -148,42 +148,6 @@ final class ArticleExtractor {
       }
     }
     junk.forEach(Element::remove);
-  }
-
-  private static String body(Document doc) {
-    for (String selector : BODY_SELECTORS) {
-      for (Element candidate : doc.select(selector)) {
-        String text = lines(candidate);
-        if (text.length() >= MIN_CHARS) {
-          return text;
-        }
-      }
-    }
-    Element best = densest(doc);
-    return best == null ? "" : lines(best);
-  }
-
-  /** 긴 문단(40자 이상)이 가장 많이 모인 블록. 문단 길이를 부모에 다 더하고 조부모에 절반을 더한다. */
-  private static Element densest(Document doc) {
-    Map<Element, Integer> scores = new HashMap<>();
-    for (Element p : doc.select("p, div > br")) {
-      Element block = "br".equals(p.tagName()) ? p.parent() : p;
-      int length = block.ownText().length();
-      if (length < 40) {
-        continue;
-      }
-      Element parent = "br".equals(p.tagName()) ? block : block.parent();
-      if (parent != null) {
-        scores.merge(parent, length, Integer::sum);
-        if (parent.parent() != null) {
-          scores.merge(parent.parent(), length / 2, Integer::sum);
-        }
-      }
-    }
-    return scores.entrySet().stream()
-        .max(Map.Entry.comparingByValue())
-        .map(Map.Entry::getKey)
-        .orElse(doc.body());
   }
 
   /** 블록마다 한 줄로 글을 모으고, 잡음 줄을 빼고, 길이 한도에서 줄 경계로 자른다. */
