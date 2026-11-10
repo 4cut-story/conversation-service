@@ -47,9 +47,19 @@ final class SpeechCast {
   private static final Pattern KO_MALE =
       Pattern.compile("(할아버지|아빠|아버지|형|오빠|남자|남고생|남학생|아들|손자|남편|삼촌|아저씨|총각|사위|왕자)");
   private static final Pattern KO_CHILD = Pattern.compile("(아이|어린이|초등|유치원|꼬마|손녀|손자|아기)");
-  private static final Pattern KO_OLD = Pattern.compile("(할머니|할아버지|노인|어르신|노부부)");
+  private static final Pattern KO_OLD =
+      Pattern.compile("(할머니|할아버지|할매|할배|노인|어르신|노부부|노모|노부|노신사|원로|증조|은퇴)");
   private static final Pattern KO_MIDDLE =
-      Pattern.compile("(엄마|어머니|아빠|아버지|이모|고모|삼촌|아저씨|아줌마|부장|사장|중년)");
+      Pattern.compile(
+          "(엄마|어머니|아빠|아버지|부모|학부모|이모|고모|삼촌|아저씨|아줌마|중년|시어머니|시아버지|장모|장인|"
+              + "부장|차장|과장|팀장|국장|사장|회장|대표|원장|교장|교감|교수|이사|임원|"
+              + "의원|장관|차관|총리|대통령|시장|도지사|구청장|위원장|청장|판사|검사장)");
+
+  /** 인물 설정의 나이: "40대", "52살", "35세". */
+  private static final Pattern KO_AGE = Pattern.compile("(\\d{1,3})\\s*(대|살|세)(?!기)");
+
+  /** 인물 설정의 나이 낱말: 마흔·쉰은 중년, 예순 넘으면 노년. */
+  private static final Pattern KO_AGE_WORD = Pattern.compile("(마흔|쉰|예순|일흔|여든|아흔)");
 
   /** 인물의 성별: 외모(영어)가 먼저이고, 모르면 호칭·인물 설정(한국어)으로 정한다. 모르면 null. */
   static String gender(ComicScript.Character c) {
@@ -70,6 +80,11 @@ final class SpeechCast {
     if (fromLook != null && !"YOUNG".equals(fromLook)) {
       return fromLook;
     }
+    // 그림용 외모는 어른을 모두 "young woman/man"으로 쓰므로, 나이는 호칭·설정에서 먼저 찾는다
+    String byNumber = ageByNumber(ko);
+    if (byNumber != null) {
+      return byNumber;
+    }
     if (KO_OLD.matcher(ko).find()) {
       return "OLD";
     }
@@ -80,6 +95,27 @@ final class SpeechCast {
       return "MIDDLE";
     }
     return fromLook != null ? fromLook : gender(c) == null ? null : "YOUNG";
+  }
+
+  /** 호칭·설정에 적힌 나이(숫자나 마흔·쉰 같은 낱말)로 정한 나이대. 없으면 null. */
+  static String ageByNumber(String ko) {
+    var m = KO_AGE.matcher(ko);
+    if (m.find()) {
+      int n = Integer.parseInt(m.group(1));
+      if ("대".equals(m.group(2))) {
+        // "3대 독자"는 나이가 아니다. 10대는 어린이 목소리보다 젊은 목소리가 맞다
+        if (n % 10 != 0) {
+          return null;
+        }
+        n = Math.max(n, 13);
+      }
+      return n < 13 ? "CHILD" : n < 40 ? "YOUNG" : n < 60 ? "MIDDLE" : "OLD";
+    }
+    var w = KO_AGE_WORD.matcher(ko);
+    if (w.find()) {
+      return "마흔".equals(w.group(1)) || "쉰".equals(w.group(1)) ? "MIDDLE" : "OLD";
+    }
+    return null;
   }
 
   private static String korean(ComicScript.Character c) {

@@ -102,6 +102,20 @@ class SpeechTest {
     assertThat(SpeechCast.ageGroup(grandpa)).isEqualTo("OLD");
     var mom = new ComicScript.Character("A", "x", "엄마", "woman, apron");
     assertThat(SpeechCast.ageGroup(mom)).isEqualTo("MIDDLE");
+    var anchor = new ComicScript.Character("A", "x", "차분한 50대 앵커", "young man, navy suit");
+    assertThat(SpeechCast.ageGroup(anchor)).isEqualTo("MIDDLE");
+    var minister =
+        new ComicScript.Character("A", "x", "단호한 성격", "young man, gray suit", "장관", null);
+    assertThat(SpeechCast.ageGroup(minister)).isEqualTo("MIDDLE");
+    var retiree = new ComicScript.Character("A", "x", "예순을 넘긴 퇴직자", "young woman, green coat");
+    assertThat(SpeechCast.ageGroup(retiree)).isEqualTo("OLD");
+    var student = new ComicScript.Character("A", "x", "22살 대학생", "young woman, denim jacket");
+    assertThat(SpeechCast.ageGroup(student)).isEqualTo("YOUNG");
+    assertThat(SpeechCast.ageByNumber("8살 꼬마")).isEqualTo("CHILD");
+    assertThat(SpeechCast.ageByNumber("2025년 일")).isNull();
+    assertThat(SpeechCast.ageByNumber("3대 독자")).isNull();
+    assertThat(SpeechCast.ageByNumber("10대 고등학생")).isEqualTo("YOUNG");
+    assertThat(SpeechCast.ageByNumber("21세기 기술")).isNull();
     var unknown = new ComicScript.Character("A", "x", null, null);
     assertThat(SpeechCast.gender(unknown)).isNull();
     assertThat(SpeechCast.ageGroup(unknown)).isNull();
