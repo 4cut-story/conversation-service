@@ -31,7 +31,8 @@ class ConversationProgress implements PipelineObserver {
                     c.getDialect(),
                     c.isManualLlm(),
                     c.articleSource(),
-                    c.isAutoPublish()))
+                    c.isAutoPublish(),
+                    c.getRssFeedId() != null))
         .orElse(null);
   }
 
