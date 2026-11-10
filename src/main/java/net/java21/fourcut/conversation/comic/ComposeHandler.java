@@ -202,7 +202,8 @@ class ComposeHandler implements StepHandler {
               wide,
               third,
               depth,
-              fourth);
+              fourth,
+              voices(id, script, wide));
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -212,6 +213,42 @@ class ComposeHandler implements StepHandler {
       log.warn("라이브 모드 정보를 만들지 못했다: conversation={} ({})", id, e.toString());
       return null;
     }
+  }
+
+  /**
+   * 대사 읽기 단계가 남긴 음성(FR-050)을 만화 폴더로 옮기고 대사 키 → 길이를 돌려준다. 자막이 나오는 넓은 그림 컷만 쓴다. 결과가 없거나 음성 파일이 없는 대사는
+   * 빠진다(그 대사는 소리 없이 자막만 나온다).
+   */
+  Map<String, Integer> voices(String id, ComicScript script, List<Boolean> wide) {
+    Map<String, Integer> out = new LinkedHashMap<>();
+    try {
+      Optional<byte[]> saved = storage.get(WorkKeys.speech(id));
+      if (saved.isEmpty()) {
+        return out;
+      }
+      JsonNode lines = json.readTree(saved.get()).path("lines");
+      for (int i = 0; i < script.panels().size(); i++) {
+        if (i >= wide.size() || !Boolean.TRUE.equals(wide.get(i))) {
+          continue;
+        }
+        int count = SpeechCast.lines(script.panels().get(i)).size();
+        for (int k = 1; k <= count; k++) {
+          String key = SpeechCast.key(i + 1, k);
+          int ms = lines.path(key).asInt(0);
+          if (ms <= 0) {
+            continue;
+          }
+          Optional<byte[]> audio = storage.get(WorkKeys.speechAudio(id, key));
+          if (audio.isPresent()) {
+            storage.put(WorkKeys.liveVoice(id, i + 1, k), audio.get(), "audio/mpeg");
+            out.put(key, ms);
+          }
+        }
+      }
+    } catch (RuntimeException e) {
+      log.warn("대사 음성을 넣지 못했다: conversation={} ({})", id, e.toString());
+    }
+    return out;
   }
 
   /**

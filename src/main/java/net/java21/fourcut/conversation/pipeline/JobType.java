@@ -6,7 +6,9 @@ import java.time.Duration;
 public enum JobType {
   TRANSCRIBE(Duration.ofMinutes(20), "WHISPER"),
   LLM(Duration.ofMinutes(5), "LLM"),
-  IMAGE(Duration.ofMinutes(10), "SDXL");
+  IMAGE(Duration.ofMinutes(10), "SDXL"),
+  /** 대사 읽기(GPT-SoVITS v4). 그림 모델과 함께 올려 두므로 모델 묶음이 같다. */
+  SPEECH(Duration.ofMinutes(5), "SDXL");
 
   private final Duration maxRun;
   private final String model;

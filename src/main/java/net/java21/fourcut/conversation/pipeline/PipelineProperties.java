@@ -11,10 +11,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param workerSeenWithin 이 시간 안에 연락한 워커가 없으면 GPU_WAITING으로 보여 준다
  * @param localStepTimeout 서버 단계(합성)가 이 시간을 넘게 RUNNING이면 실패로 보고 다시 한다
  * @param preTranscribe 녹음 중 구간 전사(FR-015)를 켠다. 끄면 녹음이 끝난 뒤 한 번에 전사한다
+ * @param speechTimeout 대사 읽기 단계가 이 시간 안에 끝나지 않으면 소리 없이 합성으로 넘어간다
  */
 @ConfigurationProperties("pipeline")
 public record PipelineProperties(
     @DefaultValue("90s") Duration leaseTime,
     @DefaultValue("60s") Duration workerSeenWithin,
     @DefaultValue("8m") Duration localStepTimeout,
-    @DefaultValue("true") boolean preTranscribe) {}
+    @DefaultValue("true") boolean preTranscribe,
+    @DefaultValue("10m") Duration speechTimeout) {}

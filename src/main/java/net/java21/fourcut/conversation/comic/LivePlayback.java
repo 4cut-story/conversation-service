@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.comic;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.java21.fourcut.conversation.scenario.ComicScript;
 import net.java21.fourcut.conversation.scenario.Motion;
@@ -121,6 +122,36 @@ final class LivePlayback {
       List<Boolean> third,
       List<Boolean> depth,
       List<Boolean> fourth) {
+    return build(json, script, sounds, effects, moving, wide, third, depth, fourth, Map.of());
+  }
+
+  /** 대사 음성 뒤에 쉬는 시간, 음성 사이 간격, 마지막 대사 뒤 컷을 더 보여 주는 시간. */
+  static final int VOICE_TAIL_MS = 200;
+
+  static final int VOICE_GAP_MS = 250;
+  static final int VOICE_END_MS = 600;
+
+  /** 대사 음성이 있는 컷의 최대 길이 (common live-mode.yaml durationMs 최대). */
+  static final int VOICE_MAX_MS = 20000;
+
+  /** 대사 음성이 나오는 동안 바탕 배경음 크기(평소 {@link #VOLUME}). */
+  static final double DUCK_VOLUME = 0.2;
+
+  /**
+   * @param voices 읽은 대사 음성 길이. 키는 "p{컷}-{대사 순번}"({@link SpeechCast#key}). 넓은 그림 컷 자막에 음성을 붙이고, 자막
+   *     시간을 음성 길이에 맞추고, 컷이 끝까지 들리도록 길이를 늘린다. 음성이 있는 컷은 말하는 동안 배경음을 줄인다
+   */
+  static ObjectNode build(
+      JsonMapper json,
+      ComicScript script,
+      List<Optional<SoundMatcher.Picked>> sounds,
+      List<Optional<SoundMatcher.Picked>> effects,
+      List<Boolean> moving,
+      List<Boolean> wide,
+      List<Boolean> third,
+      List<Boolean> depth,
+      List<Boolean> fourth,
+      Map<String, Integer> voices) {
     ObjectNode root = json.createObjectNode();
     root.put("version", VERSION);
     ArrayNode panels = root.putArray("panels");
@@ -132,10 +163,20 @@ final class LivePlayback {
       panel.put("role", p.role());
       panel.put("image", WorkKeys.livePanelPath(n, false));
       int duration = durationMs(p);
+      boolean isWide = i < wide.size() && Boolean.TRUE.equals(wide.get(i));
+      List<Integer> spoken = isWide ? voiced(p, n, voices) : List.of();
+      boolean speaks = spoken.stream().anyMatch(ms -> ms != null);
+      if (speaks) {
+        duration = voicedDuration(p, spoken, duration);
+      }
       panel.put("durationMs", duration);
-      if (i < wide.size() && Boolean.TRUE.equals(wide.get(i))) {
+      if (isWide) {
         panel.put("aspect", "16:9");
-        captions(panel.putArray("captions"), p, script.callNames(), duration);
+        if (speaks) {
+          voiceCaptions(panel.putArray("captions"), p, n, script.callNames(), spoken, duration);
+        } else {
+          captions(panel.putArray("captions"), p, script.callNames(), duration);
+        }
         if (i < depth.size() && Boolean.TRUE.equals(depth.get(i))) {
           panel.put("depth", WorkKeys.liveDepthPath(n));
         }
@@ -146,7 +187,11 @@ final class LivePlayback {
       Optional<SoundMatcher.Picked> sound = i < sounds.size() ? sounds.get(i) : Optional.empty();
       if (sound.isPresent()) {
         // 장소 소리와 배경음악은 같은 바탕 배경음이라 크기가 같다
-        panel.set("sound", sound(json, sound.get(), VOLUME, FADE_MS, true));
+        ObjectNode bg = sound(json, sound.get(), VOLUME, FADE_MS, true);
+        if (speaks) {
+          bg.put("duckVolume", DUCK_VOLUME);
+        }
+        panel.set("sound", bg);
       } else {
         panel.putNull("sound");
       }
@@ -211,6 +256,70 @@ final class LivePlayback {
       c.put("startMs", start);
       c.put("endMs", end);
       start = Math.min(durationMs, end + CAPTION_GAP_MS);
+    }
+  }
+
+  /** 컷 대사(자막 순서)별 음성 길이. 음성이 없는 대사는 null. */
+  static List<Integer> voiced(ComicScript.Panel p, int n, Map<String, Integer> voices) {
+    List<ComicScript.Line> lines = SpeechCast.lines(p);
+    List<Integer> out = new java.util.ArrayList<>();
+    for (int k = 0; k < lines.size(); k++) {
+      Integer ms = voices.get(SpeechCast.key(n, k + 1));
+      out.add(ms != null && ms > 0 ? ms : null);
+    }
+    return out;
+  }
+
+  /** 음성 없는 대사가 보이는 시간 (글자 수 비율, 최소 1초). */
+  private static int silentMs(ComicScript.Line l) {
+    return Math.max(1000, l.text().strip().length() * PER_CHAR_MS * 2);
+  }
+
+  /** 대사 음성이 끝까지 들리는 컷 길이. 원래 길이보다 짧아지지 않는다. */
+  static int voicedDuration(ComicScript.Panel p, List<Integer> spoken, int base) {
+    List<ComicScript.Line> lines = SpeechCast.lines(p);
+    int t = CAPTION_LEAD_MS;
+    for (int k = 0; k < lines.size(); k++) {
+      Integer ms = spoken.get(k);
+      t += (ms != null ? ms + VOICE_TAIL_MS : silentMs(lines.get(k))) + VOICE_GAP_MS;
+    }
+    t += VOICE_END_MS - VOICE_GAP_MS;
+    return Math.min(VOICE_MAX_MS, Math.max(base, t));
+  }
+
+  /** 음성이 있는 컷의 자막: 대사마다 음성 길이만큼 보여 주고 음성 경로를 붙인다. */
+  static void voiceCaptions(
+      ArrayNode out,
+      ComicScript.Panel p,
+      int n,
+      java.util.Map<String, String> names,
+      List<Integer> spoken,
+      int durationMs) {
+    List<ComicScript.Line> lines = SpeechCast.lines(p);
+    int start = CAPTION_LEAD_MS;
+    for (int k = 0; k < lines.size(); k++) {
+      ComicScript.Line l = lines.get(k);
+      Integer ms = spoken.get(k);
+      int len = ms != null ? ms + VOICE_TAIL_MS : silentMs(l);
+      int end = Math.min(durationMs, start + len);
+      ObjectNode c = out.addObject();
+      String speaker = l.speaker() == null ? null : names.get(l.speaker());
+      if (speaker == null) {
+        c.putNull("speaker");
+      } else {
+        c.put("speaker", speaker);
+      }
+      c.put("text", l.text().strip());
+      c.put("startMs", Math.min(start, durationMs));
+      c.put("endMs", end);
+      if (ms != null && start < durationMs) {
+        ObjectNode v = c.putObject("voice");
+        v.put("path", WorkKeys.liveVoicePath(n, k + 1));
+        v.put("durationMs", ms);
+      } else {
+        c.putNull("voice");
+      }
+      start = Math.min(durationMs, end + VOICE_GAP_MS);
     }
   }
 

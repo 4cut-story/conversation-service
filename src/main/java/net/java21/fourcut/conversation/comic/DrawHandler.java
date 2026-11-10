@@ -151,7 +151,7 @@ class DrawHandler implements StepHandler {
       }
     }
     characters.embedsUploaded(computedEmbeds(context.jobPayload()));
-    return new StepOutcome.Done(WorkKeys.workPrefix(id), Step.COMPOSE);
+    return new StepOutcome.Done(WorkKeys.workPrefix(id), Step.SPEAK);
   }
 
   /**
