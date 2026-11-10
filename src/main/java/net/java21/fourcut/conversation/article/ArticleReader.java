@@ -31,7 +31,24 @@ public class ArticleReader {
    * @throws ArticleException 열 수 없는 주소, 받기 실패, HTML이 아님, 본문 없음
    */
   public Article read(String url) {
-    Future<Article> work = executor.submit(() -> readNow(url));
+    return within(() -> readNow(url));
+  }
+
+  /**
+   * RSS·Atom 피드 문서를 기사와 같은 규칙(내부망 차단, 넘겨주기마다 검사, 크기·시간 한도)으로 받는다. 피드인지는 받은 쪽이 읽으며 가린다.
+   *
+   * @throws ArticleException 열 수 없는 주소, 받기 실패, 글이 아닌 응답(NOT_FEED)
+   */
+  public FeedDocument fetchFeed(String url) {
+    return within(
+        () -> {
+          ArticleFetcher.Page page = fetcher.fetch(url, ArticleFetcher.Kind.FEED);
+          return new FeedDocument(page.uri().toString(), page.body());
+        });
+  }
+
+  private <T> T within(java.util.concurrent.Callable<T> task) {
+    Future<T> work = executor.submit(task);
     try {
       // 응답을 아주 느리게 흘려보내는 서버에도 붙잡히지 않게 전체 시간을 따로 잰다
       return work.get(properties.timeout().toMillis() + 5_000, TimeUnit.MILLISECONDS);

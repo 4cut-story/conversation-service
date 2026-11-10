@@ -20,6 +20,8 @@ public interface ContentClient {
    * @param production 제작 정보 ({@link net.java21.fourcut.conversation.pipeline.Production}). 못 만들면
    *     null
    * @param live 라이브 모드 재생 정보 (common contracts/live-mode.yaml LivePlayback). 못 만들면 null
+   * @param autoPublish true면 content-service가 새로 만든 만화를 바로 전체 공개로 게시한다 (RSS 구독, common
+   *     contracts/rss-feeds.yaml)
    */
   record RegisterComic(
       String ownerId,
@@ -34,7 +36,8 @@ public interface ContentClient {
       String dialect,
       String summary,
       JsonNode production,
-      JsonNode live) {}
+      JsonNode live,
+      boolean autoPublish) {}
 
   /**
    * 등장인물 한 명.

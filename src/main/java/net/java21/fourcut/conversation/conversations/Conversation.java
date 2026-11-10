@@ -81,6 +81,14 @@ public class Conversation extends BaseEntity {
   @Column(name = "source_site", length = 100)
   private String sourceSite;
 
+  /** RSS 구독으로 만든 대화의 구독 내부 ID. 직접 만들었으면 null. 구독을 지워도 남는다. */
+  @Column(name = "rss_feed_id")
+  private Long rssFeedId;
+
+  /** 완성되면 바로 전체 공개로 게시한다 (RSS 구독의 "바로 공개"). */
+  @Column(name = "auto_publish", nullable = false)
+  private boolean autoPublish;
+
   protected Conversation() {
     // JPA 전용
   }
@@ -168,6 +176,20 @@ public class Conversation extends BaseEntity {
     this.sourceUrl = url;
     this.sourceTitle = title;
     this.sourceSite = site;
+  }
+
+  /** RSS 구독에서 왔다고 남긴다. 바로 공개 여부는 시작할 때의 구독 설정을 따른다 (004 FR-064). */
+  void fromFeed(long feedId, boolean publishRightAway) {
+    this.rssFeedId = feedId;
+    this.autoPublish = publishRightAway;
+  }
+
+  public Long getRssFeedId() {
+    return rssFeedId;
+  }
+
+  public boolean isAutoPublish() {
+    return autoPublish;
   }
 
   public String getSourceUrl() {

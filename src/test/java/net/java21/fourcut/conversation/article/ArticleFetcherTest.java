@@ -66,6 +66,16 @@ class ArticleFetcherTest {
           ex.sendResponseHeaders(404, -1);
           ex.close();
         });
+    server.createContext(
+        "/feed",
+        ex -> {
+          byte[] body =
+              "<rss><channel><title>t</title></channel></rss>".getBytes(StandardCharsets.UTF_8);
+          ex.getResponseHeaders().add("Content-Type", "application/rss+xml");
+          ex.sendResponseHeaders(200, body.length);
+          ex.getResponseBody().write(body);
+          ex.close();
+        });
     server.start();
     base = "http://127.0.0.1:" + server.getAddress().getPort();
   }
@@ -143,5 +153,25 @@ class ArticleFetcherTest {
         .isInstanceOf(ArticleException.class)
         .extracting(e -> ((ArticleException) e).userMessage())
         .isEqualTo(ArticleException.Reason.UNREACHABLE.message());
+  }
+
+  @Test
+  @DisplayName("004 FR-051: 피드는 기사와 같은 규칙으로 받고, XML·글 응답만 받으며 그림 같은 응답은 피드가 아니라고 알린다")
+  void feeds() {
+    ArticleProperties properties = new ArticleProperties(Duration.ofSeconds(5), 1_000_000, 3, true);
+    ArticleReader reader =
+        new ArticleReader(
+            new ArticleFetcher(properties, host -> List.of(InetAddress.getByName(host))),
+            properties);
+    FeedDocument doc = reader.fetchFeed(base + "/feed");
+    assertThat(doc.url()).endsWith("/feed");
+    assertThat(new String(doc.body(), StandardCharsets.UTF_8)).startsWith("<rss>");
+    assertThat(reader.fetchFeed(base + "/article").body()).isNotEmpty();
+    assertThatThrownBy(() -> reader.fetchFeed(base + "/image"))
+        .extracting(e -> ((ArticleException) e).reason())
+        .isEqualTo(ArticleException.Reason.NOT_FEED);
+    assertThatThrownBy(() -> fetcher(false).fetch(base + "/feed", ArticleFetcher.Kind.FEED))
+        .extracting(e -> ((ArticleException) e).reason())
+        .isEqualTo(ArticleException.Reason.BLOCKED_URL);
   }
 }

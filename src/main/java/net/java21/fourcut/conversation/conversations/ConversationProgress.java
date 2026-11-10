@@ -30,7 +30,8 @@ class ConversationProgress implements PipelineObserver {
                     c.getConcept(),
                     c.getDialect(),
                     c.isManualLlm(),
-                    c.articleSource()))
+                    c.articleSource(),
+                    c.isAutoPublish()))
         .orElse(null);
   }
 

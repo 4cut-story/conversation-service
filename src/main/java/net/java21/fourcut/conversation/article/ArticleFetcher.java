@@ -21,6 +21,31 @@ class ArticleFetcher {
   /** 받은 페이지. */
   record Page(URI uri, String contentType, byte[] body) {}
 
+  /** 받을 문서 종류. */
+  enum Kind {
+    /** 기사 HTML. */
+    HTML("text/html,application/xhtml+xml;q=0.9,*/*;q=0.1"),
+    /** RSS·Atom 피드. Content-Type을 틀리게 주는 서버가 많아 글(text/*)이면 받고 읽을 때 가린다. */
+    FEED("application/rss+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.9,*/*;q=0.1");
+
+    private final String accept;
+
+    Kind(String accept) {
+      this.accept = accept;
+    }
+
+    boolean accepts(String contentType) {
+      String type = contentType.toLowerCase(Locale.ROOT);
+      if (this == HTML) {
+        return type.contains("html");
+      }
+      return type.startsWith("text/")
+          || type.contains("xml")
+          || type.contains("rss")
+          || type.contains("atom");
+    }
+  }
+
   static final String USER_AGENT =
       "Mozilla/5.0 (compatible; 4cut-story/1.0; +https://4cut.java21.net/about)";
 
@@ -45,13 +70,17 @@ class ArticleFetcher {
   }
 
   Page fetch(String url) {
+    return fetch(url, Kind.HTML);
+  }
+
+  Page fetch(String url, Kind kind) {
     String next = url;
     for (int hop = 0; hop <= properties.maxRedirects(); hop++) {
       SafeUrl.Checked checked = SafeUrl.check(next, resolver, properties.allowPrivate());
-      HttpResponse<InputStream> response = send(checked.uri());
+      HttpResponse<InputStream> response = send(checked.uri(), kind);
       int status = response.statusCode();
       if (status < 300 || status >= 400) {
-        return page(checked, response);
+        return page(checked, response, kind);
       }
       String location = response.headers().firstValue("Location").orElse(null);
       close(response);
@@ -63,27 +92,29 @@ class ArticleFetcher {
     throw unreachable("redirects");
   }
 
-  /** 넘겨주기가 아닌 응답: 200 HTML이면 본문을 읽는다. */
-  private Page page(SafeUrl.Checked checked, HttpResponse<InputStream> response) {
+  /** 넘겨주기가 아닌 응답: 200이고 바라는 종류면 본문을 읽는다. */
+  private Page page(SafeUrl.Checked checked, HttpResponse<InputStream> response, Kind kind) {
     int status = response.statusCode();
     if (status != 200) {
       close(response);
       throw unreachable("HTTP " + status);
     }
     String type = response.headers().firstValue("Content-Type").orElse("text/html");
-    if (!type.toLowerCase(Locale.ROOT).contains("html")) {
+    if (!kind.accepts(type)) {
       close(response);
-      throw new ArticleException(ArticleException.Reason.NOT_HTML, type);
+      throw new ArticleException(
+          kind == Kind.HTML ? ArticleException.Reason.NOT_HTML : ArticleException.Reason.NOT_FEED,
+          type);
     }
     return new Page(checked.uri(), type, read(response));
   }
 
-  private HttpResponse<InputStream> send(URI uri) {
+  private HttpResponse<InputStream> send(URI uri, Kind kind) {
     HttpRequest request =
         HttpRequest.newBuilder(uri)
             .timeout(properties.timeout())
             .header("User-Agent", USER_AGENT)
-            .header("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1")
+            .header("Accept", kind.accept)
             .header("Accept-Language", "ko,en;q=0.8")
             .GET()
             .build();

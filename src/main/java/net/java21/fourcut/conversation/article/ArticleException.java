@@ -12,7 +12,9 @@ public class ArticleException extends RuntimeException {
     /** HTML이 아니다. */
     NOT_HTML("웹 페이지가 아니에요. 기사 페이지 주소를 넣어 주세요."),
     /** 본문이 너무 짧다 (유료 기사, 로그인 필요, 목록 페이지 등). */
-    NO_BODY("기사 본문을 찾지 못했어요. 유료 기사나 로그인이 필요한 페이지는 만들 수 없어요.");
+    NO_BODY("기사 본문을 찾지 못했어요. 유료 기사나 로그인이 필요한 페이지는 만들 수 없어요."),
+    /** RSS·Atom 피드가 아니다. */
+    NOT_FEED("RSS나 Atom 피드가 아니에요. 사이트의 RSS 주소를 넣어 주세요.");
 
     private final String message;
 

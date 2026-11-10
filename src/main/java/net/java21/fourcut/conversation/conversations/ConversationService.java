@@ -102,13 +102,41 @@ public class ConversationService {
     if (Boolean.TRUE.equals(request.manualLlm())) {
       c.markManualLlm();
     }
+    Conversation saved = startArticle(c, article);
+    return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
+  }
+
+  /**
+   * RSS 구독으로 새 기사를 만화로 만든다 (004 FR-059). 하루 만화 수 제한에 세지 않는다(FR-061). 바로 공개면 완성될 때 전체 공개로 게시한다.
+   *
+   * @param concept 그림체. null이면 자동
+   * @param dialect 사투리. null이면 없음
+   * @return 시작한 대화 공개 ID
+   */
+  @Transactional
+  public String createFromFeed(
+      String owner,
+      long feedId,
+      boolean autoPublish,
+      String concept,
+      String dialect,
+      Article article) {
+    Conversation c =
+        new Conversation(
+            owner, Conversation.Source.ARTICLE, article.language(), concept, clock.instant());
+    c.chooseDialect(dialect);
+    c.fromFeed(feedId, autoPublish);
+    return startArticle(c, article).getPublicId();
+  }
+
+  private Conversation startArticle(Conversation c, Article article) {
     c.fromArticle(article.url(), article.title(), article.site());
     Conversation saved = conversations.save(c);
     articles.save(saved.getPublicId(), article);
     saved.queue(0);
     conversations.flush();
     pipeline.start(saved.getId());
-    return new ConversationApi.Created(saved.getPublicId(), saved.getStatus());
+    return saved;
   }
 
   /**
