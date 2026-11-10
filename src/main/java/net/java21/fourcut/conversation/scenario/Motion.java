@@ -76,20 +76,34 @@ public enum Motion {
           + " them closer to the ground",
       "redraw only the falling petals and leaves in the air in new places again, a few of them"
           + " drifting sideways"),
-  /** 맞는 움직임이 없는 컷의 가벼운 바람(FR-049). 하늘·날씨·색·빛은 그대로 두고 잎·풀·천만 흔든다. 어느 배경에나 맞는다. */
+  /**
+   * 맞는 움직임이 없는 컷의 가벼운 바람(FR-049). 하늘·날씨·색·빛은 그대로 두고 그림에 이미 있는 잎·풀·천·매단 등만 흔든다. 어느 배경에나 맞는다. 예전에는
+   * "잎·풀·천을 흔들라"고만 해서, 나무가 없는 실내 카페 컷에도 날리는 나뭇잎과 바람 띠, 창밖 화분을 새로 그려 넣었고 그림마다 자리가 달라 번갈아 볼 때 무늬처럼
+   * 깜빡였다. 그래서 새로 그리지 말 것을 함께 적는다.
+   */
   BREEZE(
       "\\w+",
       false,
       900,
-      "let the leaves, grass and fabric in the background sway slightly as if in a light"
-          + " breeze. Keep the colors and the lighting exactly the same, and keep any rain"
-          + " streaks or snowflakes as they are",
-      "let the leaves, grass and fabric in the background sway slightly to the other side as if"
-          + " in a light breeze. Keep the colors and the lighting exactly the same, and keep any"
-          + " rain streaks or snowflakes as they are",
-      "let the leaves, grass and fabric in the background sway gently back as if in a light"
-          + " breeze. Keep the colors and the lighting exactly the same, and keep any rain"
-          + " streaks or snowflakes as they are");
+      "let only the leaves, grass, curtains, hanging lamps and fabric that are already in the"
+          + " background sway slightly as if in a light breeze. "
+          + Motion.NOTHING_NEW,
+      "let only the leaves, grass, curtains, hanging lamps and fabric that are already in the"
+          + " background sway slightly to the other side as if in a light breeze. "
+          + Motion.NOTHING_NEW,
+      "let only the leaves, grass, curtains, hanging lamps and fabric that are already in the"
+          + " background sway gently back as if in a light breeze. "
+          + Motion.NOTHING_NEW);
+
+  /**
+   * 바람 그림에서 새로 그리지 말 것. 그림에 없는 것을 흔들라고 하면 모델이 그 물건을 지어 그린다. 상수는 enum 값보다 먼저 초기화되지 않으므로 컴파일 시간
+   * 상수(문자열 리터럴)로 둔다.
+   */
+  static final String NOTHING_NEW =
+      "Do not add anything that is not already in the picture: no flying or falling leaves, no"
+          + " new plants, no wind lines, streaks or ribbons in the air. If nothing like that is"
+          + " in the picture, change almost nothing. Keep the colors and the lighting exactly the"
+          + " same, and keep any rain streaks or snowflakes as they are";
 
   /** 한 만화에 움직이는 컷 최대 수(컷 수와 같다, FR-049). 움직이는 넓은 그림 컷마다 GPU 그림이 세 장 더 든다. */
   public static final int MAX_PER_COMIC = 10;
