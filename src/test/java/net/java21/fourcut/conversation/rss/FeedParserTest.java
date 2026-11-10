@@ -67,6 +67,24 @@ class FeedParserTest {
   }
 
   @Test
+  @DisplayName("004 FR-050: CDATA 속 제목에 남은 HTML 엔터티(&#x27; 등)를 푼다")
+  void titleEntities() {
+    FeedParser.Feed feed =
+        parse(
+            """
+            <rss version="2.0"><channel>
+              <title><![CDATA[새소식 &amp; 설명]]></title>
+              <item>
+                <title><![CDATA[「저소득층 물가」(연합뉴스, &#x27;26.8.30) 설명자료]]></title>
+                <link>https://news.example.com/a/9</link>
+              </item>
+            </channel></rss>
+            """);
+    assertThat(feed.title()).isEqualTo("새소식 & 설명");
+    assertThat(feed.entries().get(0).title()).isEqualTo("「저소득층 물가」(연합뉴스, '26.8.30) 설명자료");
+  }
+
+  @Test
   @DisplayName("004 FR-050: Atom 피드의 id, alternate 링크, published(없으면 updated)를 읽는다")
   void atom() {
     FeedParser.Feed feed =

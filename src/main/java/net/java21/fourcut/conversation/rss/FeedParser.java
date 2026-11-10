@@ -18,6 +18,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import net.java21.fourcut.conversation.article.ArticleException;
+import org.jsoup.parser.Parser;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -118,7 +119,7 @@ final class FeedParser {
       }
       unique.putIfAbsent(e.key(), e);
     }
-    String name = title == null ? base.getHost() : cut(title, MAX_FEED_TITLE);
+    String name = title == null ? base.getHost() : cut(entities(title), MAX_FEED_TITLE);
     return new Feed(name == null ? "RSS" : name, site, List.copyOf(unique.values()));
   }
 
@@ -128,7 +129,8 @@ final class FeedParser {
       return;
     }
     String key = guid == null ? link : cut(guid, MAX_URL);
-    entries.add(new Entry(key, link, title == null ? null : cut(title, MAX_TITLE), published));
+    entries.add(
+        new Entry(key, link, title == null ? null : cut(entities(title), MAX_TITLE), published));
   }
 
   /** RSS link: 글이 있는 첫 link. 채널에 함께 오는 atom:link(rel=self, 글 없음)는 건너뛴다. */
@@ -191,6 +193,13 @@ final class FeedParser {
     } catch (DateTimeParseException e) {
       return null;
     }
+  }
+
+  /**
+   * 제목 속 HTML 엔터티를 푼다. CDATA 안에 {@code &#x27;}처럼 엔터티를 한 번 더 넣어 보내는 피드가 있다(XML 파서는 CDATA 속은 그대로 둔다).
+   */
+  static String entities(String text) {
+    return Parser.unescapeEntities(text, false);
   }
 
   private static String cut(String s, int max) {

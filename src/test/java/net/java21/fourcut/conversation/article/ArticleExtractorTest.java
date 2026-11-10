@@ -175,6 +175,60 @@ class ArticleExtractorTest {
     assertThat(read.text()).contains("방앗간").contains("빵집");
   }
 
+  /** 문단 태그 없이 글 상자 하나에 본문을 넣고, 아래에 짧은 안내 문단을 둔 게시판 페이지. */
+  static String boardHtml(String boxClass) {
+    return """
+        <html lang="ko"><head><title>보도 설명자료</title></head><body>
+        <div class="bv_b"><div class="%s">[언론 보도내용]
+        □ %s
+        □ %s
+        □ %s
+        □ %s</div></div>
+        <div class="open-nuri-type"><p>이 자료는 공공누리 제1유형 조건에 따라 출처를 밝히면 자유롭게 이용할 수 있습니다.</p></div>
+        </body></html>
+        """
+        .formatted(
+            boxClass,
+            PARAGRAPH,
+            PARAGRAPH.replace("떡집", "방앗간"),
+            PARAGRAPH.replace("떡집", "빵집"),
+            PARAGRAPH.replace("떡집", "국숫집"));
+  }
+
+  @Test
+  @DisplayName("004 FR-050: 본문 자리를 아는 사이트(국가데이터처 게시판)는 그 자리에서 본문을 읽는다")
+  void siteBody() {
+    Article read =
+        ArticleExtractor.extract(
+            "https://mods.go.kr/board.es?list_no=1",
+            "www.mods.go.kr",
+            boardHtml("board_content").getBytes(StandardCharsets.UTF_8));
+    assertThat(read.text()).contains("방앗간").contains("빵집").doesNotContain("공공누리");
+  }
+
+  @Test
+  @DisplayName("004 FR-050: 모르는 사이트도 문단 태그 없는 글 상자를 짧은 안내 문단보다 본문으로 고른다")
+  void plainTextBox() {
+    Article read =
+        ArticleExtractor.extract(
+            "https://board.example.com/view/1",
+            "board.example.com",
+            boardHtml("view_text").getBytes(StandardCharsets.UTF_8));
+    assertThat(read.text()).contains("방앗간").contains("빵집").doesNotContain("공공누리");
+  }
+
+  @Test
+  @DisplayName("004 FR-050: 사이트 전용 방법은 그 도메인과 하위 도메인에만 쓴다")
+  void siteBodyDomains() {
+    SiteBody site = new SiteBody(java.util.Set.of("mods.go.kr"), ".board_content");
+    org.jsoup.nodes.Document doc = org.jsoup.Jsoup.parse("<p>x</p>");
+    assertThat(site.supports(new ArticlePage("WWW.mods.go.kr", doc, doc))).isTrue();
+    assertThat(site.supports(new ArticlePage("kostat.mods.go.kr", doc, doc))).isTrue();
+    assertThat(site.supports(new ArticlePage("notmods.go.kr", doc, doc))).isFalse();
+    assertThat(site.supports(new ArticlePage(null, doc, doc))).isFalse();
+    assertThat(site.find(new ArticlePage("mods.go.kr", doc, doc))).isEmpty();
+  }
+
   @Test
   @DisplayName("기사로 만들기: 본문은 길이 한도에서 줄 경계로 자른다")
   void cutsLongBody() {

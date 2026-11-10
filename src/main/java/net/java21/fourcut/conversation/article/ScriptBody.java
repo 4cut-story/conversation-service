@@ -16,7 +16,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Next.js가 페이지에 심어 두는 데이터({@code self.__next_f.push})의 {@code articleContent} 같은 값을 읽어, 그 안의 HTML에서
  * 글만 고른다.
  */
-final class ScriptBody {
+final class ScriptBody implements BodySource {
 
   /** 본문을 담는 흔한 키. 값은 글이거나 HTML 조각이다. */
   private static final Pattern BODY_KEY =
@@ -29,10 +29,10 @@ final class ScriptBody {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
 
-  private ScriptBody() {}
-
-  /** 스크립트에서 찾은 본문 중 가장 긴 것. 없으면 빈 글. clean() 전에 불러야 한다(스크립트를 지우므로). */
-  static String find(Document doc) {
+  /** 스크립트에서 찾은 본문 중 가장 긴 것. 없으면 빈 글. 스크립트를 걷어 내기 전 문서를 읽는다. */
+  @Override
+  public String find(ArticlePage page) {
+    Document doc = page.raw();
     String best = "";
     for (String data : texts(doc)) {
       Matcher m = BODY_KEY.matcher(data);
