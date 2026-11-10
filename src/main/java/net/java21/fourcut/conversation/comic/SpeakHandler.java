@@ -128,7 +128,8 @@ class SpeakHandler implements StepHandler {
                   .toList());
       Optional<VoiceLibrary.Voice> v =
           voices.match(
-              new VoiceLibrary.Query(description, SpeechCast.gender(c), SpeechCast.ageGroup(c), d),
+              new VoiceLibrary.Query(
+                  description, SpeechCast.gender(c), SpeechCast.ageGroup(c), d, script.concept()),
               taken,
               (conversationId + ":" + c.speaker()).hashCode());
       v.ifPresent(

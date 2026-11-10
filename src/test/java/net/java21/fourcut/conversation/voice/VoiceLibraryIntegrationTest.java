@@ -196,6 +196,46 @@ class VoiceLibraryIntegrationTest {
   }
 
   @Test
+  @DisplayName("FR-050: 사극 목소리는 조선·무협 만화에만 주고, 일상 만화에는 다른 목소리가 없을 때만 준다")
+  void periodVoicesStayInPeriodComics() {
+    VoiceLibrary.Entry daily = entry("m-middle-1", "male", "MIDDLE", null, 5);
+    VoiceLibrary.Entry sageuk =
+        new VoiceLibrary.Entry(
+            "m-middle-sageuk",
+            "장군",
+            "male",
+            "MIDDLE",
+            null,
+            "말투",
+            List.of("위엄"),
+            "설명",
+            "ko-6",
+            "en-6",
+            List.of("장군"),
+            List.of("JOSEON", "WUXIA"),
+            120.0,
+            4.0);
+    library.seed(List.of(daily, sageuk));
+    library.reindex();
+    assertThat(library.match(new VoiceLibrary.Query("q-6", "MALE", "MIDDLE", null), Set.of()))
+        .map(VoiceLibrary.Voice::id)
+        .contains("m-middle-1");
+    assertThat(
+            library.match(new VoiceLibrary.Query("q-6", "MALE", "MIDDLE", null, "DAILY"), Set.of()))
+        .map(VoiceLibrary.Voice::id)
+        .contains("m-middle-1");
+    assertThat(
+            library.match(
+                new VoiceLibrary.Query("q-6", "MALE", "MIDDLE", null, "JOSEON"), Set.of()))
+        .map(VoiceLibrary.Voice::id)
+        .contains("m-middle-sageuk");
+    library.seed(List.of(sageuk));
+    assertThat(library.match(new VoiceLibrary.Query("q-6", "MALE", "MIDDLE", null), Set.of()))
+        .map(VoiceLibrary.Voice::id)
+        .contains("m-middle-sageuk");
+  }
+
+  @Test
   @DisplayName("FR-050: 점수가 사실상 같은 목소리가 여럿이면 만화마다 정해진 값으로 그중 하나를 고른다")
   void tiesPickBySeed() {
     VoiceLibrary.Voice a = new VoiceLibrary.Voice("a", "a", "FEMALE", "YOUNG", null, "t", 0.30);
