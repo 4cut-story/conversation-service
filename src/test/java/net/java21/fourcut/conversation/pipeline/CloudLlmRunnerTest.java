@@ -186,27 +186,38 @@ class CloudLlmRunnerTest {
   }
 
   @Test
-  @DisplayName("서버가 다시 뜨면 앞 서버가 외부 API로 처리하던 대사 작업을 Claude로 이어 받고, GPU 워커가 가져간 작업은 그대로 둔다")
-  void resumesAfterRestart() {
-    job.lease(CloudLlmRunner.WORKER_ID, NOW.minusSeconds(30), Duration.ofMinutes(5));
-    UUID oldToken = job.getLeaseToken();
+  @DisplayName("서버가 뜨면 넣었지만 못 부른 LLM 작업을 Claude로 처리하고, 다른 서버가 임대한 작업은 뺏지 않는다")
+  void resumesQueuedAfterRestart() {
     org.springframework.test.util.ReflectionTestUtils.setField(job, "id", 5L);
-    GpuJob taken = new GpuJob(2L, Step.SCRIPT, JobType.LLM, "{\"prompt\":\"q\"}", NOW);
-    taken.lease("gpu-pc-1", NOW, Duration.ofSeconds(90));
-    org.springframework.test.util.ReflectionTestUtils.setField(taken, "id", 6L);
-    when(jobs.lockById(6L)).thenReturn(Optional.of(taken));
-    when(jobs.findByTypeAndManualFalseAndStateIn(eq(JobType.LLM), any()))
-        .thenReturn(List.of(job, taken));
+    when(jobs.findByTypeAndManualFalseAndStateIn(JobType.LLM, List.of(GpuJob.State.QUEUED)))
+        .thenReturn(List.of(job));
     ObjectNode result = json.createObjectNode().put("content", "{}");
     when(claude.chat(any())).thenReturn(result);
     when(service.complete(eq(5L), any(UUID.class), eq(result))).thenReturn(true);
 
     runner.resumeAfterRestart();
 
-    assertThat(job.getLeaseToken()).isNotEqualTo(oldToken);
     verify(service).complete(5L, job.getLeaseToken(), result);
     verify(claude, times(1)).chat(any());
-    assertThat(taken.getWorkerId()).isEqualTo("gpu-pc-1");
+  }
+
+  @Test
+  @DisplayName("서버가 내려가면 Claude로 처리 중인 대사 작업의 임대를 바로 끝내 다음 서버가 이어 받게 한다")
+  void handsOffOnShutdown() {
+    UUID[] token = new UUID[1];
+    when(claude.chat(any()))
+        .thenAnswer(
+            i -> {
+              token[0] = job.getLeaseToken();
+              runner.handOff();
+              return json.createObjectNode().put("content", "{}");
+            });
+
+    runner.onQueued(new LlmJobQueued(5L));
+
+    assertThat(token[0]).isNotNull();
+    assertThat(job.getLeaseExpiresAt()).isBefore(NOW);
+    runner.handOff();
   }
 
   @Test

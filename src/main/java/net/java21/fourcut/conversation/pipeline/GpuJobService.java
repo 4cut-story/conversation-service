@@ -11,6 +11,7 @@ import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ class GpuJobService {
   private final PipelineProperties properties;
   private final JsonMapper json;
   private final Clock clock;
+  private final ApplicationEventPublisher events;
 
   GpuJobService(
       GpuJobRepository jobs,
@@ -44,7 +46,9 @@ class GpuJobService {
       ObjectStorage storage,
       PipelineProperties properties,
       JsonMapper json,
-      Clock clock) {
+      Clock clock,
+      ApplicationEventPublisher events) {
+    this.events = events;
     this.jobs = jobs;
     this.workers = workers;
     this.pipeline = pipeline;
@@ -220,6 +224,10 @@ class GpuJobService {
       } else {
         log.info("임대 만료로 대기열에 되돌림: job={} worker={}", job.getId(), job.getWorkerId());
         job.requeue();
+        // LLM 작업은 외부 API(Claude)가 먼저 다시 잡게 한다. 배포로 내려간 서버가 하던 대사 작업이 GPU 워커(qwen)로 새지 않게
+        if (job.getType() == JobType.LLM && !job.isManual()) {
+          events.publishEvent(new LlmJobQueued(job.getId()));
+        }
       }
     }
   }
