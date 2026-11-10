@@ -203,7 +203,7 @@ class ComposeHandler implements StepHandler {
               third,
               depth,
               fourth,
-              voices(id, script, wide));
+              voices(id, script));
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -216,10 +216,10 @@ class ComposeHandler implements StepHandler {
   }
 
   /**
-   * 대사 읽기 단계가 남긴 음성(FR-050)을 만화 폴더로 옮기고 대사 키 → 길이를 돌려준다. 자막이 나오는 넓은 그림 컷만 쓴다. 결과가 없거나 음성 파일이 없는 대사는
+   * 대사 읽기 단계가 남긴 음성(FR-050)을 만화 폴더로 옮기고 대사 키 → 길이를 돌려준다. 1:1 컷(말풍선 그림)도 쓴다. 결과가 없거나 음성 파일이 없는 대사는
    * 빠진다(그 대사는 소리 없이 자막만 나온다).
    */
-  Map<String, Integer> voices(String id, ComicScript script, List<Boolean> wide) {
+  Map<String, Integer> voices(String id, ComicScript script) {
     Map<String, Integer> out = new LinkedHashMap<>();
     try {
       Optional<byte[]> saved = storage.get(WorkKeys.speech(id));
@@ -228,9 +228,6 @@ class ComposeHandler implements StepHandler {
       }
       JsonNode lines = json.readTree(saved.get()).path("lines");
       for (int i = 0; i < script.panels().size(); i++) {
-        if (i >= wide.size() || !Boolean.TRUE.equals(wide.get(i))) {
-          continue;
-        }
         int count = SpeechCast.lines(script.panels().get(i)).size();
         for (int k = 1; k <= count; k++) {
           String key = SpeechCast.key(i + 1, k);
