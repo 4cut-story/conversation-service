@@ -32,7 +32,7 @@ class LiveBackfill {
   private static final Logger log = LoggerFactory.getLogger(LiveBackfill.class);
 
   /** 다시 만드는 차례. 올리면 모든 만화를 한 번 더 다시 만든다. */
-  static final int ROUND = 1;
+  static final int ROUND = 2;
 
   private final Production production;
   private final PipelineObserver conversations;
@@ -125,7 +125,10 @@ class LiveBackfill {
     return LivePlayback.build(
         json,
         script,
-        sounds.match(ComposeHandler.queries(script), DrawHandler.seedOf(script)),
+        sounds.match(
+            ComposeHandler.queries(script),
+            DrawHandler.seedOf(script),
+            ComposeHandler.story(script)),
         sounds.effects(script.panels().stream().map(ComicScript.Panel::effect).toList()),
         moving,
         wide,

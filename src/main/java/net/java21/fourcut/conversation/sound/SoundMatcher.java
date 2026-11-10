@@ -16,11 +16,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * 라이브 모드 컷별 배경음 고르기 (docs specs/003-live-mode R6). 컷마다 소리 장면 문장·장소·대사를 설명 임베딩(BGE-M3)으로
- * 장소·환경음(AMBIENCE)과 견줘 가까운 소리를 고른다. 소리의 장소 낱말이 소리 장면 문장에 있으면 가까운 위쪽 몇 개 안에서만 앞으로 올리고, 시간대·날씨가 어긋나는
- * 소리는 뒤로 보내며, 앞 컷과 같은 장소이고 앞 소리가 후보 위쪽에 있으면 앞 소리를 이어 쓴다(끊지 않고 이어 틀기). 임베딩을 쓸 수 없으면 글자로 찾고, 그래도 없으면
- * 소리 없음이다. 고르다 실패해도 만화 생성은 이어진다. 콘티가 컷에 사건 소리(알람, 초인종…)를 적었으면 효과음(EFFECT)에서 가장 가까운 소리 하나를 따로
- * 고른다({@link #effects}).
+ * 라이브 모드 컷별 배경음 고르기 (docs specs/003-live-mode R6). 유사도 0.70 이상인 장소·환경음이 없는 컷에는 만화 분위기(콘티 mood, 없으면
+ * 줄거리로 짐작)에 맞는 배경음악을 깐다. 컷마다 소리 장면 문장·장소·대사를 설명 임베딩(BGE-M3)으로 장소·환경음(AMBIENCE)과 견줘 가까운 소리를 고른다. 소리의
+ * 장소 낱말이 소리 장면 문장에 있으면 가까운 위쪽 몇 개 안에서만 앞으로 올리고, 시간대·날씨가 어긋나는 소리는 뒤로 보내며, 앞 컷과 같은 장소이고 앞 소리가 후보 위쪽에
+ * 있으면 앞 소리를 이어 쓴다(끊지 않고 이어 틀기). 임베딩을 쓸 수 없으면 글자로 찾고, 그래도 없으면 소리 없음이다. 고르다 실패해도 만화 생성은 이어진다. 콘티가 컷에
+ * 사건 소리(알람, 초인종…)를 적었으면 효과음(EFFECT)에서 가장 가까운 소리 하나를 따로 고른다({@link #effects}).
  */
 @Service
 public class SoundMatcher {
@@ -38,6 +38,17 @@ public class SoundMatcher {
 
   /** 질의 글 최대 길이. 대사가 길어도 장소·소리 장면이 묻히지 않게 자른다. */
   static final int MAX_QUERY = 300;
+
+  /**
+   * 만화 전체 분위기. 장면에 꼭 맞는 장소·환경음이 없는 컷에 깔 배경음악을 고른다.
+   *
+   * @param mood 콘티 LLM이 고른 분위기(배경음 moods 이름). 없으면 text로 짐작한다
+   * @param text 줄거리 요약. 분위기 안에서 가까운 곡을 고르고, 분위기가 없을 때 분위기를 짐작한다
+   */
+  public record Story(String mood, String text) {
+
+    public static final Story NONE = new Story(null, null);
+  }
 
   /** 컷 하나의 질의. place는 그림용 배경 문구의 첫 마디(장소 이름), lines는 대사를 이은 글. */
   public record Query(String soundScene, String place, String lines) {}
@@ -96,15 +107,17 @@ public class SoundMatcher {
   public static final double DEFAULT_MAX_DISTANCE = 0.40;
 
   /**
-   * 장면 낱말 없이도 믿고 쓰는 거리 기본값(코사인 거리 0.30 = 유사도 0.70 이상). 이보다 먼(유사도 0.60~0.70) 장소·환경음은 소리의 장소 낱말이나 중심
-   * 낱말(제목 끝 낱말: "기계실 웅웅거림"의 웅웅거림)이 소리 장면 문장에 있을 때만 쓴다. 실제 만화에서 유사도 0.63~0.69로 붙은 소리가 햄버거 가게에 기계실
-   * 웅웅거림, 정전된 집 안에 집 밖 밤 소리, 눈 오는 날 선풍기처럼 장면과 어긋났다(marco, 2026-11-09). 쓰지 못하면 바탕 배경음악을 깐다.
+   * 장소·환경음을 쓰는 거리 기본값(코사인 거리 0.30 = 유사도 0.70 이상). 이보다 먼 장소·환경음은 쓰지 않고 만화 분위기의 배경음악을 깐다. 실제 만화에서 유사도
+   * 0.63~0.69로 붙은 소리가 햄버거 가게에 기계실 웅웅거림, 눈 오는 날 선풍기처럼 장면과 어긋났고(marco, 2026-11-09), 장면 문장의 낱말이 맞아도
+   * 우울한 이야기의 빌라 공용실에 사무실 환풍구 소리(0.62)가 붙었다(marco, 2026-11-10).
    */
   public static final double DEFAULT_SURE_DISTANCE = 0.30;
 
   private final BiFunction<String, Integer, List<Scored>> finder;
   private final BiFunction<String, Integer, List<Scored>> effectFinder;
   private final BiFunction<String, Integer, List<Scored>> musicFinder;
+  private final MoodMusic moodMusic;
+  private final java.util.function.Function<String, Optional<String>> moodGuess;
   private final double maxDistance;
   private final double sureDistance;
 
@@ -119,6 +132,9 @@ public class SoundMatcher {
         (q, n) -> library.scored(new SoundLibrary.Filter("EFFECT", null, null, null), q, n);
     this.musicFinder =
         (q, n) -> library.scored(new SoundLibrary.Filter("MUSIC", null, null, null), q, n);
+    this.moodMusic =
+        (mood, q, n) -> library.scored(new SoundLibrary.Filter("MUSIC", null, mood, null), q, n);
+    this.moodGuess = library::guessMood;
     this.maxDistance = maxDistance;
     this.sureDistance = sureDistance;
   }
@@ -134,19 +150,31 @@ public class SoundMatcher {
         (q, n) -> byRank(finder.apply(q, n)),
         (q, n) -> byRank(effectFinder.apply(q, n)),
         (q, n) -> List.of(),
+        (m, q, n) -> List.of(),
+        t -> Optional.empty(),
         DEFAULT_MAX_DISTANCE,
         DEFAULT_SURE_DISTANCE);
+  }
+
+  /** 분위기와 검색어로 찾는 배경음악. */
+  @FunctionalInterface
+  interface MoodMusic {
+    List<Scored> find(String mood, String query, int n);
   }
 
   private SoundMatcher(
       BiFunction<String, Integer, List<Scored>> scored,
       BiFunction<String, Integer, List<Scored>> effectFinder,
       BiFunction<String, Integer, List<Scored>> musicFinder,
+      MoodMusic moodMusic,
+      java.util.function.Function<String, Optional<String>> moodGuess,
       double maxDistance,
       double sureDistance) {
     this.finder = scored;
     this.effectFinder = effectFinder;
     this.musicFinder = musicFinder;
+    this.moodMusic = moodMusic;
+    this.moodGuess = moodGuess;
     this.maxDistance = maxDistance;
     this.sureDistance = sureDistance;
   }
@@ -168,7 +196,29 @@ public class SoundMatcher {
       BiFunction<String, Integer, List<Scored>> scored,
       BiFunction<String, Integer, List<Scored>> effects,
       BiFunction<String, Integer, List<Scored>> music) {
-    return new SoundMatcher(scored, effects, music, DEFAULT_MAX_DISTANCE, DEFAULT_SURE_DISTANCE);
+    return new SoundMatcher(
+        scored,
+        effects,
+        music,
+        (m, q, n) -> List.of(),
+        t -> Optional.empty(),
+        DEFAULT_MAX_DISTANCE,
+        DEFAULT_SURE_DISTANCE);
+  }
+
+  /** 거리를 아는 배경음·분위기 배경음악 찾기와 분위기 짐작으로 만든다(테스트). */
+  static SoundMatcher scored(
+      BiFunction<String, Integer, List<Scored>> scored,
+      MoodMusic moodMusic,
+      java.util.function.Function<String, Optional<String>> moodGuess) {
+    return new SoundMatcher(
+        scored,
+        (q, n) -> List.of(),
+        (q, n) -> List.of(),
+        moodMusic,
+        moodGuess,
+        DEFAULT_MAX_DISTANCE,
+        DEFAULT_SURE_DISTANCE);
   }
 
   static List<Scored> byRank(List<SoundLibrary.Sound> sounds) {
@@ -253,6 +303,28 @@ public class SoundMatcher {
    * 고른다. 늘 첫 후보만 쓰면 비슷한 장면마다 같은 소리가 나온다. 같은 만화는 같은 소리다.
    */
   public List<Optional<Picked>> match(List<Query> panels, long seed) {
+    return match(panels, seed, Story.NONE);
+  }
+
+  /**
+   * 컷마다 고른 소리. 장면에 꼭 맞는 장소·환경음이 없는 컷에는 만화 분위기({@link Story})의 배경음악 한 곡을 모든 그런 컷에 이어 깐다. 분위기를 모르면 컷
+   * 장면으로 음악을 찾는다.
+   */
+  public List<Optional<Picked>> match(List<Query> panels, long seed, Story story) {
+    Scored[] storyMusic = new Scored[1];
+    boolean[] tried = new boolean[1];
+    java.util.function.Supplier<Scored> moodTrack =
+        () -> {
+          if (!tried[0]) {
+            tried[0] = true;
+            try {
+              storyMusic[0] = storyMusic(story, panels, seed);
+            } catch (RuntimeException e) {
+              log.warn("분위기 배경음악을 고르지 못했다: {}", e.toString());
+            }
+          }
+          return storyMusic[0];
+        };
     List<Optional<Picked>> out = new ArrayList<>();
     Scored previous = null;
     String previousPlace = null;
@@ -273,7 +345,10 @@ public class SoundMatcher {
           chosen = tieBreak(q, ranked, seed);
         }
         if (chosen == null) {
-          // 한도 안의 장소·환경음이 없으면 같은 질의로 분위기 배경음악을 깐다
+          // 꼭 맞는 장소·환경음이 없으면 만화 분위기의 배경음악을 깐다. 분위기 곡이 없으면 컷 장면으로 음악을 찾는다
+          chosen = moodTrack.get();
+        }
+        if (chosen == null) {
           chosen = music(q, previous, seed);
         }
       } catch (RuntimeException e) {
@@ -284,6 +359,33 @@ public class SoundMatcher {
       previousPlace = q.place();
     }
     return out;
+  }
+
+  /**
+   * 만화 분위기의 배경음악 한 곡. 분위기가 없으면 줄거리로 짐작한다. 그 분위기 곡 가운데 줄거리(없으면 컷 장면들)와 가까운 곡을 고른다. 분위기도 곡도 없으면 null.
+   */
+  private Scored storyMusic(Story story, List<Query> panels, long seed) {
+    String text = text(story.text());
+    if (text.isEmpty()) {
+      text =
+          panels.stream().map(SoundMatcher::query).filter(t -> !t.isEmpty()).findFirst().orElse("");
+    }
+    String mood = text(story.mood());
+    if (mood.isEmpty() && !text.isEmpty()) {
+      mood = moodGuess.apply(text).orElse("");
+    }
+    if (mood.isEmpty() || text.isEmpty()) {
+      return null;
+    }
+    String q = text.length() > MAX_QUERY ? text.substring(0, MAX_QUERY) : text;
+    List<Scored> found = moodMusic.find(mood, q, CANDIDATES);
+    if (found.isEmpty()) {
+      return null;
+    }
+    Scored best = found.get(0);
+    List<Scored> tied =
+        found.stream().filter(s -> s.distance() - best.distance() <= TIE_MARGIN).toList();
+    return tied.get((int) Math.floorMod(seed, (long) tied.size()));
   }
 
   /**
@@ -340,10 +442,12 @@ public class SoundMatcher {
     String context = (scene + " " + text(q.place())).toLowerCase(Locale.ROOT);
     // 시간대·날씨가 어긋나는 소리는 쓰지 않는다(장면과 관계없는 소리보다 바탕 배경음악이 낫다)
     // 믿을 만큼 가깝지 않은 소리는 장면 문장이 그 장소나 소리를 말할 때만 쓴다
+    // 유사도 0.70 밑의 소리는 장면 문장에 장소·소리 낱말이 있어도 쓰지 않는다: 공용실 "형광등 웅웅"에 사무실 환풍구 소리(0.62)가
+    // 붙었다(marco, 2026-11-10). 그런 컷은 만화 분위기의 배경음악을 깐다
     List<Scored> fit =
         close(found).stream()
             .filter(s -> !conflicts(context, s.sound()))
-            .filter(s -> sure(s) || supported(scene, s.sound()))
+            .filter(this::sure)
             .toList();
     List<Scored> top = fit.subList(0, Math.min(PLACE_WINDOW, fit.size()));
     List<Scored> out = new ArrayList<>();
@@ -356,15 +460,6 @@ public class SoundMatcher {
   /** 장면 낱말 없이도 쓸 만큼 가까운가. 거리를 모르는 후보(글자 찾기)는 찾은 낱말이 이미 장면에 있다. */
   private boolean sure(Scored s) {
     return !s.known() || s.distance() <= sureDistance;
-  }
-
-  /** 소리 장면 문장이 소리의 장소 낱말이나 중심 낱말(제목 끝 낱말)을 말하는가. */
-  static boolean supported(String scene, SoundLibrary.Sound s) {
-    if (placeHit(scene, s)) {
-      return true;
-    }
-    String head = head(s.title());
-    return !scene.isEmpty() && head.length() >= 2 && scene.contains(head);
   }
 
   /** 소리 이름의 중심 낱말: "소리" 같은 흔한 말을 뺀 끝 낱말("밤바다 파도 소리"는 파도). */
