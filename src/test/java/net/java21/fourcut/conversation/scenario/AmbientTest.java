@@ -58,8 +58,8 @@ class AmbientTest {
     List<List<String>> kept =
         script.withAmbientLimits().panels().stream().map(ComicScript.Panel::ambient).toList();
 
-    // 근거 없는 효과를 지운 컷에도 은은한 빛을 넣어 모든 컷이 움직인다
-    assertThat(kept).containsExactly(List.of("steam"), List.of("glow"), List.of("twinkle"));
+    // 근거 없는 효과를 지운 컷에도 배경에 맞는 효과(낮 햇빛 → 창빛)를 넣어 모든 컷이 움직인다
+    assertThat(kept).containsExactly(List.of("steam"), List.of("sunbeam"), List.of("twinkle"));
     ComicScript old =
         new ComicScript(
             "t",
@@ -79,6 +79,42 @@ class AmbientTest {
         .containsExactly("twinkle");
     assertThat(Ambient.fallback("plain white office")).containsExactly("glow");
     assertThat(Ambient.fallback(null)).containsExactly("glow");
+  }
+
+  @Test
+  @DisplayName("FR-045: 창빛·화면·도시 불빛·구름·비눗방울은 그 배경에서만 맞고, 창빛·구름은 밤 장면이 아니다")
+  void sceneEffects() {
+    assertThat(Ambient.SUNBEAM.fits("office, big windows, desks")).isTrue();
+    assertThat(Ambient.SUNBEAM.fits("bedroom at night, window")).isFalse();
+    assertThat(Ambient.SCREEN.fits("newsroom, rows of monitors")).isTrue();
+    assertThat(Ambient.BOKEH.fits("busy city street at night, headlights")).isTrue();
+    assertThat(Ambient.CLOUDS.fits("park bench, blue sky with clouds")).isTrue();
+    assertThat(Ambient.CLOUDS.fits("living room, painting of clouds")).isFalse();
+    assertThat(Ambient.CLOUDS.fits("park at night")).isFalse();
+    assertThat(Ambient.BUBBLES.fits("kids blowing soap bubbles in the yard")).isTrue();
+  }
+
+  @Test
+  @DisplayName("FR-045: 채우는 효과는 앞 컷과 겹치지 않는 것을 먼저 고르고, 맞는 것이 앞 컷 것뿐이면 그것을 쓴다")
+  void fallbackAvoidsPrevious() {
+    String office = "office, big windows, rows of monitors";
+    assertThat(Ambient.fallback(office, List.of())).containsExactly("sunbeam");
+    assertThat(Ambient.fallback(office, List.of("sunbeam"))).containsExactly("screen");
+    assertThat(Ambient.fallback("office, rows of monitors", List.of("screen")))
+        .containsExactly("screen");
+    assertThat(Ambient.fallback("plain white wall", List.of("glow"))).containsExactly("glow");
+    ComicScript script =
+        new ComicScript(
+            "t",
+            List.of(new ComicScript.Character("A", "민지", "", "girl")),
+            List.of(
+                panel("{A} types", office, List.of()),
+                panel("{A} sighs", office, List.of()),
+                panel("{A} smiles", office, List.of())),
+            true,
+            List.of());
+    assertThat(script.withAmbientLimits().panels().stream().map(ComicScript.Panel::ambient))
+        .containsExactly(List.of("sunbeam"), List.of("screen"), List.of("sunbeam"));
   }
 
   @Test

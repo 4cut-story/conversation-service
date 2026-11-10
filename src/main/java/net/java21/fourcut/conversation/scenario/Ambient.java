@@ -41,8 +41,27 @@ public enum Ambient {
   FIREWORKS("firework|fireworks", false),
   /** 번개가 번쩍인다. */
   LIGHTNING("lightning|thunder|thunderstorm", false),
+  /** 창으로 드는 빛줄기가 천천히 밝아졌다 옅어진다. 밤 장면은 아니다. */
+  SUNBEAM("window|windows|daylight|morning light|skylight|sunny", false, Ambient.NIGHT),
+  /** 모니터·텔레비전 화면 빛이 은은하게 깜빡인다. */
+  SCREEN(
+      "monitor|monitors|screen|screens|computer|computers|laptop|laptops|tv|television|"
+          + "broadcast|newsroom|control room",
+      false),
+  /** 멀리 도시 불빛·자동차 불빛이 흐릿한 빛 동그라미로 번진다. */
+  BOKEH(
+      "street lights|streetlights|street lamps|streetlamps|headlights|taillights|traffic|"
+          + "neon signs|night city|downtown|cars|city street",
+      false),
+  /** 하늘에 구름이 천천히 흐른다. 야외 낮만. */
+  CLOUDS("cloud|clouds|cloudy|blue sky|sky|skyline|rooftop|field|park", true, Ambient.NIGHT),
+  /** 비눗방울·수족관 거품이 떠오른다. */
+  BUBBLES("bubble|bubbles|soap|aquarium|fish tank|bathtub", false),
   /** 은은하게 떠다니는 빛 알갱이. 배경과 상관없이 어울려서, 다른 효과가 없는 컷에 코드가 넣는다. */
   GLOW("", false);
+
+  /** 밤 낱말. 창빛·구름은 밤 장면에 띄우지 않는다. */
+  private static final String NIGHT = "night|midnight|dark|starry|moonlight|moonlit";
 
   /** 한 컷에 겹치는 효과 최대 수. 많으면 그림이 가린다. */
   public static final int MAX_PER_PANEL = 2;
@@ -55,10 +74,16 @@ public enum Ambient {
 
   private final Pattern background;
   private final boolean outdoorOnly;
+  private final Pattern avoid;
 
   Ambient(String background, boolean outdoorOnly) {
+    this(background, outdoorOnly, null);
+  }
+
+  Ambient(String background, boolean outdoorOnly, String avoid) {
     this.background = background.isEmpty() ? null : Pattern.compile("\\b(" + background + ")\\b");
     this.outdoorOnly = outdoorOnly;
+    this.avoid = avoid == null ? null : Pattern.compile("\\b(" + avoid + ")\\b");
   }
 
   /** 재생 정보와 LLM 출력에 쓰는 이름(소문자). */
@@ -87,6 +112,9 @@ public enum Ambient {
     if (!background.matcher(text).find()) {
       return false;
     }
+    if (avoid != null && avoid.matcher(text).find()) {
+      return false;
+    }
     return !outdoorOnly || !INDOOR.matcher(text).find();
   }
 
@@ -113,9 +141,20 @@ public enum Ambient {
    * #GLOW}다.
    */
   public static List<String> fallback(String sceneAndSetting) {
-    return Arrays.stream(values())
-        .filter(a -> a != GLOW && a.fits(sceneAndSetting))
+    return fallback(sceneAndSetting, List.of());
+  }
+
+  /**
+   * 앞 컷 효과(previous)와 겹치지 않는 효과를 먼저 고른다. 배경 문구에 맞는 효과가 앞 컷 것뿐이면 그것을 쓰고, 하나도 없으면 {@link #GLOW}다. 여러
+   * 편을 이어 보면 은은한 빛·먼지만 되풀이돼 새롭지 않았다(최근 40편 264컷 중 60%).
+   */
+  public static List<String> fallback(String sceneAndSetting, List<String> previous) {
+    List<Ambient> fit =
+        Arrays.stream(values()).filter(a -> a != GLOW && a.fits(sceneAndSetting)).toList();
+    return fit.stream()
+        .filter(a -> previous == null || !previous.contains(a.code()))
         .findFirst()
+        .or(() -> fit.stream().findFirst())
         .map(a -> List.of(a.code()))
         .orElse(List.of(GLOW.code()));
   }

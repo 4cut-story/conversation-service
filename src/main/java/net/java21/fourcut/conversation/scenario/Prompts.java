@@ -321,10 +321,21 @@ final class Prompts {
         flicker. 벚꽃길을 걷는 컷 → petals.
         나쁜 예: 인물이 손을 흔든다 → none(인물 동작). 밤인데 setting에 별이 없다 → none. 창밖에 비가 오는 방 안 → none
         (실내). 놀라서 펄쩍 뛴다 → none. 모든 컷에 twinkle → 한두 컷만 남기고 none.
-      - ambient: 라이브 모드에서 그림 위에 화면이 얹는 작은 움직임 층이다(그림은 그대로). 아래 열두 가지에서 그 컷 배경에
+      - stir: 라이브 모드에서 그 컷 배경의 무엇이 어떻게 살짝 움직이는지 영어 한 구절(5~16낱말)로 쓴다. motion이 "none"인
+        컷의 움직임 그림이 이 구절로 그려진다. 그 컷 setting에 쓴 물건 하나를 골라 그 물건 이름을 그대로 쓰고, 그 장소와
+        이야기에 어울리는 움직임을 쓴다. 인물·얼굴·손은 움직이지 않고, 그림에 없는 것을 새로 생기게 하지 않는다. 바로 앞 컷과
+        다른 물건을 움직인다. 나뭇잎·풀이 흔들리는 바람은 setting에 나무·풀이 있는 야외 컷에서만 쓴다.
+        좋은 예: 사무실(setting에 monitors, wall clock) → "the wall clock's hands tick forward" 또는 "the code on the
+        monitors scrolls up". 식당(setting에 soup pot) → "steam curls up from the soup pot". 거실(setting에 TV) → "the
+        news on the TV screen changes to a new picture". 버스 안(setting에 bus window) → "the street scenery slides past
+        the bus window". 횡단보도(setting에 traffic light, cars) → "the traffic light turns from red to green". 카페(setting에
+        espresso machine) → "steam puffs from the espresso machine". 야외 공원(setting에 trees, clouds) → "white clouds
+        drift slowly across the sky".
+        나쁜 예: "she smiles"(인물). "leaves fly around the room"(실내에 없는 것). setting에 없는 물건. 앞 컷과 같은 물건.
+      - ambient: 라이브 모드에서 그림 위에 화면이 얹는 작은 움직임 층이다(그림은 그대로). 아래 열일곱 가지에서 그 컷 배경에
         실제로 보이는 것만 0~2개 고른다. 대사나 장면에 하늘·날씨 사건(별똥별, 불꽃놀이, 번개)이 나오면 그 낱말을 setting에도
         쓰고 꼭 고른다. 그 낱말(괄호 안)이 그 컷 setting에 쓰여 있어야 하고, 없으면 빈 배열 []이다. motion과
-        달리 여러 컷에 써도 된다. 같은 장소·날씨가 이어지면 같은 값을 쓴다. 확실하지 않으면 [].
+        달리 여러 컷에 써도 된다. 날씨(비·눈)는 이어 쓰되, 같은 장소가 이어져도 그 컷 배경에 보이는 다른 것이 있으면 앞 컷과 다른 효과를 고른다. 확실하지 않으면 [].
         · twinkle: 별빛·전구 불빛이 반짝인다(stars, night sky, fairy lights, city lights).
         · rain: 빗줄기(rain). 야외 컷만이다. 창밖에 비가 오는 방 안은 안 된다.
         · snow: 내리는 눈(snow). 야외 컷만이다.
@@ -337,8 +348,13 @@ final class Prompts {
         · meteor: 별똥별이 하늘을 가로질러 떨어진다(shooting star, meteor).
         · fireworks: 불꽃놀이가 터진다(fireworks).
         · lightning: 번개가 번쩍인다(lightning, thunderstorm).
+        · sunbeam: 낮에 창으로 드는 빛줄기가 천천히 밝아졌다 옅어진다(window, daylight). 밤 장면은 안 된다.
+        · screen: 모니터·텔레비전 화면 빛이 은은하게 깜빡인다(monitor, screen, laptop, TV).
+        · bokeh: 멀리 거리 불빛·자동차 불빛이 흐릿한 빛 동그라미로 번진다(street lights, headlights, traffic, neon signs).
+        · clouds: 낮 하늘에 구름이 천천히 흐른다(clouds, blue sky). 야외 낮 컷만이다.
+        · bubbles: 비눗방울·수족관 거품이 떠오른다(bubbles, soap, aquarium).
         좋은 예: 별이 뜬 밤 옥상 → ["twinkle"]. 비 오는 밤 골목 → ["rain"]. 카페에서 김 나는 커피를 마신다 → ["steam"].
-        햇살 드는 아침 방 → ["dust"]. "별똥별이다!" 하며 밤하늘을 보는 컷 → ["meteor","twinkle"]. 축제 밤 불꽃놀이 → ["fireworks"]. 캠핑장 밤 모닥불 → ["flicker","twinkle"]. 벚꽃길 → ["petals"].
+        햇살 드는 아침 방 → ["dust"]. 모니터가 켜진 사무실 → ["screen"]. 밤 도심 거리 → ["bokeh"]. 맑은 날 공원 → ["clouds"]. "별똥별이다!" 하며 밤하늘을 보는 컷 → ["meteor","twinkle"]. 축제 밤 불꽃놀이 → ["fireworks"]. 캠핑장 밤 모닥불 → ["flicker","twinkle"]. 벚꽃길 → ["petals"].
         나쁜 예: 밤이라는 말만 있고 setting에 별이 없다 → []. 차가운 아이스커피 → [](김이 안 난다). 창밖에 비가 오는
         방 안 → [](실내). 낮 하늘에 twinkle → []. 세 개 이상 → 두 개까지만.
 
@@ -373,7 +389,7 @@ final class Prompts {
        "places":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"object","required":["key","draw"],
         "properties":{"key":{"type":"string"},"draw":{"type":"string"}}}},
        "panels":{"type":"array","minItems":4,"maxItems":10,"items":{"type":"object",
-        "required":["role","shot","action","place","setting","faces","lines","sound","motion","effect","ambient"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
+        "required":["role","shot","action","place","setting","faces","lines","sound","motion","stir","effect","ambient"],"properties":{"role":{"type":"string","enum":["기","승","전","결"]},
          "shot":{"type":"string","enum":["wide","medium","close-up"]},
          "action":{"type":"string"},"place":{"type":"string"},"setting":{"type":"string"},
          "faces":{"type":"array","items":{"type":"object","required":["speaker","face","lookAt"],
@@ -382,9 +398,10 @@ final class Prompts {
            "quote":{"type":"string"},"text":{"type":"string"}}}},
          "sound":{"type":"string"},
          "effect":{"type":"string"},
+         "stir":{"type":"string"},
          "motion":{"type":"string","enum":["none","twinkle","rain","snow","flicker","shimmer","petals"]},
          "ambient":{"type":"array","maxItems":2,"items":{"type":"string",
-          "enum":["twinkle","rain","snow","fireflies","petals","leaves","steam","dust","flicker","meteor","fireworks","lightning"]}}}}},
+          "enum":["twinkle","rain","snow","fireflies","petals","leaves","steam","dust","flicker","meteor","fireworks","lightning","sunbeam","screen","bokeh","clouds","bubbles"]}}}}},
        "nameWarnings":{"type":"array","items":{"type":"string"}}}}
       """;
 }
