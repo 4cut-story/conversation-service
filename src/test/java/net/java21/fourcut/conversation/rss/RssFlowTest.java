@@ -166,10 +166,12 @@ class RssFlowTest {
     assertThat(first.get("auto_publish")).isEqualTo(true);
     assertThat(first.get("rss_feed_id")).isNotNull();
     assertThat(first.get("concept")).isEqualTo("NEWSPAPER");
-    assertThat(
+    // 만든 기사의 대화가 생긴 뒤에 나머지를 건너뜀으로 남기므로 기다린다
+    await(
+        () ->
             jdbc.queryForObject(
-                "select count(*) from rss_feed_items where status = 'SKIPPED'", Integer.class))
-        .isEqualTo(2);
+                    "select count(*) from rss_feed_items where status = 'SKIPPED'", Integer.class)
+                == 2);
 
     ARTICLES.addAll(List.of("4", "5"));
     mvc.perform(as(post("/api/v1/rss-feeds/{id}/check", id), owner))
