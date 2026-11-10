@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.character.CharacterRef;
 import net.java21.fourcut.conversation.character.LookHead;
+import net.java21.fourcut.conversation.pipeline.ConversationInfo;
 import net.java21.fourcut.conversation.pipeline.JobType;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -22,6 +23,8 @@ import net.java21.fourcut.conversation.scenario.ScenarioStore;
 import net.java21.fourcut.conversation.scenario.Stir;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -39,23 +42,31 @@ import tools.jackson.databind.node.ObjectNode;
 @Component
 class DrawHandler implements StepHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(DrawHandler.class);
+
+  /** 움직임 그림만 그리는 두 번째 그림 작업 표시 (FR-051). */
+  static final String MOTION_ONLY = "motionOnly";
+
   private final ScenarioStore scenarios;
   private final ObjectStorage storage;
   private final ComicProperties properties;
   private final JsonMapper json;
   private final CharacterLibrary characters;
+  private final MotionPlan plans;
 
   DrawHandler(
       ScenarioStore scenarios,
       ObjectStorage storage,
       ComicProperties properties,
       JsonMapper json,
-      CharacterLibrary characters) {
+      CharacterLibrary characters,
+      MotionPlan plans) {
     this.scenarios = scenarios;
     this.storage = storage;
     this.properties = properties;
     this.json = json;
     this.characters = characters;
+    this.plans = plans;
   }
 
   @Override
@@ -110,12 +121,7 @@ class DrawHandler implements StepHandler {
         // 라이브 전용 넓은 그림. 완성 컷을 바탕으로 같은 인물·장면을 16:9로 넓히고 빛·거리감을 더한다(첫 그림 프롬프트는 그대로)
         image.set("live", live(style, id, i, script.panels().get(i)));
       }
-      ObjectNode motion =
-          properties.twoPass() ? motion(style, id, i, script.panels().get(i)) : null;
-      if (motion != null) {
-        // 라이브 모드 두 번째 그림. 첫 그림 프롬프트는 그대로 두고, 워커가 완성 그림을 입력으로 배경만 바꿔 그린다
-        image.set("motion", motion);
-      }
+      // 라이브 모드 움직임 그림은 이 그림들을 다 그린 뒤 넓은 그림을 보고 정해 따로 그린다(FR-051, runLocal)
       ArrayNode refs = references(stage, cast, othersInScene(script, panel));
       image.put("seed", panelSeed(seed, i, stages.get(i), cast, properties.panelSeedStep()));
       image.put("width", properties.imageSize());
@@ -138,6 +144,123 @@ class DrawHandler implements StepHandler {
 
   @Override
   public StepOutcome onResult(StepContext context, JsonNode result) {
+    String publicId = context.conversation().publicId();
+    if (motionOnly(context.jobPayload())) {
+      // 움직임 그림은 못 그린 컷이 있어도 된다(그 컷은 넓은 그림 한 장으로 재생한다)
+      log.info("움직임 그림 완료: conversation={} {}", publicId, result.path("motions"));
+      return new StepOutcome.Done(WorkKeys.workPrefix(publicId), Step.SPEAK);
+    }
+    StepOutcome drawn = drawn(context, result);
+    if (drawn instanceof StepOutcome.Done
+        && properties.twoPass()
+        && !motionDrawn(context.jobPayload())) {
+      // 넓은 그림을 보고 움직임을 정하는 일(외부 LLM 호출)은 오래 걸릴 수 있어 서버 작업으로 따로 한다
+      return new StepOutcome.RunLocal();
+    }
+    return drawn;
+  }
+
+  /**
+   * 그림을 다 그린 뒤: 넓은 그림을 보고 컷마다 움직일 것을 정해(FR-051) 움직임 그림만 그리는 작업을 넣는다. 움직이는 컷이 없거나 정하다 실패하면 움직임 없이 다음
+   * 단계로 간다. 그림을 다시 그리지 않도록 이 단계는 실패하지 않는다.
+   */
+  @Override
+  public StepOutcome runLocal(StepContext context) {
+    String id = context.conversation().publicId();
+    try {
+      ObjectNode payload = motionJob(context.conversation(), scenarios.script(id));
+      if (payload != null) {
+        return new StepOutcome.Enqueue(JobType.IMAGE, payload, null);
+      }
+    } catch (RuntimeException e) {
+      log.warn("움직임 그림 작업을 만들지 못해 움직임 없이 간다: conversation={}", id, e);
+    }
+    return new StepOutcome.Done(WorkKeys.workPrefix(id), Step.SPEAK);
+  }
+
+  /** 움직임 그림만 그리는 작업이 실패하면 그림은 다시 그리지 않고 움직임 없이 다음 단계로 간다. */
+  @Override
+  public StepOutcome onJobFailed(StepContext context, String reason) {
+    if (motionOnly(context.jobPayload())) {
+      log.warn("움직임 그림 작업 실패, 움직임 없이 간다: {}", reason);
+      return new StepOutcome.Done(
+          WorkKeys.workPrefix(context.conversation().publicId()), Step.SPEAK);
+    }
+    return new StepOutcome.Retry(reason);
+  }
+
+  /** 그림을 다 그렸는데 움직임 정하기가 끝나지 않았다(서버 재시작 등). 그림은 다시 그리지 않고 움직임 없이 다음 단계로 간다. */
+  @Override
+  public StepOutcome onStalled(StepContext context) {
+    log.warn("움직임 그림 정하기가 끝나지 않아 움직임 없이 간다: {}", context.conversation().publicId());
+    return new StepOutcome.Done(WorkKeys.workPrefix(context.conversation().publicId()), Step.SPEAK);
+  }
+
+  /** 예전 그림 작업(배포 전에 넣은 것)은 움직임 그림을 함께 그렸다. */
+  static boolean motionDrawn(JsonNode payload) {
+    if (payload == null) {
+      return false;
+    }
+    for (JsonNode image : payload.path("images")) {
+      if (image.path("motion").isObject()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static boolean motionOnly(JsonNode payload) {
+    return payload != null && payload.path(MOTION_ONLY).asBoolean(false);
+  }
+
+  /**
+   * 움직임 그림만 그리는 작업 (FR-051). 움직이는 컷마다 그려 둔 넓은 그림(baseGetKey)과 깊이 지도(depthGetKey)를 주고, 그 그림을 보고 정한
+   * 움직임의 세 장면을 세 장으로 그리게 한다. 정하지 못한 컷은 콘티 글로 정한 움직임이다. 넓은 그림이 없는 컷은 뺀다. 그릴 컷이 없으면 null.
+   */
+  ObjectNode motionJob(ConversationInfo conversation, ComicScript script) {
+    String id = conversation.publicId();
+    List<MotionPlan.Asked> asked = new ArrayList<>();
+    for (int i = 0; i < script.panels().size(); i++) {
+      var m = script.panels().get(i).liveMotion();
+      if (m.isEmpty()) {
+        continue;
+      }
+      var wide = storage.get(WorkKeys.panelWide(id, i + 1));
+      if (wide.isPresent()) {
+        asked.add(new MotionPlan.Asked(i, wide.get(), m.get()));
+      }
+    }
+    if (asked.isEmpty()) {
+      return null;
+    }
+    Map<Integer, MotionPlan.Plan> planned =
+        plans == null || conversation.manualLlm() ? Map.of() : plans.plan(asked);
+    String style = style(script, properties);
+    long seed = Math.floorMod(seedOf(script), 1_000_000_000L);
+    ObjectNode payload = json.createObjectNode();
+    payload.put(MOTION_ONLY, true);
+    ArrayNode images = payload.putArray("images");
+    for (MotionPlan.Asked a : asked) {
+      int i = a.index();
+      ComicScript.Panel panel = script.panels().get(i);
+      ObjectNode image = images.addObject();
+      image.put("name", panelName(i));
+      image.put("prompt", livePrompt(style, panel));
+      image.put("negativePrompt", negative(script, properties) + dayNegative(panel));
+      image.put("seed", seed);
+      image.put("width", LIVE_WIDTH);
+      image.put("height", LIVE_HEIGHT);
+      image.put("baseGetKey", WorkKeys.panelWide(id, i + 1));
+      if (storage.exists(WorkKeys.panelDepth(id, i + 1))) {
+        image.put("depthGetKey", WorkKeys.panelDepth(id, i + 1));
+      }
+      image.set("motion", motion(style, id, i, panel, planned.get(i)));
+    }
+    log.info("움직임 그림 작업: conversation={} 컷 {}개, 그림을 보고 정한 컷 {}개", id, asked.size(), planned.size());
+    return payload;
+  }
+
+  private StepOutcome drawn(StepContext context, JsonNode result) {
     Set<String> uploaded = new HashSet<>();
     result.path("uploaded").forEach(n -> uploaded.add(n.asString()));
     String id = context.conversation().publicId();
@@ -803,23 +926,43 @@ class DrawHandler implements StepHandler {
    * next는 세 번째, next.next는 네 번째 그림이다. 움직임이 없는 컷은 null. 참조 그림을 그대로 받는 그림 모델(2단 그리기를 켠 모델)에서만 부른다.
    */
   ObjectNode motion(String style, String conversationId, int index, ComicScript.Panel panel) {
+    return motion(style, conversationId, index, panel, null);
+  }
+
+  /** plan(넓은 그림을 보고 정한 움직임, FR-051)이 있으면 그 세 장면을 그린다. */
+  ObjectNode motion(
+      String style,
+      String conversationId,
+      int index,
+      ComicScript.Panel panel,
+      MotionPlan.Plan plan) {
     return panel
         .liveMotion()
         .map(
             m -> {
-              // 가벼운 바람 컷에 콘티가 쓴 배경 움직임이 있으면 그 움직임의 처음·중간·끝을 그린다(FR-049)
+              // 그림을 보고 정한 움직임이 없으면, 가벼운 움직임 컷에 콘티가 쓴 배경 움직임의 처음·중간·끝을 그린다(FR-049)
               java.util.Optional<String> stir = panel.liveStir();
+              List<String> changes =
+                  plan != null
+                      ? List.of(plan.change(0), plan.change(1), plan.change(2))
+                      : List.of(
+                          stir.map(Stir::change).orElseGet(m::change),
+                          stir.map(Stir::next).orElseGet(m::next),
+                          stir.map(Stir::last).orElseGet(m::last));
               ObjectNode node = json.createObjectNode();
               node.put("type", m.code());
-              node.put("prompt", motionPrompt(style, stir.map(Stir::change).orElseGet(m::change)));
+              if (plan != null) {
+                node.put("target", plan.target());
+              }
+              node.put("prompt", motionPrompt(style, changes.get(0)));
               node.put("uploadPutKey", WorkKeys.panelB(conversationId, index + 1));
               // 세 번째 그림(FR-044): 같은 바탕에서 다르게 바꾼 한 장. 예전 워커는 이 필드를 모르고 두 장만 그린다
               ObjectNode next = node.putObject("next");
-              next.put("prompt", motionPrompt(style, stir.map(Stir::next).orElseGet(m::next)));
+              next.put("prompt", motionPrompt(style, changes.get(1)));
               next.put("uploadPutKey", WorkKeys.panelC(conversationId, index + 1));
               // 네 번째 그림(FR-049): 넓은 그림 컷만 워커가 그린다
               ObjectNode last = next.putObject("next");
-              last.put("prompt", motionPrompt(style, stir.map(Stir::last).orElseGet(m::last)));
+              last.put("prompt", motionPrompt(style, changes.get(2)));
               last.put("uploadPutKey", WorkKeys.panelD(conversationId, index + 1));
               return node;
             })

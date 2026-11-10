@@ -21,6 +21,9 @@ public interface DirectLlm {
 
   String SUMMARY = "summary";
 
+  /** 라이브 모드 움직임 그림을 컷 그림을 보고 정한다. */
+  String MOTION = "motion";
+
   /**
    * @param task 작업 이름 ({@link #CORRECT} 등)
    * @param jsonSchema 응답 JSON 스키마

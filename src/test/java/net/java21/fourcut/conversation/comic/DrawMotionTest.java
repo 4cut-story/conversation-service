@@ -12,7 +12,7 @@ import tools.jackson.databind.json.JsonMapper;
 class DrawMotionTest {
 
   private final JsonMapper json = JsonMapper.builder().build();
-  private final DrawHandler handler = new DrawHandler(null, null, null, json, null);
+  private final DrawHandler handler = new DrawHandler(null, null, null, json, null, null);
 
   @Test
   @DisplayName("FR-014: 움직임 컷은 두 번째 그림 edit 프롬프트와 업로드 키를 보낸다")

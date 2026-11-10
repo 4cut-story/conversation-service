@@ -15,7 +15,7 @@ import tools.jackson.databind.node.ArrayNode;
 class DrawReferencesTest {
 
   private final JsonMapper json = JsonMapper.builder().build();
-  private final DrawHandler handler = new DrawHandler(null, null, null, json, null);
+  private final DrawHandler handler = new DrawHandler(null, null, null, json, null, null);
 
   private final ComicScript script =
       new ComicScript(
