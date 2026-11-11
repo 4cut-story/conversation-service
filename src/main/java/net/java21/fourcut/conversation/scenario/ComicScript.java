@@ -1103,6 +1103,56 @@ public record ComicScript(
         mood);
   }
 
+  /** 제목, 대사(원문 포함), 인물 소개(persona), 줄거리를 f로 바꾼다. 실존 기업·인물 이름을 일반 표현으로 바꾸는 데 쓴다. */
+  public ComicScript generalized(UnaryOperator<String> f) {
+    List<Character> cast =
+        characters == null
+            ? null
+            : characters.stream()
+                .map(
+                    c ->
+                        c.persona() == null
+                            ? c
+                            : new Character(
+                                c.speaker(),
+                                c.name(),
+                                f.apply(c.persona()),
+                                c.look(),
+                                c.role(),
+                                c.lookId()))
+                .toList();
+    return new ComicScript(
+        title == null ? null : f.apply(title),
+        cast,
+        mapLines(l -> l.mapped(f)),
+        reviewed,
+        nameWarnings,
+        concept,
+        summary == null ? null : f.apply(summary),
+        mood);
+  }
+
+  /** 생성 후 검사: 제목, 대사, 인물 소개, 줄거리에 남은 실존 기업 이름(사전·회사 이름 꼴). 없으면 빈 목록. */
+  public List<String> realEntities() {
+    List<String> out = new java.util.ArrayList<>();
+    out.addAll(Entities.remaining(title));
+    out.addAll(Entities.remaining(summary));
+    if (characters != null) {
+      characters.forEach(c -> out.addAll(Entities.remaining(c.persona())));
+    }
+    if (panels != null) {
+      for (Panel p : panels) {
+        if (p.lines() != null) {
+          for (Line l : p.lines()) {
+            out.addAll(Entities.remaining(l.text()));
+            out.addAll(Entities.remaining(l.quote()));
+          }
+        }
+      }
+    }
+    return out;
+  }
+
   /** 대사와 제목의 단어를 바꾼다(긴 단어부터). */
   public ComicScript replaced(Map<String, String> rename) {
     if (rename.isEmpty()) {

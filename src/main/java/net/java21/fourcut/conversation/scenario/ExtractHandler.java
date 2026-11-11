@@ -257,8 +257,11 @@ class ExtractHandler implements StepHandler {
       }
     }
     store.saveCandidates(id, found);
-    store.saveNames(
-        id, mergeNames(store.names(id), content.path("names"), ScriptHandler.spoken(transcript)));
+    String spoken = ScriptHandler.spoken(transcript);
+    store.saveNames(id, mergeNames(store.names(id), content.path("names"), spoken));
+    if (!content.path("entities").isEmpty()) {
+      store.saveEntities(id, Entities.merge(store.entities(id), content.path("entities"), spoken));
+    }
   }
 
   /** 구간마다 찾은 실명을 합친다. 대화에 실제로 나오고 이름처럼 보이는 단어만 남긴다. */

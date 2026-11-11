@@ -3,6 +3,7 @@ package net.java21.fourcut.conversation.scenario;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -48,7 +49,12 @@ class ScriptHandler implements StepHandler {
     SceneCandidate scene = chosen(id);
     Transcript transcript = transcripts.load(id);
     String prompt =
-        prompt(transcript, scene, transcript.seed(), RealNames.whose(store.names(id), transcript));
+        prompt(
+            transcript,
+            scene,
+            transcript.seed(),
+            RealNames.whose(store.names(id), transcript),
+            store.entities(id));
     long seed = transcript.seed() + context.attempt();
     return llm.job(
         Prompts.scriptSystem(concept(context, scene), Dialect.of(context.conversation().dialect())),
@@ -59,11 +65,23 @@ class ScriptHandler implements StepHandler {
         null);
   }
 
-  /** 콘티 LLM 입력: 화자별 가명, 고른 장면 정보, 장면 대화와 앞뒤 1분 대화. 대화 속 실명은 미리 가명으로 바꿔 LLM이 실명을 보지 않게 한다. */
   static String prompt(
       Transcript transcript, SceneCandidate scene, long castSeed, Map<String, String> names) {
+    return prompt(transcript, scene, castSeed, names, Map.of());
+  }
+
+  /**
+   * 콘티 LLM 입력: 화자별 가명, 고른 장면 정보, 장면 대화와 앞뒤 1분 대화. 대화 속 실명은 미리 가명으로, 실존 기업·인물 이름은 일반 표현으로 바꿔 LLM이 보지
+   * 않게 한다.
+   */
+  static String prompt(
+      Transcript transcript,
+      SceneCandidate scene,
+      long castSeed,
+      Map<String, String> names,
+      Map<String, String> entities) {
     Map<String, String> cast = cast(transcript, castSeed);
-    Map<String, String> rename = RealNames.replacements(names, cast);
+    UnaryOperator<String> rename = scrub(RealNames.replacements(names, cast), entities);
     double from = scene.start();
     double to = scene.end();
     String before =
@@ -82,9 +100,9 @@ class ScriptHandler implements StepHandler {
         + "\n만화 분위기: "
         + Prompts.tone(scene.kind())
         + "\n장면 요약: "
-        + RealNames.apply(scene.summary(), rename)
+        + rename.apply(scene.summary())
         + "\n고른 이유: "
-        + RealNames.apply(scene.reason(), rename)
+        + rename.apply(scene.reason())
         + peak(scene, rename)
         + "\n\n[장면 앞 대화 (참고만)]\n"
         + before
@@ -95,18 +113,21 @@ class ScriptHandler implements StepHandler {
   }
 
   /** 장면 추출이 찾은 핵심 순간(없으면 빈 문자열). 전 컷의 기준이 된다. */
-  private static String peak(SceneCandidate scene, Map<String, String> rename) {
+  private static String peak(SceneCandidate scene, UnaryOperator<String> rename) {
     String peak = scene.peak();
-    return peak == null || peak.isBlank()
-        ? ""
-        : "\n핵심 순간: " + RealNames.apply(peak.strip(), rename);
+    return peak == null || peak.isBlank() ? "" : "\n핵심 순간: " + rename.apply(peak.strip());
   }
 
   /** 발화 시작 시각으로 나눈 구간(겹치지 않는다). */
   private static String section(
-      Transcript transcript, Predicate<Transcript.Utterance> in, Map<String, String> rename) {
+      Transcript transcript, Predicate<Transcript.Utterance> in, UnaryOperator<String> rename) {
     List<Transcript.Utterance> part = transcript.utterances().stream().filter(in).toList();
-    return part.isEmpty() ? "(없음)" : RealNames.apply(TranscriptText.compact(part), rename);
+    return part.isEmpty() ? "(없음)" : rename.apply(TranscriptText.compact(part));
+  }
+
+  /** 실명은 가명으로, 실존 기업·인물 이름은 일반 표현으로 바꾸는 함수. */
+  static UnaryOperator<String> scrub(Map<String, String> rename, Map<String, String> entities) {
+    return t -> Entities.apply(RealNames.apply(t, rename), entities);
   }
 
   /**
@@ -122,20 +143,22 @@ class ScriptHandler implements StepHandler {
     Map<String, String> cast = cast(transcript, transcript.seed());
     Map<String, String> rename =
         RealNames.replacements(RealNames.whose(store.names(id), transcript), cast);
-    List<String> source = SpokenLines.sentences(RealNames.apply(spoken(transcript), rename));
+    Map<String, String> entities = store.entities(id);
+    UnaryOperator<String> clean = scrub(rename, entities);
+    List<String> source = SpokenLines.sentences(clean.apply(spoken(transcript)));
     SceneCandidate scene = chosen(id);
     Concept concept = concept(context, scene);
-    List<String> inScene =
-        SpokenLines.sentences(RealNames.apply(sceneText(transcript, scene), rename));
+    List<String> inScene = SpokenLines.sentences(clean.apply(sceneText(transcript, scene)));
     ComicScript script =
         llm.read(ScriptDraft.flatten(llm.content(result)), ComicScript.class)
             .normalized()
             .withNames(cast)
             .withFictionalNames(spoken(transcript))
             .replaced(rename)
+            .generalized(t -> Entities.apply(t, entities))
             .withLineTexts(t -> SpokenLines.snap(t, source))
             .withLinesWhere(t -> SpokenLines.inside(t, inScene));
-    List<ComicScript.Line> sceneLines = sceneLines(transcript, scene, rename);
+    List<ComicScript.Line> sceneLines = sceneLines(transcript, scene, clean);
     List<String> uncast = script.uncastSourceSpeakers(sceneLines);
     if (!uncast.isEmpty() && context.attempt() <= UNCAST_RETRIES) {
       String reason = "등장인물에 없는 화자 " + String.join(", ", uncast) + "의 말을 다른 인물 대사로 썼다";
@@ -146,7 +169,7 @@ class ScriptHandler implements StepHandler {
         script
             .withSourceSpeakers(sceneLines)
             .withoutRepeatedLines()
-            .withEmptyPanelsFilled(sceneLines(transcript, scene, rename))
+            .withEmptyPanelsFilled(sceneLines(transcript, scene, clean))
             .withStyledLines(SpokenLines.MAX_CHARS)
             .withoutRepeatedLines()
             .scrubbed(w -> RealNames.called(w, spoken(transcript)))
@@ -158,6 +181,12 @@ class ScriptHandler implements StepHandler {
             .withAmbientLimits();
     if (concept == Concept.ANIMALS) {
       script = script.withAnimals(animals(transcript.seed()));
+    }
+    // 생성 후 검사: 다듬기·빈 컷 채우기를 거친 뒤에도 실존 기업·인물 이름이 남았으면 한 번 더 일반 표현으로 바꾼다
+    List<String> left = script.realEntities();
+    if (!left.isEmpty()) {
+      log.warn("콘티에 실존 기업·인물 이름이 남아 일반 표현으로 바꿨다: {}", left);
+      script = script.generalized(t -> Entities.apply(t, entities));
     }
     String violation = script.violation();
     if (violation != null) {
@@ -177,11 +206,16 @@ class ScriptHandler implements StepHandler {
   /** 장면 구간 발화를 시간 순서대로 말풍선 후보로 바꾼다(실명은 가명으로). 대사가 빈 컷을 채울 때 쓴다. */
   static List<ComicScript.Line> sceneLines(
       Transcript transcript, SceneCandidate scene, Map<String, String> rename) {
+    return sceneLines(transcript, scene, t -> RealNames.apply(t, rename));
+  }
+
+  static List<ComicScript.Line> sceneLines(
+      Transcript transcript, SceneCandidate scene, UnaryOperator<String> rename) {
     return sceneUtterances(transcript, scene).stream()
         .map(
             u ->
                 new ComicScript.Line(
-                    u.speaker(), SpokenLines.snap(RealNames.apply(u.text(), rename), List.of())))
+                    u.speaker(), SpokenLines.snap(rename.apply(u.text()), List.of())))
         .toList();
   }
 

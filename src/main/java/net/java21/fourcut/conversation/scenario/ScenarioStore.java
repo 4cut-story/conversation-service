@@ -17,7 +17,12 @@ public class ScenarioStore {
   /** 저장 형식 {@code {names: ["민지", "준호"]}}. */
   record RealNameList(List<String> names) {}
 
+  /** 저장 형식 {@code {entities: {"삼성전자": "대기업"}}}. */
+  record EntityList(java.util.Map<String, String> entities) {}
+
   private static final String NAMES = "names.json";
+
+  private static final String ENTITIES = "entities.json";
 
   private final ObjectStorage storage;
   private final JsonMapper json;
@@ -48,6 +53,19 @@ public class ScenarioStore {
 
   void saveNames(String id, List<String> names) {
     put(WorkKeys.work(id, NAMES), new RealNameList(names));
+  }
+
+  /** 장면 추출이 찾은 실존 기업·인물 이름 → 일반 표현. 콘티 입력과 출력에서 바꾸는 데 쓴다. API에는 내보내지 않는다. */
+  java.util.Map<String, String> entities(String id) {
+    return storage
+        .get(WorkKeys.work(id, ENTITIES))
+        .map(b -> json.readValue(b, EntityList.class).entities())
+        .filter(java.util.Objects::nonNull)
+        .orElse(java.util.Map.of());
+  }
+
+  void saveEntities(String id, java.util.Map<String, String> entities) {
+    put(WorkKeys.work(id, ENTITIES), new EntityList(entities));
   }
 
   /** 검수까지 끝난 콘티. comic 모듈이 읽는다. */

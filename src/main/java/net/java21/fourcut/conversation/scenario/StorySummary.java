@@ -26,6 +26,7 @@ public class StorySummary {
       대화로 만든 기념 만화 아래에 보이는 줄거리 요약을 쓴다. 만화만 봐서는 놓치는 앞뒤 사정까지 받은 대화(또는 콘티)에서 있었던 일
       전체를 3~4문장(250자 이내)으로 쓴다: 어떤 상황에서 시작해 무슨 일이 생겼고 어떻게 끝났는지.
       - 인물은 "인물 호칭"에 적힌 호칭으로만 부른다(예: "손녀가 할머니에게…"). 실명·가명·화자 표시(A, B)는 쓰지 않는다.
+      - 실존 기업·브랜드·정당·단체 이름과 실존 인물(정치인, 연예인, 기업 총수 등) 이름은 쓰지 않고 일반 표현(대기업, 카페, 한 가수)으로 쓴다.
       - 대화에 없는 일을 지어 넣지 않고, 대사를 길게 옮기지 않는다.
       - 대화와 같은 언어로, 맞춤법·띄어쓰기를 지켜 평서문(~다)으로 쓴다.
       """;
@@ -74,7 +75,7 @@ public class StorySummary {
     String prompt = prompt(id, script);
     return llm.chat(DirectLlm.SUMMARY, SYSTEM, prompt, SCHEMA)
         .map(this::summaryOf)
-        .map(s -> ComicScript.cleanSummary(toRoles(s, id, script)));
+        .map(s -> ComicScript.cleanSummary(Entities.apply(toRoles(s, id, script), Map.of())));
   }
 
   private String summaryOf(String answer) {
@@ -103,7 +104,8 @@ public class StorySummary {
               transcript,
               scene.get(),
               transcript.seed(),
-              RealNames.whose(store.names(id), transcript));
+              RealNames.whose(store.names(id), transcript),
+              store.entities(id));
     }
     StringBuilder lines = new StringBuilder();
     List<ComicScript.Panel> panels = script.panels() == null ? List.of() : script.panels();
