@@ -1,7 +1,6 @@
 package net.java21.fourcut.conversation.rss;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -27,7 +26,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 켜진 피드를 30분마다(설정 {@code rss.check-interval}) 확인한다 (004 FR-055~060). 처음 확인하는 피드는 가장 최근 기사 1편만 만들고
- * 나머지는 건너뛴다. 그 뒤로는 처음 보는 기사를 최신 것부터 만들되, 한 번 확인에 {@code rss.max-per-check}편, 하루(24시간)에 {@code
+ * 나머지는 건너뛴다. 그 뒤로는 처음 보는 기사를 최신 것부터 만들되, 한 번 확인에 {@code rss.max-per-check}편, 하루(한국 시각 0시부터)에 {@code
  * rss.max-per-day}편까지만 만든다. 남는 기사는 건너뜀으로 남긴다. 본문을 못 찾는 등 만들지 못한 기사가 있으면 다음 기사로 넘어가되, 한 번 확인에 읽어 보는
  * 기사 수도 제한한다. 기사마다 기록을 먼저 남겨 같은 기사로 두 번 만들지 않는다.
  */
@@ -57,8 +56,15 @@ class FeedChecker {
     return "이 구독으로 하루에 만드는 편수(" + max + "편)를 다 써서 건너뛰었어요.";
   }
 
+  /** 오늘(한국 시각) 0시. 하루 편수는 이때부터 센다. */
+  private java.time.Instant startOfToday() {
+    return clock.instant().atZone(KST).toLocalDate().atStartOfDay(KST).toInstant();
+  }
+
   /** 만들 자리 하나마다 읽어 볼 수 있는 기사 수. 본문을 못 찾는 기사가 이어져도 피드 전체를 읽지 않는다. */
   static final int TRIES_PER_SLOT = 3;
+
+  private static final java.time.ZoneId KST = java.time.ZoneId.of("Asia/Seoul");
 
   private static final Logger log = LoggerFactory.getLogger(FeedChecker.class);
 
@@ -149,7 +155,7 @@ class FeedChecker {
     } else {
       long today =
           items.countByFeedIdAndStatusAndCreatedAtAfter(
-              feedId, RssFeedItem.Status.MADE, clock.instant().minus(Duration.ofDays(1)));
+              feedId, RssFeedItem.Status.MADE, startOfToday());
       int left = (int) Math.max(0, maxPerDay - today);
       limit = Math.min(maxPerCheck, left);
       overReason = left <= maxPerCheck ? perDayReason(maxPerDay) : perCheckReason(maxPerCheck);
