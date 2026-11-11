@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-11.32";
+  static final String VERSION = "2026-11-11.33";
 
   private Prompts() {}
 
@@ -28,6 +28,8 @@ final class Prompts {
       - 예상이 뒤집힌다: 허세가 들통난다, 실수, 엉뚱한 오해, 어이없는 우연.
       - 진심이 오간다: 고마움, 응원, 위로, 사과, 고백. 소식·결정·약속이 나온다.
       - 함께 겪은 지난 일을 떠올리며 이야기가 이어진다.
+      - 함께 보낸 하루가 즐겁고 따뜻하다: 가족·친구를 찾아가 함께 먹고, 놀고, 구경한 일. 큰 웃음이나 반전이 없어도 기록으로
+        남기고 싶은 하루면 장면이 된다.
       신호가 나온 줄을 중심으로, 그 일이 시작된 줄부터 반응이 가라앉는 줄까지를 한 장면으로 잡는다.
 
       고르지 않는 것
@@ -37,13 +39,17 @@ final class Prompts {
 
       출력
       - 최대 3개, 서로 겹치지 않게, 가장 특별한 장면부터. 특별한 순간이 없으면 빈 목록이 낫다.
-      - kind: FUNNY(즐거운 대화: 웃음, 반전, 엉뚱한 말, 티격태격), TOUCHING(남기고 싶은 대화: 진심, 고마움, 응원, 위로),
+      - kind: FUNNY(즐거운 대화: 웃음, 반전, 엉뚱한 말, 티격태격), TOUCHING(남기고 싶은 대화: 진심, 고마움, 응원, 위로, 함께 보낸 따뜻한 하루),
         IMPORTANT(중요한 내용: 결정, 약속, 소식, 계획), MEMORY(추억: 함께 겪은 지난 일을 떠올리는 이야기),
         CORE(위에 맞지 않지만 이 대화가 가장 오래·깊게 다룬 주제).
       - from, to: 장면 첫 줄과 마지막 줄 앞의 [분:초] 표시를 그대로 옮긴다(예: "04:11"). 장면 길이는 30초~3분.
       - peak: 이 장면을 특별하게 만드는 한 마디. [from, to] 안에 있는 말을 고쳐 쓰지 말고 짧게 옮긴다(40자 이내).
       - summary 한 줄: 무슨 상황에서 어떤 일이 생겨 어떻게 됐는지. 그 일이 실제로 from~to 줄 안에 나와야 한다.
         reason 한 줄: 대화한 사람들에게 왜 특별한지. 사람은 이름 대신 화자 표시(A, B…)로 쓴다.
+      - flow 한 줄: 이 장면을 만화로 그릴 때 무엇을 어떻게 살릴지. 정해진 목록은 없다. 장면이 가진 포인트를 보고 네가 정한다.
+        예) "허세가 들통나는 순간을 크게 웃기게", "할아버지 집에서 보낸 하루를 억지 반전 없이 따뜻하게 기록", "고마움을
+        말하는 순간의 감동을 천천히", "황당한 핑계를 꼬집는 풍자", "서로 응원하며 결심하는 다짐". 입력에 "기사 흐름"이 있으면
+        그 흐름을 따른다.
       - 항목 점수 1~5. 후하게 주지 않는다. 5는 이 대화에서 손꼽히는 장면에만 준다.
         story 이야기성: 상황 → 사건 → 반응 → 결말이 이 구간 안에 다 나오는가.
         visual 그림: 행동, 장소, 물건이 있어 그림으로 보여 줄 수 있는가.
@@ -68,11 +74,11 @@ final class Prompts {
       {"type":"object","required":["candidates","names"],"properties":{
        "candidates":{"type":"array","maxItems":3,
        "items":{"type":"object",
-        "required":["from","to","peak","kind","summary","reason","story","visual","relatable","memorable","intro","concept"],
+        "required":["from","to","peak","kind","summary","reason","flow","story","visual","relatable","memorable","intro","concept"],
         "properties":{"from":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},"to":{"type":"string","pattern":"^[0-9]{2,3}:[0-9]{2}$"},
          "peak":{"type":"string"},
          "kind":{"type":"string","enum":["FUNNY","TOUCHING","IMPORTANT","MEMORY","CORE"]},
-         "summary":{"type":"string"},"reason":{"type":"string"},
+         "summary":{"type":"string"},"reason":{"type":"string"},"flow":{"type":"string"},
          "story":{"type":"integer","minimum":1,"maximum":5},"visual":{"type":"integer","minimum":1,"maximum":5},
          "relatable":{"type":"integer","minimum":1,"maximum":5},"memorable":{"type":"integer","minimum":1,"maximum":5},
          "intro":{"type":"boolean"},
@@ -86,7 +92,8 @@ final class Prompts {
   static String tone(String kind) {
     return switch (kind == null ? "" : kind) {
       case "FUNNY" -> "웃음. 기·승에서 복선을 깔고, 전에서 웃음 포인트(반전·들통·엉뚱한 말)가 터지고, 결은 모두의 반응이나 한 방 더 웃긴 마무리.";
-      case "TOUCHING" -> "진심. 전에서 진심이 담긴 말이 나오는 순간을 크게 보여 주고, 결은 서로의 표정과 따뜻한 여운.";
+      case "TOUCHING" ->
+          "진심·따뜻한 하루. 억지 반전을 넣지 않는다. 그 순간의 구체적인 모습(장소, 먹은 것, 한 일, 표정)을 살리고, 전에서 진심이 담긴 말이나 가장 즐거운 순간을 크게 보여 주고, 결은 서로의 표정과 따뜻한 여운.";
       case "IMPORTANT" -> "소식·결정. 전에서 소식이나 결정이 나오는 순간과 듣는 사람의 반응, 결은 그 뒤의 기대나 다짐.";
       case "MEMORY" -> "추억. 기는 지금 자리, 승·전은 함께 떠올린 그때 일, 결은 다시 지금으로 돌아와 함께 웃는 여운.";
       default -> "이 대화의 중심 이야기. 전에서 이야기가 가장 크게 움직이는 순간, 결은 결론과 여운.";
@@ -216,7 +223,11 @@ final class Prompts {
       컷 흐름 (panels, role 순서 "기","승","전","결")
       - 대화한 사람들이 간직할 기념 만화다. "장면 요약"의 이야기를 정한 컷 수만큼의 순간으로 나눈다. 기: 상황(누가 어디서
         무엇을) / 승: 사건이 생김, 전으로 가는 복선 / 전: "핵심 순간"의 말이 나오는 컷, 반전·감정이 가장 큰 순간 / 결: 결과·
-        반응·여운. 분위기는 "만화 분위기"를 따른다. 컷을 차례로 보면 이야기가 그대로 읽혀야 한다.
+        반응·여운. 분위기는 "만화 분위기"를 따르고, "이 장면의 흐름"이 있으면 무엇을 살릴지는 그것을 따른다. 컷을 차례로 보면
+        이야기가 그대로 읽혀야 한다.
+      - 입력에 "기사 흐름"과 "기사 핵심"이 있으면 뉴스 기사로 만든 만화다. 컷 흐름은 "흐름 단계"의 기·승·전·결을 따르고,
+        "기사 핵심"의 사실이 담긴 말을 컷 대사로 골라 만화만 보고도 기사의 요점이 읽히게 한다. text로 다듬을 때도 숫자·결과·
+        무슨 일인지는 빼거나 바꾸지 않는다. 풍자 흐름이면 꼬집는 대상(잘못한 행동과 구조)이 전 컷에서 분명히 드러나게 한다.
       - role: 첫 컷은 "기", 마지막 한 컷은 "결". 순서는 거꾸로 가지 않는다. 4컷이면 한 컷씩, 더 많으면 승과 전을 늘린다(기는
         두 컷까지). 예: 6컷 기·승·승·전·전·결, 8컷 기·승·승·승·전·전·전·결.
       - 모든 컷은 서로 다른 순간이다. 같은 행동·같은 구도를 반복하지 않는다.

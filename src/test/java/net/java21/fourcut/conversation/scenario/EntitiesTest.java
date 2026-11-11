@@ -76,6 +76,46 @@ class EntitiesTest {
   }
 
   @Test
+  @DisplayName("FR-006: 콘티 입력에 장면의 흐름과 기사 각색 기획(흐름 단계, 핵심 사실)을 넣는다")
+  void flowAndArticleBrief() {
+    Transcript t =
+        new Transcript(
+            "ko", List.of("A", "B"), List.of(new Transcript.Utterance("A", 0, 3, "회의만 다섯 번째네")));
+    SceneCandidate scene =
+        new SceneCandidate(
+            "CORE",
+            0,
+            30,
+            "회의",
+            "꼬집기",
+            0.9,
+            true,
+            4,
+            4,
+            4,
+            false,
+            "NEWSPAPER",
+            "다섯 번째",
+            4,
+            "회의만 하는 대책을 꼬집는 풍자");
+    String prompt =
+        ScriptHandler.prompt(
+            t,
+            scene,
+            0,
+            Map.of(),
+            Map.of("홍길동", "담당자"),
+            "기사 흐름: 풍자\n기사 핵심 (대사에 꼭 남긴다):\n- 홍길동이 회의를 5번 열었다");
+    assertThat(prompt)
+        .contains("이 장면의 흐름: 회의만 하는 대책을 꼬집는 풍자")
+        .contains("기사 흐름: 풍자")
+        .contains("회의를 5번 열었다")
+        .contains("담당자")
+        .doesNotContain("홍길동");
+    assertThat(ScriptHandler.prompt(t, scene, 0, Map.of())).doesNotContain("기사 흐름");
+  }
+
+  @Test
   @DisplayName("FR-005: 생성 후 검사는 콘티 제목·대사·인물 소개·줄거리에 남은 실존 기업 이름을 찾아 바꾼다")
   void script() {
     ComicScript script =

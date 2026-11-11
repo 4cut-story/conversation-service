@@ -13,6 +13,7 @@ package net.java21.fourcut.conversation.scenario;
  * @param concept 이 장면에 어울리는 그림 컨셉({@link Concept} 이름). 사용자가 컨셉을 고르지 않았을 때 쓴다
  * @param peak 장면을 특별하게 만드는 한 마디(대화 그대로). 콘티의 전 컷에 쓴다
  * @param memorable 간직 1~5: 몇 년 뒤에도 꺼내 보고 싶은 순간인가
+ * @param flow 이 장면을 만화로 살릴 흐름 한 줄(무엇을 어떻게 살리는지). 정해진 목록 없이 장면마다 LLM이 정한다. 콘티의 "만화 분위기"에 더한다
  */
 public record SceneCandidate(
     String kind,
@@ -28,13 +29,34 @@ public record SceneCandidate(
     Boolean intro,
     String concept,
     String peak,
-    Integer memorable) {
+    Integer memorable,
+    String flow) {
 
   static final java.util.Set<String> KINDS =
       java.util.Set.of("FUNNY", "TOUCHING", "IMPORTANT", "MEMORY", "CORE");
 
   /** 도입부 감점. */
   static final double INTRO_PENALTY = 0.3;
+
+  public SceneCandidate(
+      String kind,
+      double start,
+      double end,
+      String summary,
+      String reason,
+      double score,
+      Boolean selected,
+      Integer story,
+      Integer visual,
+      Integer relatable,
+      Boolean intro,
+      String concept,
+      String peak,
+      Integer memorable) {
+    this(
+        kind, start, end, summary, reason, score, selected, story, visual, relatable, intro,
+        concept, peak, memorable, null);
+  }
 
   public SceneCandidate(
       String kind,
@@ -97,7 +119,7 @@ public record SceneCandidate(
     double rounded = Math.round(Math.max(0, s) * 100) / 100.0;
     return new SceneCandidate(
         kind, start, end, summary, reason, rounded, selected, story, visual, relatable, intro,
-        concept, peak, memorable);
+        concept, peak, memorable, flow);
   }
 
   private static int clamp(int v) {
@@ -112,6 +134,6 @@ public record SceneCandidate(
   SceneCandidate select() {
     return new SceneCandidate(
         kind, start, end, summary, reason, score, true, story, visual, relatable, intro, concept,
-        peak, memorable);
+        peak, memorable, flow);
   }
 }
