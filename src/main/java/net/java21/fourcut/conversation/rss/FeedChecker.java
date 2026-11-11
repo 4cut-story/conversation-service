@@ -152,7 +152,8 @@ class FeedChecker {
       overReason = BEFORE_SUBSCRIBE_REASON;
     } else {
       long today =
-          items.countByFeedIdAndStatusAndCreatedAtAfter(feedId, RssFeedItem.Status.MADE, todayStart());
+          items.countByFeedIdAndStatusAndCreatedAtAfter(
+              feedId, RssFeedItem.Status.MADE, todayStart());
       int left = (int) Math.max(0, maxPerDay - today);
       limit = Math.min(maxPerCheck, left);
       overReason = left <= maxPerCheck ? perDayReason(maxPerDay) : perCheckReason(maxPerCheck);
