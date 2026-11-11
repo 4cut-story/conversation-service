@@ -554,6 +554,10 @@ class PipelineFlowIntegrationTest {
                         .type(JsonFieldType.STRING)
                         .description("장면을 특별하게 만드는 한 마디(대화 그대로). 콘티의 전 컷에 쓴다")
                         .optional(),
+                    fieldWithPath("candidates[].flow")
+                        .type(JsonFieldType.STRING)
+                        .description("이 장면을 만화로 살릴 흐름 한 줄(정해진 목록 없이 장면마다 정한다). 콘티의 분위기에 더한다")
+                        .optional(),
                     fieldWithPath("candidates[].intro")
                         .description("인사·안부 같은 도입부면 true")
                         .optional(),
