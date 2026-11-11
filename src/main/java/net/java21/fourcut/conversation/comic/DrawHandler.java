@@ -1001,17 +1001,20 @@ class DrawHandler implements StepHandler {
               + "hospital|living room|bathroom|hall|indoors?|inside)\\b");
 
   /**
-   * 넓은 그림 프롬프트: 같은 인물·옷·자세·그림체는 그대로 두고 같은 장소를 좌우로 넓힌다. 장면의 시간대 빛·날씨·앞뒤 거리감을 더 진하게 쓰고, 글자·말풍선·테두리를
-   * 빼게 한다. 컷 그림체의 "simple background"는 넓은 그림에서는 뺀다(배경을 채워야 넓어 보인다).
+   * 넓은 그림 프롬프트: 같은 인물·옷·자세·그림체·밝기·색은 그대로 두고 같은 장소를 좌우로 넓힌다. 장면의 시간대 빛·날씨·앞뒤 거리감을 더하고, 글자·말풍선·테두리를
+   * 빼게 한다. 컷 그림체의 "simple background"는 넓은 그림에서는 뺀다(배경을 채워야 넓어 보인다). 예전에는 "cinematic shot"과 밤 실내
+   * "dark room, deep blue shadows"를 써서, 밝은 색연필 컷(평균 밝기 약 150)의 밤 거실이 넓은 그림에서는 거의 검푸른 방(약 35)이 되어
+   * 라이브 모드가 너무 어두웠다. 그래서 컷 그림의 밝기·색을 그대로 두라고 쓰고, 밤은 창밖에만 둔다.
    */
   static String livePrompt(String style, ComicScript.Panel panel) {
     String base = style.replace(", simple background", "").replace("simple background, ", "");
     String setting = panel.setting() == null ? "" : panel.setting();
     String sound = panel.sound() == null ? "" : panel.sound();
     return base
-        + ", edit this picture into one wide 16:9 cinematic shot: keep the same characters, the"
-        + " same faces, hair, clothes, poses, objects and drawing style, and extend the same"
-        + " place to the left and right"
+        + ", edit this picture into one wide 16:9 shot: keep the same characters, the"
+        + " same faces, hair, clothes, poses, objects and drawing style, the same brightness and"
+        + " the same bright colors as the picture, and extend the same place to the left and"
+        + " right"
         + setting(panel)
         + ", "
         + light(setting)
@@ -1021,13 +1024,15 @@ class DrawHandler implements StepHandler {
         + ", no text, no letters, no speech bubbles, no captions, no panel borders, no frame";
   }
 
-  /** 장면 시간대에 맞춘 빛. 실내는 창빛·실내등이다. */
+  /** 장면 시간대에 맞춘 빛. 실내는 창빛·실내등이다. 밤 실내는 방을 컷 그림만큼 밝게 두고 밤은 창밖에만 둔다. */
   static String light(String setting) {
     boolean indoor = INDOOR.matcher(setting).find();
     if (DARK.matcher(setting).find()) {
       return indoor
-          ? "warm lamp light in the dark room, deep blue shadows by the window"
-          : "night lighting, warm glow of street lamps, deep blue sky and shadows";
+          ? "the room as brightly lit by its warm indoor lights as in the picture, the night sky"
+              + " only outside the window"
+          : "night sky, warm glow of street lamps, the people and the foreground as bright and"
+              + " clear as in the picture";
     }
     if (EVENING.matcher(setting).find()) {
       return "warm golden evening light, long soft shadows, orange and pink sky";

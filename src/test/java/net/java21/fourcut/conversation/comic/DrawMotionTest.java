@@ -89,7 +89,11 @@ class DrawMotionTest {
     assertThat(live.path("depthUploadPutKey").asString())
         .isEqualTo("pipeline-work/c1/panel-2-depth.png");
     assertThat(live.path("prompt").asString())
-        .contains("wide 16:9 cinematic shot", "keep the same characters", "night park, stars")
+        .contains(
+            "wide 16:9 shot",
+            "the same brightness",
+            "keep the same characters",
+            "night park, stars")
         .contains("no text", "no speech bubbles", "no panel borders")
         .doesNotContain("simple background");
   }
@@ -98,7 +102,11 @@ class DrawMotionTest {
   @DisplayName("FR-032: 넓은 그림은 장면 시간대·실내외에 맞는 빛과 비·눈 공기를 더한다")
   void liveLight() {
     assertThat(DrawHandler.light("night street")).contains("street lamps");
-    assertThat(DrawHandler.light("night, bedroom")).contains("lamp light in the dark room");
+    // 밤 실내도 방은 컷 그림만큼 밝게 두고 밤은 창밖에만 둔다(넓은 그림이 검푸르게 어두워졌다)
+    assertThat(DrawHandler.light("night, bedroom"))
+        .contains("brightly lit by its warm indoor lights", "only outside the window")
+        .doesNotContain("dark room", "deep blue");
+    assertThat(DrawHandler.light("night street")).doesNotContain("deep blue");
     assertThat(DrawHandler.light("sunset beach")).contains("golden evening light");
     assertThat(DrawHandler.light("cafe")).contains("daylight from the window");
     assertThat(DrawHandler.light("park")).contains("natural daylight");
