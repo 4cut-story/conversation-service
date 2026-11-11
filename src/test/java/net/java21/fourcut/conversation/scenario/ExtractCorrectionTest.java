@@ -47,7 +47,13 @@ class ExtractCorrectionTest {
 
   private ExtractHandler handler(ScenarioProperties p) {
     return new ExtractHandler(
-        transcripts, scenarios, new LlmJobs(p, json), p, new TranscriptCorrector(llm, json), llm);
+        transcripts,
+        scenarios,
+        new LlmJobs(p, json),
+        p,
+        new TranscriptCorrector(llm, json),
+        llm,
+        new net.java21.fourcut.conversation.article.ArticleStore(storage, json));
   }
 
   private static String candidate(String from, String to, String summary) {
@@ -257,5 +263,49 @@ class ExtractCorrectionTest {
     public void deletePrefix(String prefix) {
       objects.keySet().removeIf(k -> k.startsWith(prefix));
     }
+  }
+
+  @Test
+  @DisplayName("FR-004: 기사로 만든 대화는 각색 기획(흐름, 핵심 사실)을 장면 고르기에 넘기고, 후보의 흐름을 남긴다")
+  void articlePlanReachesExtract() {
+    List<Transcript.Utterance> lines = new java.util.ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      lines.add(new Transcript.Utterance(i % 2 == 0 ? "A" : "B", i * 4, i * 4 + 3.5, "기사 말 " + i));
+    }
+    transcripts.save(ID, new Transcript("ko", List.of("A", "B"), lines));
+    new net.java21.fourcut.conversation.article.ArticleStore(storage, json)
+        .savePlan(
+            ID,
+            new net.java21.fourcut.conversation.article.ArticleDialogue.Plan(
+                "풍자", "보여 주기식 대책을 꼬집는다", List.of("기", "승", "전", "결"), List.of("대책 회의만 5번 열렸다")));
+    StepContext article =
+        new StepContext(
+            new ConversationInfo(
+                1L,
+                ID,
+                "u",
+                "ko",
+                1,
+                null,
+                null,
+                false,
+                new ConversationInfo.ArticleSource("https://news.example.com/a", "t", "s")),
+            Step.EXTRACT,
+            1,
+            null);
+    when(llm.available()).thenReturn(true);
+    String found =
+        candidate("00:00", "00:35", "회의만 하는 장면")
+            .replace("\"reason\":\"r\"", "\"reason\":\"r\",\"flow\":\"회의만 하는 대책 풍자\"");
+    when(llm.chat(
+            anyString(), anyString(), contains("기사 핵심 (대사에 꼭 남긴다):\n- 대책 회의만 5번 열렸다"), anyString()))
+        .thenReturn(Optional.of("{\"candidates\":[" + found + "],\"names\":[]}"));
+
+    StepOutcome outcome = parallel.runLocal(article);
+
+    assertThat(outcome).isInstanceOf(StepOutcome.Done.class);
+    assertThat(scenarios.candidates(ID))
+        .extracting(SceneCandidate::flow)
+        .containsExactly("회의만 하는 대책 풍자");
   }
 }

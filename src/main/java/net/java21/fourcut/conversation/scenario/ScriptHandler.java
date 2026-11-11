@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import net.java21.fourcut.conversation.article.ArticleStore;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
 import net.java21.fourcut.conversation.pipeline.StepHandler;
@@ -31,11 +32,14 @@ class ScriptHandler implements StepHandler {
   private final TranscriptStore transcripts;
   private final ScenarioStore store;
   private final LlmJobs llm;
+  private final ArticleStore articles;
 
-  ScriptHandler(TranscriptStore transcripts, ScenarioStore store, LlmJobs llm) {
+  ScriptHandler(
+      TranscriptStore transcripts, ScenarioStore store, LlmJobs llm, ArticleStore articles) {
     this.transcripts = transcripts;
     this.store = store;
     this.llm = llm;
+    this.articles = articles;
   }
 
   @Override
@@ -54,7 +58,8 @@ class ScriptHandler implements StepHandler {
             scene,
             transcript.seed(),
             RealNames.whose(store.names(id), transcript),
-            store.entities(id));
+            store.entities(id),
+            articleBrief(context));
     long seed = transcript.seed() + context.attempt();
     return llm.job(
         Prompts.scriptSystem(concept(context, scene), Dialect.of(context.conversation().dialect())),
@@ -67,7 +72,27 @@ class ScriptHandler implements StepHandler {
 
   static String prompt(
       Transcript transcript, SceneCandidate scene, long castSeed, Map<String, String> names) {
-    return prompt(transcript, scene, castSeed, names, Map.of());
+    return prompt(transcript, scene, castSeed, names, Map.of(), null);
+  }
+
+  static String prompt(
+      Transcript transcript,
+      SceneCandidate scene,
+      long castSeed,
+      Map<String, String> names,
+      Map<String, String> entities) {
+    return prompt(transcript, scene, castSeed, names, entities, null);
+  }
+
+  /** 기사로 만든 대화의 각색 기획(흐름, 핵심 사실). 녹음이거나 기획이 없으면 null. */
+  private String articleBrief(StepContext context) {
+    if (context.conversation().article() == null) {
+      return null;
+    }
+    return articles
+        .plan(context.conversation().publicId())
+        .map(net.java21.fourcut.conversation.article.ArticleDialogue.Plan::brief)
+        .orElse(null);
   }
 
   /**
@@ -79,7 +104,8 @@ class ScriptHandler implements StepHandler {
       SceneCandidate scene,
       long castSeed,
       Map<String, String> names,
-      Map<String, String> entities) {
+      Map<String, String> entities,
+      String articleBrief) {
     Map<String, String> cast = cast(transcript, castSeed);
     UnaryOperator<String> rename = scrub(RealNames.replacements(names, cast), entities);
     double from = scene.start();
@@ -99,6 +125,8 @@ class ScriptHandler implements StepHandler {
         + scene.kind()
         + "\n만화 분위기: "
         + Prompts.tone(scene.kind())
+        + flow(scene, rename)
+        + (articleBrief == null ? "" : "\n" + rename.apply(articleBrief))
         + "\n장면 요약: "
         + rename.apply(scene.summary())
         + "\n고른 이유: "
@@ -110,6 +138,12 @@ class ScriptHandler implements StepHandler {
         + during
         + "\n\n[장면 뒤 대화 (참고만)]\n"
         + after;
+  }
+
+  /** 장면 추출이 정한 이 장면의 흐름(없으면 빈 문자열). */
+  private static String flow(SceneCandidate scene, UnaryOperator<String> rename) {
+    String flow = scene.flow();
+    return flow == null || flow.isBlank() ? "" : "\n이 장면의 흐름: " + rename.apply(flow.strip());
   }
 
   /** 장면 추출이 찾은 핵심 순간(없으면 빈 문자열). 전 컷의 기준이 된다. */

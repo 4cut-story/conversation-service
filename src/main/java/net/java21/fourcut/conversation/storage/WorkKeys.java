@@ -44,6 +44,11 @@ public final class WorkKeys {
     return work(conversationId, "article.json");
   }
 
+  /** 기사 각색 기획(흐름, 핵심 사실). 장면 고르기·콘티가 읽는다. */
+  public static String articlePlan(String conversationId) {
+    return work(conversationId, "article-plan.json");
+  }
+
   public static String candidates(String conversationId) {
     return work(conversationId, "candidates.json");
   }

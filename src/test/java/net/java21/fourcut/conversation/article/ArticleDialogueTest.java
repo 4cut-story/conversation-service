@@ -111,4 +111,49 @@ class ArticleDialogueTest {
     Article noLang = new Article("u", "t", "s", null, article.text());
     assertThat(dialogue.parse(result, noLang).language()).isEqualTo("ko");
   }
+
+  @Test
+  @DisplayName("기사로 만들기: 흐름은 정해진 목록 없이 기사마다 정하고, 사회적 잘못은 풍자로 쓰게 한다")
+  void planRules() {
+    String system = dialogue.payload(article).path("system").asString();
+    assertThat(system).contains("정해진 목록은 없다").contains("반드시 풍자로").contains("points는 하나도 빠짐없이");
+    String schema = dialogue.payload(article).path("jsonSchema").toString();
+    assertThat(schema).contains("plan").contains("points").contains("beats");
+  }
+
+  @Test
+  @DisplayName("기사로 만들기: 각색 기획(흐름, 핵심 사실)을 함께 풀어 다음 단계에 넘길 글로 만든다")
+  void plan() {
+    ObjectNode result = result("가", "나", "다", "라", "마", "바");
+    ObjectNode content = (ObjectNode) json.readTree(contentOf(result));
+    ObjectNode plan = content.putObject("plan");
+    plan.put("angle", "감동");
+    plan.put("message", "떡집 할머니의 30년에 고마움을");
+    plan.putArray("beats").add("마지막 날 아침 긴 줄").add("단골들의 사연").add("남은 떡을 다 나눔").add("박수");
+    plan.putArray("points").add("30년 된 떡집이 문을 닫았다").add(" ").add("주인 할머니가 남은 떡을 모두 나눠 주었다");
+    result.put("content", json.writeValueAsString(content));
+
+    ArticleDialogue.Plan parsed = dialogue.parse(result, article).plan();
+    assertThat(parsed.angle()).isEqualTo("감동");
+    assertThat(parsed.points()).hasSize(2);
+    assertThat(parsed.brief())
+        .contains("기사 흐름: 감동 — 떡집 할머니의 30년에 고마움을")
+        .contains("흐름 단계: 마지막 날 아침 긴 줄 / 단골들의 사연")
+        .contains("기사 핵심 (대사에 꼭 남긴다):\n- 30년 된 떡집이 문을 닫았다");
+  }
+
+  @Test
+  @DisplayName("기사로 만들기: 기획이 없거나 비면 대화만 쓴다")
+  void noPlan() {
+    assertThat(dialogue.parse(result("가", "나", "다", "라", "마", "바"), article).plan()).isNull();
+    assertThat(ArticleDialogue.plan(json.readTree("{\"angle\":\"풍자\",\"points\":[]}"))).isNull();
+    ArticleDialogue.Plan bare =
+        ArticleDialogue.plan(json.readTree("{\"angle\":\"풍자\",\"points\":[\"핵심\"]}"));
+    assertThat(bare.brief()).isEqualTo("기사 흐름: 풍자\n기사 핵심 (대사에 꼭 남긴다):\n- 핵심");
+  }
+
+  private String contentOf(ObjectNode result) {
+    String content = result.path("content").asString();
+    return content.substring(content.indexOf('{'), content.lastIndexOf('}') + 1);
+  }
 }

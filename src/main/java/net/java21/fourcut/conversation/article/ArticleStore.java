@@ -1,6 +1,7 @@
 package net.java21.fourcut.conversation.article;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import net.java21.fourcut.conversation.storage.ObjectStorage;
 import net.java21.fourcut.conversation.storage.WorkKeys;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,7 @@ public class ArticleStore {
   private final ObjectStorage storage;
   private final JsonMapper json;
 
-  ArticleStore(ObjectStorage storage, JsonMapper json) {
+  public ArticleStore(ObjectStorage storage, JsonMapper json) {
     this.storage = storage;
     this.json = json;
   }
@@ -31,5 +32,20 @@ public class ArticleStore {
             .get(WorkKeys.article(conversationId))
             .orElseThrow(() -> new IllegalStateException("기사 본문이 없다"));
     return json.readValue(bytes, Article.class);
+  }
+
+  /** 각색 기획을 둔다. */
+  public void savePlan(String conversationId, ArticleDialogue.Plan plan) {
+    storage.put(
+        WorkKeys.articlePlan(conversationId),
+        json.writeValueAsString(plan).getBytes(StandardCharsets.UTF_8),
+        "application/json");
+  }
+
+  /** 각색 기획. 녹음으로 만든 대화나 기획이 없는 옛 기사 대화는 빈 값. */
+  public Optional<ArticleDialogue.Plan> plan(String conversationId) {
+    return storage
+        .get(WorkKeys.articlePlan(conversationId))
+        .map(bytes -> json.readValue(bytes, ArticleDialogue.Plan.class));
   }
 }

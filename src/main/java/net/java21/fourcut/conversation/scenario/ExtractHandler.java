@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import net.java21.fourcut.conversation.article.ArticleStore;
 import net.java21.fourcut.conversation.pipeline.DirectLlm;
 import net.java21.fourcut.conversation.pipeline.Step;
 import net.java21.fourcut.conversation.pipeline.StepContext;
@@ -50,6 +51,7 @@ class ExtractHandler implements StepHandler {
   private final ScenarioProperties properties;
   private final TranscriptCorrector corrector;
   private final DirectLlm direct;
+  private final ArticleStore articles;
 
   /** {@code direct}는 지연 주입한다. 외부 LLM 실행기가 파이프라인 엔진을 거쳐 이 클래스에 다시 닿는 순환을 끊는다. */
   ExtractHandler(
@@ -58,13 +60,15 @@ class ExtractHandler implements StepHandler {
       LlmJobs llm,
       ScenarioProperties properties,
       TranscriptCorrector corrector,
-      @Lazy DirectLlm direct) {
+      @Lazy DirectLlm direct,
+      ArticleStore articles) {
     this.transcripts = transcripts;
     this.store = store;
     this.llm = llm;
     this.properties = properties;
     this.corrector = corrector;
     this.direct = direct;
+    this.articles = articles;
   }
 
   @Override
@@ -139,7 +143,7 @@ class ExtractHandler implements StepHandler {
     List<Integer> windows = windows(transcript);
     List<Callable<JsonNode>> calls = new ArrayList<>();
     for (int w : windows) {
-      String prompt = prompt(transcript, w);
+      String prompt = prompt(context, transcript, w);
       calls.add(
           () ->
               llm.parse(
@@ -170,7 +174,7 @@ class ExtractHandler implements StepHandler {
           direct.chat(
               DirectLlm.EXTRACT,
               Prompts.EXTRACT_SYSTEM.strip(),
-              prompt(transcript, w) + SHORT_HINT,
+              prompt(context, transcript, w) + SHORT_HINT,
               Prompts.EXTRACT_SCHEMA);
       if (again.isPresent()) {
         absorb(id, transcript, w, llm.parse(again.get()));
@@ -293,6 +297,27 @@ class ExtractHandler implements StepHandler {
     return out;
   }
 
+  /** 기사로 만든 대화면 각색 기획(흐름, 핵심 사실)을 붙여, 핵심이 담긴 구간을 고르게 한다. */
+  private String prompt(StepContext context, Transcript transcript, int window) {
+    return prompt(transcript, window) + articleHint(context);
+  }
+
+  private String articleHint(StepContext context) {
+    if (context.conversation().article() == null) {
+      return "";
+    }
+    return articles
+        .plan(context.conversation().publicId())
+        .map(plan -> "\n\n" + plan.brief() + ARTICLE_HINT)
+        .orElse("");
+  }
+
+  /** 기사 대화의 장면 고르기 지시. 기사 대화는 처음부터 끝까지 한 사건이라, 짧게 자르면 핵심 사실이 빠진다. */
+  static final String ARTICLE_HINT =
+      "\n\n이 대화는 위 기사를 각색했다. 장면은 기사 핵심이 가장 많이 담기고 흐름 단계의 전(절정)이 들어간 구간으로 넓게 잡는다"
+          + "(대화 대부분이어도 된다). peak는 기사 흐름이 가장 크게 드러나는 말, flow는 기사 흐름을 따른다. 풍자 흐름이면 concept는 NEWSPAPER가"
+          + " 어울린다.";
+
   private String prompt(Transcript transcript, int window) {
     int size = properties.windowSec();
     return "대화 언어: "
@@ -313,7 +338,7 @@ class ExtractHandler implements StepHandler {
         long seed = transcript.seed() + w + context.attempt();
         return llm.job(
             Prompts.EXTRACT_SYSTEM,
-            prompt(transcript, w),
+            prompt(context, transcript, w),
             Prompts.EXTRACT_SCHEMA,
             Prompts.EXTRACT_MAX_TOKENS,
             seed,

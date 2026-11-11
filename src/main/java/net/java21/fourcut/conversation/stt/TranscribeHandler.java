@@ -111,6 +111,9 @@ class TranscribeHandler implements StepHandler {
       return new StepOutcome.Retry(e.getMessage());
     }
     Transcript transcript = fromDialogue(parsed);
+    if (parsed.plan() != null) {
+      articles.savePlan(id, parsed.plan());
+    }
     String key = transcripts.save(id, transcript);
     observer.transcribed(context.conversation().id(), transcript.language(), 0);
     return new StepOutcome.Done(key, Step.EXTRACT);
