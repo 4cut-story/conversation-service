@@ -8,12 +8,12 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-10.30";
+  static final String VERSION = "2026-11-11.31";
 
   private Prompts() {}
 
   /** 장면 후보 JSON(후보 3개, 핵심 순간, 항목 점수, 이름)은 짧다. 넘치면 잘린 JSON이 되어 재시도한다. */
-  static final int EXTRACT_MAX_TOKENS = 1100;
+  static final int EXTRACT_MAX_TOKENS = 1300;
 
   /** 콘티 JSON(컷 4~10개, 원문 대사와 다듬은 대사, 인물) 출력 상한. 4컷에 2600이던 것을 10컷까지 들어가게 늘렸다. */
   static final int SCRIPT_MAX_TOKENS = 6000;
@@ -56,6 +56,10 @@ final class Prompts {
         풀면 재미있는 가족·이웃·장터 이야기), WUXIA(무협: 내기, 승부, 비밀, 사소한 일을 크게 부풀린 대결).
       - names: 대화에서 사람 이름(실명·별명)으로 쓰인 단어만 최대 6개. 조사·호격을 뺀 형태로 쓴다(민지야 → 민지,
         준호는 → 준호). 직함·호칭(팀장, 사장님, 언니), 음식, 물건, 장소, 가게 이름은 넣지 않는다. 없으면 빈 목록.
+      - entities: 대화에 나온 실존 기업·브랜드·정당·단체 이름과 실존 인물(정치인, 연예인, 운동선수, 기업 회장·총수 등)
+        이름, 소속과 직함을 붙여 한 사람을 가리키는 말(예: "OO그룹 회장")을 최대 8개. name은 대화에 나온 그대로(조사는
+        뺀다), generic은 누구인지 알 수 없는 일반 표현(10자 이내)이다. 예) 삼성전자 → 대기업, 스타벅스 → 카페, 이OO 회장
+        → 회장님, OO당 → 한 정당, 아이유 → 한 가수. 대화한 사람들의 이름(names)은 넣지 않는다. 없으면 빈 목록.
       - 대화와 같은 언어로 쓴다.
       """;
 
@@ -73,7 +77,9 @@ final class Prompts {
          "relatable":{"type":"integer","minimum":1,"maximum":5},"memorable":{"type":"integer","minimum":1,"maximum":5},
          "intro":{"type":"boolean"},
          "concept":{"type":"string","enum":["DAILY","ANIMALS","WATERCOLOR","PICTURE_BOOK","NEWSPAPER","JOSEON","WUXIA"]}}}},
-       "names":{"type":"array","maxItems":6,"items":{"type":"string"}}}}
+       "names":{"type":"array","maxItems":6,"items":{"type":"string"}},
+       "entities":{"type":"array","maxItems":8,"items":{"type":"object","required":["name","generic"],
+        "properties":{"name":{"type":"string"},"generic":{"type":"string"}}}}}}
       """;
 
   /** 장면 종류마다 콘티의 흐름과 분위기. 콘티 입력의 "만화 분위기"로 넣는다. */
@@ -298,6 +304,11 @@ final class Prompts {
       - 이름: 대사(quote, text)에 대화 속 사람 이름·별명이 나오면 바꾼다. 등장 화자를 부르는 말이면 quote는 그 화자의 가명으로
         (예: "민수야" → B가 도윤이면 "도윤아"), text는 role 호칭으로, 그 밖의 사람은 "친구"로. 학교·회사 이름도 지운다. 바꾸기
         전 단어는 nameWarnings에 넣는다.
+      - 실존 인물·기업: 제목, 대사(text), persona, summary에 실존 기업·브랜드·정당·단체 이름, 실존 인물(정치인, 연예인,
+        운동선수, 기업 회장·총수 등) 이름, 소속과 직함을 붙여 한 사람을 가리키는 말(예: "OO그룹 회장", "OO시장")을 쓰지 않고
+        누구인지 알 수 없는 일반 표현으로 바꾼다(삼성 → 대기업, 스타벅스 → 카페, OO그룹 회장 → 회장님, OO당 대표 → 한 정당
+        대표). 대화에 이미 일반 표현으로 바뀌어 있으면 그대로 쓴다. 그림용 영어(action, setting, draw)에도 상표·회사 이름과
+        로고를 쓰지 않는다(Starbucks cafe → a coffee shop). 바꾸기 전 단어는 nameWarnings에 넣는다.
       - 욕설과 민감한 표현은 순화한다.
       - sound: 라이브 모드에서 그 컷에 틀 배경 소리 장면을 한국어 한 줄(40자 이내)로 쓴다. "시간대·날씨 + 장소(실내/바깥),
         계속 들리는 소리와 그 결" 순서로 쓴다(예: "밤 바닷가, 잔잔하게 밀려오는 파도와 풀벌레", "비 오는 골목, 지붕을
