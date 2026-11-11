@@ -162,12 +162,12 @@ class FeedCheckerTest {
   }
 
   @Test
-  @DisplayName("하루(24시간)에 만드는 편수를 다 쓰면 남은 만큼만 만들고 나머지는 건너뛴다")
+  @DisplayName("004 FR-057: 하루(한국 시각 0시부터)에 만드는 편수를 다 쓰면 남은 만큼만 만들고 나머지는 건너뛴다")
   void perDayLimit() {
     serve(item(3, null), item(2, null), item(1, null));
     when(items.existsByFeedId(7L)).thenReturn(true);
     when(items.countByFeedIdAndStatusAndCreatedAtAfter(
-            7L, RssFeedItem.Status.MADE, NOW.minus(java.time.Duration.ofDays(1))))
+            7L, RssFeedItem.Status.MADE, Instant.parse("2026-11-09T15:00:00Z")))
         .thenReturn(9L);
 
     assertThat(checker.check(7L)).isEqualTo(1);
