@@ -155,6 +155,20 @@ class RssFeedServiceTest {
   }
 
   @Test
+  @DisplayName("004 FR-065: 꺼 둔 피드를 켜면 바로 확인하고, 켜진 채 설정만 바꾸거나 끄면 확인하지 않는다")
+  void checksWhenTurnedOn() {
+    RssFeed feed = stored("u");
+    when(feeds.findByPublicId("f")).thenReturn(Optional.of(feed));
+
+    service.update("u", "f", new RssFeedApi.UpdateRequest(false, true, null, null));
+    service.update("u", "f", new RssFeedApi.UpdateRequest(false, false, null, null));
+    verify(checker, never()).checkLater(any());
+
+    service.update("u", "f", new RssFeedApi.UpdateRequest(false, true, null, null));
+    verify(checker).checkLater(3L);
+  }
+
+  @Test
   @DisplayName("004 FR-066: 지우기는 주인 것만 지우고, 없거나 남의 것이면 조용히 끝난다")
   void delete() {
     RssFeed feed = stored("u");

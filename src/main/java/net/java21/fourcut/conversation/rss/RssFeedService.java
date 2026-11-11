@@ -9,6 +9,8 @@ import net.java21.fourcut.conversation.error.ErrorCode;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** 구독 등록·목록·설정·삭제·지금 확인 (004 FR-050~054, FR-065, FR-066). 남의 구독은 없는 것처럼 404. */
 @Service
@@ -68,12 +70,31 @@ class RssFeedService {
   @Transactional
   public RssFeedApi.View update(String owner, String id, RssFeedApi.UpdateRequest request) {
     RssFeed feed = owned(owner, id);
+    boolean turnedOn = !feed.isEnabled() && request.enabled();
     feed.configure(
         request.autoPublish(),
         request.enabled(),
         RssFeedApi.concept(request.concept()),
         RssFeedApi.dialect(request.dialect()));
+    if (turnedOn) {
+      checkAfterCommit(feed.getId());
+    }
     return view(feed);
+  }
+
+  /** 꺼 둔 피드를 켜면 다음 정기 확인(최대 30분)을 기다리지 않고 바로 확인한다. 바뀐 설정이 저장된 뒤에 확인한다. */
+  private void checkAfterCommit(Long feedId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      checker.checkLater(feedId);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            checker.checkLater(feedId);
+          }
+        });
   }
 
   /** 구독을 지운다. 기사 기록은 DB가 함께 지우고(ON DELETE CASCADE), 만든 만화는 남는다. 없어도 조용히 끝난다(멱등). */
