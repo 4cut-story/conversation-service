@@ -153,6 +153,34 @@ class ArticleExtractorTest {
   }
 
   @Test
+  @DisplayName("004 FR-059: 스크립트 속 본문이 길고 이스케이프가 많아도(JTBC 긴 기사) 스택이 넘치지 않고 본문을 찾는다")
+  void longScriptBody() throws Exception {
+    StringBuilder article = new StringBuilder("<div id=\"ijam_content\">");
+    for (int i = 0; i < 60; i++) {
+      article
+          .append(" \n ")
+          .append(i)
+          .append("번째 이야기. ")
+          .append(PARAGRAPH)
+          .append(" <br> \n <br> ");
+    }
+    article.append("</div>");
+    String html =
+        "<html><head><meta property=\"og:title\" content=\"떡집 마지막 날\"></head><body>"
+            + "<main><p>로딩 중</p></main><script>window.q=[{\"data\":{\"articleIdx\":\"NB1\","
+            + "\"articleContent\":"
+            + JSON.writeValueAsString(article.toString())
+            + ",\"sectionName\":\"사회\"}}];</script></body></html>";
+    Article read =
+        ArticleExtractor.extract(
+            "https://news.example.com/article/NB1",
+            "news.example.com",
+            html.getBytes(StandardCharsets.UTF_8));
+    assertThat(read.text()).contains("떡집").doesNotContain("로딩 중").doesNotContain("사회");
+    assertThat(read.text().length()).isGreaterThan(PARAGRAPH.length() * 50);
+  }
+
+  @Test
   @DisplayName("004 FR-059: 화면에 본문이 없으면 JSON-LD의 articleBody를 쓴다")
   void jsonLdBody() throws Exception {
     String body =
