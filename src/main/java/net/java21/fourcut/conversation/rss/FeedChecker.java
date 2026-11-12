@@ -27,8 +27,10 @@ import org.springframework.stereotype.Component;
 /**
  * 켜진 피드를 30분마다(설정 {@code rss.check-interval}) 확인한다 (004 FR-055~060). 처음 확인하는 피드는 가장 최근 기사 1편만 만들고
  * 나머지는 건너뛴다. 그 뒤로는 처음 보는 기사를 최신 것부터 만들되, 한 번 확인에 {@code rss.max-per-check}편, 하루(한국 시각 0시부터)에 {@code
- * rss.max-per-day}편까지만 만든다. 남는 기사는 건너뜀으로 남긴다. 본문을 못 찾는 등 만들지 못한 기사가 있으면 다음 기사로 넘어가되, 한 번 확인에 읽어 보는
- * 기사 수도 제한한다. 기사마다 기록을 먼저 남겨 같은 기사로 두 번 만들지 않는다.
+ * rss.max-per-day}편까지만 만든다. 하루 편수는 새벽에 몰아 쓰지 않고 하루에 고르게 나눈다(설정 {@code rss.spread-over-day}): 한국 시각
+ * 0시부터 지난 시간만큼만 쓸 수 있어서, 하루 10편이면 약 2시간 24분마다 1편씩 늘어난다. 아직 차례가 오지 않은 기사는 기록하지 않고 다음 확인에서 다시 본다. 하루
+ * 편수를 다 쓰거나 한 번 확인 편수를 넘은 기사는 건너뜀으로 남긴다. 본문을 못 찾는 등 만들지 못한 기사가 있으면 다음 기사로 넘어가되, 한 번 확인에 읽어 보는 기사 수도
+ * 제한한다. 기사마다 기록을 먼저 남겨 같은 기사로 두 번 만들지 않는다.
  */
 @Component
 class FeedChecker {
@@ -61,6 +63,26 @@ class FeedChecker {
     return clock.instant().atZone(KST).toLocalDate().atStartOfDay(KST).toInstant();
   }
 
+  /**
+   * 지금까지(한국 시각 0시부터) 쓸 수 있는 하루 편수. 하루를 편수만큼 나눠 0시에 1편, 그 뒤로 한 칸 지날 때마다 1편씩 늘고 마지막 칸에서 하루 편수가 된다.
+   * 고르게 나누지 않으면 하루 편수 전부.
+   */
+  int paceNow() {
+    if (!spreadOverDay) {
+      return maxPerDay;
+    }
+    java.time.Instant now = clock.instant();
+    long elapsed = java.time.Duration.between(startOfToday(), now).getSeconds();
+    long day = java.time.Duration.ofDays(1).getSeconds();
+    return (int) Math.min(maxPerDay, maxPerDay * Math.max(0, elapsed) / day + 1);
+  }
+
+  /**
+   * 본문을 못 찾아도 다시 읽어 볼 만큼 갓 올라온 기사. 속보는 한 줄만 먼저 올리고 본문을 나중에 채우는 일이 많아, 이 안에 올라온 기사는 실패로 남기지 않고 다음
+   * 확인에서 다시 읽는다.
+   */
+  static final java.time.Duration RETRY_NO_BODY_WITHIN = java.time.Duration.ofHours(2);
+
   /** 만들 자리 하나마다 읽어 볼 수 있는 기사 수. 본문을 못 찾는 기사가 이어져도 피드 전체를 읽지 않는다. */
   static final int TRIES_PER_SLOT = 3;
 
@@ -76,6 +98,7 @@ class FeedChecker {
   private final Clock clock;
   private final int maxPerCheck;
   private final int maxPerDay;
+  private final boolean spreadOverDay;
   private final Set<Long> running = ConcurrentHashMap.newKeySet();
   private final ExecutorService background = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -87,7 +110,8 @@ class FeedChecker {
       SimilarArticles similar,
       Clock clock,
       @Value("${rss.max-per-check:3}") int maxPerCheck,
-      @Value("${rss.max-per-day:10}") int maxPerDay) {
+      @Value("${rss.max-per-day:10}") int maxPerDay,
+      @Value("${rss.spread-over-day:true}") boolean spreadOverDay) {
     this.feeds = feeds;
     this.items = items;
     this.reader = reader;
@@ -96,6 +120,7 @@ class FeedChecker {
     this.clock = clock;
     this.maxPerCheck = Math.max(1, maxPerCheck);
     this.maxPerDay = Math.max(1, maxPerDay);
+    this.spreadOverDay = spreadOverDay;
   }
 
   /** 켜진 피드를 모두 확인한다. 시작한 대화 수를 돌려준다. */
@@ -149,6 +174,8 @@ class FeedChecker {
     List<FeedParser.Entry> fresh = newestFirst(fresh(feedId, parsed.entries()));
     int limit;
     String overReason;
+    // 하루를 고르게 나누느라 이번 확인에 못 만드는 기사는 기록하지 않고 다음 확인에서 다시 본다
+    boolean paced = false;
     if (!items.existsByFeedId(feedId)) {
       limit = 1;
       overReason = BEFORE_SUBSCRIBE_REASON;
@@ -157,7 +184,9 @@ class FeedChecker {
           items.countByFeedIdAndStatusAndCreatedAtAfter(
               feedId, RssFeedItem.Status.MADE, startOfToday());
       int left = (int) Math.max(0, maxPerDay - today);
-      limit = Math.min(maxPerCheck, left);
+      int paceLeft = (int) Math.max(0, paceNow() - today);
+      paced = paceLeft < Math.min(maxPerCheck, left);
+      limit = Math.min(maxPerCheck, Math.min(left, paceLeft));
       overReason = left <= maxPerCheck ? perDayReason(maxPerDay) : perCheckReason(maxPerCheck);
     }
     feeds.checked(feedId, clock.instant(), null);
@@ -165,7 +194,9 @@ class FeedChecker {
     int tried = 0;
     for (FeedParser.Entry entry : fresh) {
       if (made >= limit || tried >= limit * TRIES_PER_SLOT) {
-        skip(feedId, entry, overReason);
+        if (!paced) {
+          skip(feedId, entry, overReason);
+        }
         continue;
       }
       tried++;
@@ -223,6 +254,12 @@ class FeedChecker {
     }
   }
 
+  /** 발행 시각이 {@link #RETRY_NO_BODY_WITHIN} 안인 기사. 시각이 없으면 아니다. */
+  private boolean justPublished(FeedParser.Entry entry) {
+    return entry.published() != null
+        && entry.published().isAfter(clock.instant().minus(RETRY_NO_BODY_WITHIN));
+  }
+
   private boolean make(RssFeed feed, FeedParser.Entry entry) {
     RssFeedItem item = record(feed.getId(), entry, RssFeedItem.Status.MADE);
     if (item == null) {
@@ -252,6 +289,11 @@ class FeedChecker {
               feed.getDialect(),
               article));
     } catch (ArticleException e) {
+      if (e.reason() == ArticleException.Reason.NO_BODY && justPublished(entry)) {
+        log.info("갓 올라온 기사라 본문을 다음 확인에서 다시 읽는다: feed={} link={}", feed.getId(), entry.link());
+        items.delete(item);
+        return false;
+      }
       if (e.reason() == ArticleException.Reason.EXCLUDED) {
         item.skipped(EXCLUDED_REASON);
       } else {

@@ -125,6 +125,8 @@ rss:
   # 한 번 확인에 만드는 편수, 구독 하나가 하루(한국 시각 0시부터)에 만드는 편수. 남는 새 기사는 건너뜀으로 남긴다
   max-per-check: ${RSS_MAX_PER_CHECK:3}
   max-per-day: ${RSS_MAX_PER_DAY:10}
+  # 하루 편수를 새벽에 몰아 쓰지 않고 하루에 고르게 나눈다(10편이면 약 2시간 24분마다 1편). 차례가 오지 않은 기사는 다음 확인에서 다시 본다
+  spread-over-day: ${RSS_SPREAD_OVER_DAY:true}
   # 최근 이 기간 안에 만든 기사와 주제가 비슷하면 건너뛴다(0이면 비교 안 함). 임베딩 코사인 유사도 기준, 임베딩이 없을 때 제목 겹침 기준
   similar-within: ${RSS_SIMILAR_WITHIN:3d}
   similar-threshold: ${RSS_SIMILAR_THRESHOLD:0.82}

@@ -18,10 +18,13 @@ import tools.jackson.databind.json.JsonMapper;
  */
 final class ScriptBody implements BodySource {
 
-  /** 본문을 담는 흔한 키. 값은 글이거나 HTML 조각이다. */
+  /**
+   * 본문을 담는 흔한 키와 값을 여는 따옴표. 값은 글이거나 HTML 조각이다. 값 끝은 {@link #valueEnd}로 직접 찾는다: 값 전체를 정규식 반복으로 읽으면 긴
+   * 기사(이스케이프가 많은 HTML)에서 StackOverflowError가 난다.
+   */
   private static final Pattern BODY_KEY =
       Pattern.compile(
-          "\"(articleBody|articleContent|articleText|contentHtml|bodyHtml)\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+          "\"(articleBody|articleContent|articleText|contentHtml|bodyHtml)\"\\s*:\\s*\"");
 
   /** Next.js App Router가 심는 데이터 조각: self.__next_f.push([1,"..."]). */
   private static final Pattern NEXT_PUSH =
@@ -36,8 +39,14 @@ final class ScriptBody implements BodySource {
     String best = "";
     for (String data : texts(doc)) {
       Matcher m = BODY_KEY.matcher(data);
-      while (m.find()) {
-        String value = unescape(m.group(2));
+      int from = 0;
+      while (m.find(from)) {
+        int end = valueEnd(data, m.end());
+        if (end < 0) {
+          break;
+        }
+        from = end + 1;
+        String value = unescape(data.substring(m.end(), end));
         if (value == null) {
           continue;
         }
@@ -76,6 +85,19 @@ final class ScriptBody implements BodySource {
       out.add(next.toString());
     }
     return out;
+  }
+
+  /** 따옴표 안 JSON 문자열 값이 끝나는 닫는 따옴표 자리. 없으면 -1. */
+  static int valueEnd(String data, int start) {
+    for (int i = start; i < data.length(); i++) {
+      char c = data.charAt(i);
+      if (c == '\\') {
+        i++;
+      } else if (c == '"') {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /** JSON 문자열 값(따옴표 안)을 원래 글로 푼다. 잘못된 값이면 null. */

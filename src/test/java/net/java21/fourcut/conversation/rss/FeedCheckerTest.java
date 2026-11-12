@@ -40,9 +40,21 @@ class FeedCheckerTest {
   private final ArticleReader reader = mock(ArticleReader.class);
   private final ConversationService conversations = mock(ConversationService.class);
   private final SimilarArticles similar = mock(SimilarArticles.class);
-  private final FeedChecker checker =
-      new FeedChecker(
-          feeds, items, reader, conversations, similar, Clock.fixed(NOW, ZoneOffset.UTC), 3, 10);
+  private final FeedChecker checker = checkerAt(NOW);
+
+  private FeedChecker checkerAt(Instant now) {
+    return new FeedChecker(
+        feeds,
+        items,
+        reader,
+        conversations,
+        similar,
+        Clock.fixed(now, ZoneOffset.UTC),
+        3,
+        10,
+        true);
+  }
+
   private final List<RssFeedItem> saved = new ArrayList<>();
   private final RssFeed feed = new RssFeed("owner", URL, "예시신문", null);
 
@@ -170,12 +182,89 @@ class FeedCheckerTest {
             7L, RssFeedItem.Status.MADE, Instant.parse("2026-11-09T15:00:00Z")))
         .thenReturn(9L);
 
-    assertThat(checker.check(7L)).isEqualTo(1);
+    // 한국 시각 23:30: 하루 편수를 모두 쓸 수 있는 때
+    assertThat(checkerAt(Instant.parse("2026-11-10T14:30:00Z")).check(7L)).isEqualTo(1);
 
     assertThat(statuses())
         .containsExactly(
             RssFeedItem.Status.MADE, RssFeedItem.Status.SKIPPED, RssFeedItem.Status.SKIPPED);
     assertThat(saved.get(1).getReason()).isEqualTo(FeedChecker.perDayReason(10));
+  }
+
+  @Test
+  @DisplayName("004 FR-059: 갓 올라온 속보는 본문이 아직 짧아도 실패로 남기지 않고 다음 확인에서 다시 읽는다")
+  void retriesFreshShortArticle() {
+    // NOW(03:00Z) 30분 전에 올라온 기사와 하루 전에 올라온 기사
+    serve(item(2, "Tue, 10 Nov 2026 02:30:00 GMT"), item(1, "Mon, 09 Nov 2026 03:00:00 GMT"));
+    when(items.existsByFeedId(7L)).thenReturn(true);
+    when(reader.read(anyString()))
+        .thenThrow(new ArticleException(ArticleException.Reason.NO_BODY, "짧다"));
+
+    assertThat(checker.check(7L)).isZero();
+
+    org.mockito.Mockito.verify(items).delete(saved.get(0));
+    assertThat(saved.get(0).getLink()).isEqualTo("https://news.example.com/a/2");
+    org.mockito.Mockito.verify(items, org.mockito.Mockito.never()).delete(saved.get(1));
+    assertThat(saved.get(1).getStatus()).isEqualTo(RssFeedItem.Status.FAILED);
+  }
+
+  @Test
+  @DisplayName("하루 편수는 하루에 고르게 나눠 쓴다: 한국 시각 0시에 1편, 그 뒤로 하루를 편수로 나눈 칸마다 1편씩 늘어난다")
+  void paceOverDay() {
+    assertThat(checkerAt(Instant.parse("2026-11-09T15:00:00Z")).paceNow()).isEqualTo(1);
+    assertThat(checkerAt(Instant.parse("2026-11-09T17:23:59Z")).paceNow()).isEqualTo(1);
+    assertThat(checkerAt(Instant.parse("2026-11-09T17:24:00Z")).paceNow()).isEqualTo(2);
+    assertThat(checker.paceNow()).isEqualTo(6); // 한국 시각 12:00
+    assertThat(checkerAt(Instant.parse("2026-11-10T14:59:59Z")).paceNow()).isEqualTo(10);
+    assertThat(
+            new FeedChecker(
+                    feeds,
+                    items,
+                    reader,
+                    conversations,
+                    similar,
+                    Clock.fixed(Instant.parse("2026-11-09T15:00:00Z"), ZoneOffset.UTC),
+                    3,
+                    10,
+                    false)
+                .paceNow())
+        .isEqualTo(10);
+  }
+
+  @Test
+  @DisplayName("새벽에 하루 편수를 몰아 쓰지 않는다: 차례가 오지 않은 기사는 기록하지 않고 다음 확인에서 다시 본다")
+  void pacedLeavesForLater() {
+    serve(item(5, null), item(4, null), item(3, null), item(2, null));
+    when(items.existsByFeedId(7L)).thenReturn(true);
+    when(items.countByFeedIdAndStatusAndCreatedAtAfter(
+            7L, RssFeedItem.Status.MADE, Instant.parse("2026-11-09T15:00:00Z")))
+        .thenReturn(5L);
+
+    // 한국 시각 12:00에는 6편까지: 오늘 5편을 만들었으니 1편만 만든다
+    assertThat(checker.check(7L)).isEqualTo(1);
+
+    assertThat(saved)
+        .extracting(RssFeedItem::getLink, RssFeedItem::getStatus)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple(
+                "https://news.example.com/a/5", RssFeedItem.Status.MADE));
+  }
+
+  @Test
+  @DisplayName("이번 차례를 다 썼으면 아무 기사도 읽거나 기록하지 않는다")
+  void pacedNothingYet() {
+    serve(item(5, null), item(4, null));
+    when(items.existsByFeedId(7L)).thenReturn(true);
+    when(items.countByFeedIdAndStatusAndCreatedAtAfter(
+            7L, RssFeedItem.Status.MADE, Instant.parse("2026-11-09T15:00:00Z")))
+        .thenReturn(1L);
+
+    // 한국 시각 01:00에는 1편까지
+    assertThat(checkerAt(Instant.parse("2026-11-09T16:00:00Z")).check(7L)).isZero();
+
+    assertThat(saved).isEmpty();
+    org.mockito.Mockito.verify(reader, org.mockito.Mockito.never()).read(anyString());
+    verify(feeds).checked(7L, Instant.parse("2026-11-09T16:00:00Z"), null);
   }
 
   @Test
