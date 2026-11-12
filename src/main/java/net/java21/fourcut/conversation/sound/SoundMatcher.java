@@ -496,7 +496,7 @@ public class SoundMatcher {
       Pattern.compile("빗|비가|비 오|비오|비 내|비를|소나기|장맛비|폭우|천둥|우산|rain|thunder|storm");
 
   private List<Scored> find(Query q) {
-    String query = query(q);
+    String query = soundQuery(q);
     if (query.isEmpty()) {
       return List.of();
     }
@@ -513,6 +513,78 @@ public class SoundMatcher {
     }
     return List.of();
   }
+
+  /**
+   * 장소·환경음 질의 글. 소리 설명과 같은 항목 틀("들리는 소리: … 장소: … 시간대: … 날씨: …")로 쓴다. 이야기 문장("술집에서 친구들과 맥주와 치킨…")은
+   * 맞는 술집 소리와도 유사도 0.63에 그쳤는데, 같은 틀로 쓰면 0.82~0.84로 올라왔다(설명 임베딩 BGE-M3로 잰 값, 2026-11-12). 소리 장면은 콘티
+   * 규칙대로 "시간대·날씨 + 장소, 계속 들리는 소리" 순이라 첫 쉼표 앞을 장소·시간대·날씨로, 뒤를 들리는 소리로 나눈다. 소리 장면이 없으면 {@link
+   * #query}와 같다.
+   */
+  static String soundQuery(Query q) {
+    String scene = text(q.soundScene());
+    if (scene.isEmpty()) {
+      return query(q);
+    }
+    int comma = scene.indexOf(',');
+    String head = comma < 0 ? "" : scene.substring(0, comma).strip();
+    String heard = comma < 0 ? scene : scene.substring(comma + 1).strip();
+    List<String> time = new ArrayList<>();
+    List<String> weather = new ArrayList<>();
+    List<String> place = new ArrayList<>();
+    for (String w : head.split("\\s+")) {
+      if (w.isEmpty() || WEATHER_VERBS.contains(w)) {
+        continue;
+      }
+      String time1 = TIME_WORDS.get(w);
+      String weather1 = WEATHER_WORDS.get(w);
+      if (time1 != null) {
+        time.add(time1);
+      } else if (weather1 != null) {
+        weather.add(weather1);
+      } else {
+        place.add(w);
+      }
+    }
+    String where = place.isEmpty() ? text(q.place()) : String.join(" ", place);
+    List<String> parts = new ArrayList<>();
+    parts.add("들리는 소리: " + (heard.isEmpty() ? scene : heard));
+    if (!where.isEmpty()) {
+      parts.add("장소: " + where);
+    }
+    if (!time.isEmpty()) {
+      parts.add("시간대: " + String.join(", ", time));
+    }
+    if (!weather.isEmpty()) {
+      parts.add("날씨: " + String.join(", ", weather));
+    }
+    String joined = String.join(". ", parts) + ".";
+    return joined.length() > MAX_QUERY ? joined.substring(0, MAX_QUERY) : joined;
+  }
+
+  /** 소리 장면 앞마디의 시간대 낱말과 소리 설명의 시간대 값. */
+  private static final java.util.Map<String, String> TIME_WORDS =
+      java.util.Map.ofEntries(
+          java.util.Map.entry("아침", "아침"),
+          java.util.Map.entry("새벽", "아침"),
+          java.util.Map.entry("오전", "아침"),
+          java.util.Map.entry("낮", "낮"),
+          java.util.Map.entry("한낮", "낮"),
+          java.util.Map.entry("대낮", "낮"),
+          java.util.Map.entry("오후", "낮"),
+          java.util.Map.entry("저녁", "저녁"),
+          java.util.Map.entry("해질녘", "저녁"),
+          java.util.Map.entry("밤", "밤"),
+          java.util.Map.entry("한밤", "밤"),
+          java.util.Map.entry("한밤중", "밤"),
+          java.util.Map.entry("심야", "밤"));
+
+  /** 날씨 낱말 뒤에 붙는 말("비 오는", "바람 부는"). 장소로 넣지 않는다. */
+  private static final java.util.Set<String> WEATHER_VERBS = java.util.Set.of("오는", "내리는", "부는");
+
+  /** 소리 장면 앞마디의 날씨 낱말과 소리 설명의 날씨 값. */
+  private static final java.util.Map<String, String> WEATHER_WORDS =
+      java.util.Map.of(
+          "비", "비", "비오는", "비", "빗속", "비", "눈", "눈", "눈오는", "눈", "바람", "바람", "맑은", "맑음");
 
   /** 질의 글: 소리 장면, 장소 순서. 대사는 소리 장면이 없을 때만 넣는다(대사의 음식·물건 낱말이 들리는 소리를 흐리지 않게). */
   static String query(Query q) {
