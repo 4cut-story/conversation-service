@@ -98,7 +98,8 @@ class SoundMatcherTest {
             "second", List.of(sound("bbbbbbbbbbbbbbbbbbbbb"), sound("aaaaaaaaaaaaaaaaaaaaa")),
             "third", List.of(sound("bbbbbbbbbbbbbbbbbbbbb"), sound("aaaaaaaaaaaaaaaaaaaaa")));
     SoundMatcher matcher =
-        new SoundMatcher((q, n) -> byQuery.getOrDefault(q.split("\\.")[0], List.of()));
+        new SoundMatcher(
+            (q, n) -> byQuery.getOrDefault(q.split("\\.")[0].replace("들리는 소리: ", ""), List.of()));
 
     var picked =
         matcher.match(
@@ -125,7 +126,7 @@ class SoundMatcherTest {
     assertThat(words.match(List.of(new SoundMatcher.Query("골목 빗소리", null, "가자"))).get(0))
         .map(SoundMatcher.Picked::publicId)
         .contains("ccccccccccccccccccccc");
-    assertThat(asked).containsExactly("골목 빗소리", "골목", "빗소리");
+    assertThat(asked).containsExactly("들리는 소리: 골목 빗소리.", "골목", "빗소리");
 
     SoundMatcher broken =
         new SoundMatcher(
@@ -219,7 +220,7 @@ class SoundMatcherTest {
     SoundMatcher matcher =
         SoundMatcher.scored(
             (q, n) ->
-                q.startsWith("비")
+                q.contains("날씨: 비")
                     ? List.of(new SoundMatcher.Scored(near, 0.25))
                     : List.of(new SoundMatcher.Scored(far, 0.55)),
             (q, n) -> List.of(),
@@ -346,5 +347,20 @@ class SoundMatcherTest {
         .isPresent();
     assertThat(SoundMatcher.head("밤바다에 밀려오는 잔잔한 파도 소리")).isEqualTo("파도");
     assertThat(SoundMatcher.head("기계실 웅웅거림")).isEqualTo("웅웅거림");
+  }
+
+  @Test
+  @DisplayName("FR-008e: 장소·환경음 질의는 소리 설명과 같은 항목 틀(들리는 소리·장소·시간대·날씨)로 쓴다")
+  void soundQueryUsesDescriptionTemplate() {
+    assertThat(
+            SoundMatcher.soundQuery(
+                new SoundMatcher.Query("저녁 술집 안, 사람들 웅성거림과 잔 부딪는 소리", "a pub", "건배!")))
+        .isEqualTo("들리는 소리: 사람들 웅성거림과 잔 부딪는 소리. 장소: 술집 안. 시간대: 저녁.");
+    assertThat(SoundMatcher.soundQuery(new SoundMatcher.Query("비 오는 골목, 지붕을 두드리는 빗소리", null, null)))
+        .isEqualTo("들리는 소리: 지붕을 두드리는 빗소리. 장소: 골목. 날씨: 비.");
+    assertThat(SoundMatcher.soundQuery(new SoundMatcher.Query("밤, 풀벌레 소리", "a park", null)))
+        .isEqualTo("들리는 소리: 풀벌레 소리. 장소: a park. 시간대: 밤.");
+    assertThat(SoundMatcher.soundQuery(new SoundMatcher.Query(null, "a cafe", "안녕")))
+        .isEqualTo(SoundMatcher.query(new SoundMatcher.Query(null, "a cafe", "안녕")));
   }
 }
