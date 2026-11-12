@@ -14,8 +14,8 @@ final class RssFeedApi {
   static final String CONCEPTS =
       "AUTO|DAILY|ANIMALS|WATERCOLOR|PICTURE_BOOK|NEWSPAPER|JOSEON|WUXIA";
 
-  /** 고를 수 있는 사투리. NONE은 사투리 없음. */
-  static final String DIALECTS = "NONE|GYEONGSANG|JEOLLA|CHUNGCHEONG|GANGWON|SEOUL";
+  /** 고를 수 있는 사투리. NONE은 사투리 없음, AUTO는 기사마다 자동({@link FeedDialect}). */
+  static final String DIALECTS = "AUTO|NONE|GYEONGSANG|JEOLLA|CHUNGCHEONG|GANGWON|SEOUL";
 
   private RssFeedApi() {}
 
@@ -63,8 +63,11 @@ final class RssFeedApi {
     return value == null || "AUTO".equals(value) ? null : value;
   }
 
-  /** 저장할 사투리. 없음이면 null. */
+  /** 저장할 사투리. 없음이면 null, 자동이면 AUTO. 값을 보내지 않으면 자동. */
   static String dialect(String value) {
-    return value == null || "NONE".equals(value) ? null : value;
+    if (value == null) {
+      return FeedDialect.AUTO;
+    }
+    return "NONE".equals(value) ? null : value;
   }
 }
