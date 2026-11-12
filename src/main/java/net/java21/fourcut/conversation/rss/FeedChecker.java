@@ -77,6 +77,12 @@ class FeedChecker {
     return (int) Math.min(maxPerDay, maxPerDay * Math.max(0, elapsed) / day + 1);
   }
 
+  /**
+   * 본문을 못 찾아도 다시 읽어 볼 만큼 갓 올라온 기사. 속보는 한 줄만 먼저 올리고 본문을 나중에 채우는 일이 많아, 이 안에 올라온 기사는 실패로 남기지 않고 다음
+   * 확인에서 다시 읽는다.
+   */
+  static final java.time.Duration RETRY_NO_BODY_WITHIN = java.time.Duration.ofHours(2);
+
   /** 만들 자리 하나마다 읽어 볼 수 있는 기사 수. 본문을 못 찾는 기사가 이어져도 피드 전체를 읽지 않는다. */
   static final int TRIES_PER_SLOT = 3;
 
@@ -248,6 +254,12 @@ class FeedChecker {
     }
   }
 
+  /** 발행 시각이 {@link #RETRY_NO_BODY_WITHIN} 안인 기사. 시각이 없으면 아니다. */
+  private boolean justPublished(FeedParser.Entry entry) {
+    return entry.published() != null
+        && entry.published().isAfter(clock.instant().minus(RETRY_NO_BODY_WITHIN));
+  }
+
   private boolean make(RssFeed feed, FeedParser.Entry entry) {
     RssFeedItem item = record(feed.getId(), entry, RssFeedItem.Status.MADE);
     if (item == null) {
@@ -277,6 +289,11 @@ class FeedChecker {
               feed.getDialect(),
               article));
     } catch (ArticleException e) {
+      if (e.reason() == ArticleException.Reason.NO_BODY && justPublished(entry)) {
+        log.info("갓 올라온 기사라 본문을 다음 확인에서 다시 읽는다: feed={} link={}", feed.getId(), entry.link());
+        items.delete(item);
+        return false;
+      }
       if (e.reason() == ArticleException.Reason.EXCLUDED) {
         item.skipped(EXCLUDED_REASON);
       } else {
