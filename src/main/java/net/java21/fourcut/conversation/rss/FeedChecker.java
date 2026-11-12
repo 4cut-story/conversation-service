@@ -286,7 +286,7 @@ class FeedChecker {
               feed.getId(),
               feed.isAutoPublish(),
               feed.getConcept(),
-              feed.getDialect(),
+              FeedDialect.pick(feed.getDialect(), feed.getConcept(), entry.link()),
               article));
     } catch (ArticleException e) {
       if (e.reason() == ArticleException.Reason.NO_BODY && justPublished(entry)) {
