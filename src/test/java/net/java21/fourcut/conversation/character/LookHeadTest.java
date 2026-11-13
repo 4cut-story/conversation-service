@@ -303,4 +303,52 @@ class LookHeadTest {
         .isEqualTo(
             "little boy swordsman, child, blue robe, wooden sword, straight-leg white trousers");
   }
+
+  @Test
+  @DisplayName("REQ-018: 콘티 costume 칸이 없으면 외모에서 역할 옷 마디(제복·가운·갑옷)를 찾는다")
+  void costumeOf() {
+    assertThat(LookHead.costumeOf(" white doctor coat ", "young woman"))
+        .isEqualTo("white doctor coat");
+    assertThat(
+            LookHead.costumeOf(
+                null, "young man, short black hair, olive military uniform, combat helmet, boots"))
+        .isEqualTo("olive military uniform, combat helmet");
+    assertThat(LookHead.costumeOf("", "old man, gray monk robe")).isEqualTo("gray monk robe");
+    assertThat(LookHead.costumeOf(null, "young woman, police uniform")).isEqualTo("police uniform");
+    assertThat(LookHead.costumeOf(null, "young woman, pink hoodie, blue jeans")).isEmpty();
+    assertThat(LookHead.costumeOf(null, null)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("REQ-018: 캐릭터가 역할 옷을 입었는지는 색이 아니라 역할 낱말로 본다")
+  void wears() {
+    assertThat(
+            LookHead.wears(
+                "navy police uniform, police cap", "young man, police cap, police uniform"))
+        .isTrue();
+    assertThat(LookHead.wears("olive military uniform", "young man, police cap, police uniform"))
+        .isFalse();
+    assertThat(
+            LookHead.wears("olive military uniform", "young man, short black hair, cream sweater"))
+        .isFalse();
+    assertThat(LookHead.wears("white doctor coat", "woman, doctor coat, stethoscope")).isTrue();
+    assertThat(LookHead.wears("white uniform", "man, white uniform, cap")).isTrue();
+    assertThat(LookHead.wears("white uniform", "man, cream sweater")).isFalse();
+    assertThat(LookHead.wears("", "man, cream sweater")).isTrue();
+    assertThat(LookHead.wears("white uniform", null)).isFalse();
+  }
+
+  @Test
+  @DisplayName("REQ-018: 역할 옷을 입히면 캐릭터 모습의 옷·모자는 빼고 머리·얼굴은 남긴다")
+  void dressed() {
+    assertThat(
+            LookHead.dressed(
+                "young man, short black hair, cream sweater, red cap, round glasses",
+                "olive military uniform"))
+        .isEqualTo("young man, short black hair, round glasses, olive military uniform");
+    assertThat(LookHead.dressed("man in hanbok, topknot, white dopo", "silver knight armor"))
+        .isEqualTo("man, topknot, silver knight armor");
+    assertThat(LookHead.dressed("young woman, red bob", null)).isEqualTo("young woman, red bob");
+    assertThat(LookHead.dressed(null, "white doctor coat")).isEqualTo("white doctor coat");
+  }
 }

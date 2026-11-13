@@ -89,12 +89,25 @@ public record ComicScript(
    * @param look 그림용 영어 외모
    * @param role 대사와 말풍선에서 이 인물을 부르는 호칭(할머니, 손녀, 친구…). 예전 콘티에는 없다
    * @param lookId 그림 단계에서 찾은 캐릭터 모습 공개 ID. 못 찾았거나 그리기 전이면 null
+   * @param costume 역할·직업 때문에 꼭 보여야 하는 옷(그림용 영어, 예: olive military uniform). 일상복이거나 예전 콘티면 null·빈
+   *     문자열
    */
   public record Character(
-      String speaker, String name, String persona, String look, String role, String lookId) {
+      String speaker,
+      String name,
+      String persona,
+      String look,
+      String role,
+      String lookId,
+      String costume) {
 
     public Character(String speaker, String name, String persona, String look) {
-      this(speaker, name, persona, look, null, null);
+      this(speaker, name, persona, look, null, null, null);
+    }
+
+    public Character(
+        String speaker, String name, String persona, String look, String role, String lookId) {
+      this(speaker, name, persona, look, role, lookId, null);
     }
 
     /** 등장인물 이름(가명, 그림 단계 뒤에는 캐릭터 이름). 이름이 없으면 화자 표시. */
@@ -108,19 +121,19 @@ public record ComicScript(
     }
 
     public Character withName(String newName) {
-      return new Character(speaker, newName, persona, look, role, lookId);
+      return new Character(speaker, newName, persona, look, role, lookId, costume);
     }
 
     public Character withLook(String newLook) {
-      return new Character(speaker, name, persona, newLook, role, lookId);
+      return new Character(speaker, name, persona, newLook, role, lookId, costume);
     }
 
     public Character withRole(String newRole) {
-      return new Character(speaker, name, persona, look, newRole, lookId);
+      return new Character(speaker, name, persona, look, newRole, lookId, costume);
     }
 
     public Character withLookId(String newLookId) {
-      return new Character(speaker, name, persona, look, role, newLookId);
+      return new Character(speaker, name, persona, look, role, newLookId, costume);
     }
   }
 

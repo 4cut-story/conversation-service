@@ -105,6 +105,9 @@ class DrawReferencesTest {
     assertThat(one).hasSize(1);
     assertThat(one.get(0).path("region").asString()).isEqualTo("full");
     assertThat(one.get(0).path("embedGetKey").asString()).isEqualTo(ready.embedKey());
+    // FLUX.2 klein은 그림을 그대로 받아서 embedding이 있어도 참조 그림을 늘 넘긴다
+    assertThat(one.get(0).path("imageGetKey").asString()).isEqualTo(ready.referenceImageKey());
+    assertThat(one.get(0).has("crop")).isFalse();
     assertThat(one.get(0).path("scale").asDouble()).isEqualTo(0.6);
 
     var duo = new ComicScript.Panel("승", "medium", "{B} hands {A} a cup", null);
@@ -230,5 +233,22 @@ class DrawReferencesTest {
 
   private static ComicScript.Panel panel(String scene) {
     return new ComicScript.Panel("기", "medium", scene, List.of());
+  }
+
+  @Test
+  @DisplayName("REQ-018: 역할 옷을 입힌 인물은 참조 그림의 머리만 쓰고, 소개 그림·말풍선 확인에는 캐릭터 그림을 쓰지 않는다")
+  void costumeHeadOnly() {
+    CharacterRef soldier = fresh.withCostume("olive military uniform");
+    var solo = new ComicScript.Panel("기", "medium", "{B} salutes", null);
+    ArrayNode refs = handler.references(script, solo, Map.of("B", soldier));
+    assertThat(refs.get(0).path("crop").asString()).isEqualTo("head");
+    ComicScript named = DrawHandler.withNames(script, Map.of("A", ready, "B", soldier));
+    assertThat(named.characters().get(0).lookId()).isEqualTo(ready.publicId());
+    assertThat(named.characters().get(1).lookId()).isNull();
+    ComicScript looked = DrawHandler.withLooks(script, Map.of("B", soldier));
+    assertThat(looked.characters().get(1).look())
+        .contains("olive military uniform")
+        .doesNotContain("hoodie");
+    assertThat(fresh.withCostume(" ").costumed()).isFalse();
   }
 }

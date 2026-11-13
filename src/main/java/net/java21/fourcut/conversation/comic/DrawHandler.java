@@ -863,7 +863,8 @@ class DrawHandler implements StepHandler {
                 new CharacterLibrary.Wanted(
                     c.speaker(),
                     ComicScript.pseudonym(c.displayName()) ? null : c.displayName(),
-                    c.look()))
+                    c.look(),
+                    LookHead.costumeOf(c.costume(), c.look())))
         .toList();
   }
 
@@ -886,7 +887,9 @@ class DrawHandler implements StepHandler {
         named.characters().stream()
             .map(
                 c ->
-                    cast.containsKey(c.speaker())
+                    // 역할 옷을 입힌 인물은 캐릭터 그림(평상복)과 옷이 달라, 소개 그림과 말풍선 자리 확인에 캐릭터 그림을 쓰지 않고 컷에서
+                    // 자른 얼굴을 쓴다
+                    cast.containsKey(c.speaker()) && !cast.get(c.speaker()).costumed()
                         ? c.withLookId(cast.get(c.speaker()).publicId())
                         : c)
             .toList();
@@ -907,7 +910,8 @@ class DrawHandler implements StepHandler {
                             CharacterLibrary.drawLook(
                                 cast.get(c.speaker()).look(),
                                 c.look(),
-                                cast.get(c.speaker()).referenceImageKey() != null))
+                                cast.get(c.speaker()).referenceImageKey() != null,
+                                cast.get(c.speaker()).costume()))
                         : c)
             .toList();
     return new ComicScript(
@@ -1622,10 +1626,17 @@ class DrawHandler implements StepHandler {
       r.put("scale", ref.scale());
       boolean solo = e.getValue() == Staging.Side.CENTER && stage.size() == 1;
       r.put("region", solo && others ? "center" : REGION.get(e.getValue()));
+      if (ref.costumed()) {
+        // 역할 옷으로 갈아입힌 인물은 참조 그림의 머리(얼굴·머리 모양)만 쓴다. 옷까지 보이면 그림 모델이 참조 그림 옷(스웨터)을 따라
+        // 그려 군인이 평상복으로 나왔다
+        r.put("crop", "head");
+      }
+      // 참조 그림은 늘 넘긴다. FLUX.2 klein은 그림을 그대로 받아서, SDXL embedding만 넘기면 참조 없이 글로만 그렸다(예전에
+      // embedding을 계산해 둔 캐릭터는 클라인 그림에서 참조가 빠져 캐릭터 옷 글만으로 그려졌다)
+      r.put("imageGetKey", ref.referenceImageKey());
       if (ref.embedReady()) {
         r.put("embedGetKey", ref.embedKey());
       } else {
-        r.put("imageGetKey", ref.referenceImageKey());
         r.put("embedUploadPutKey", ref.embedTargetKey());
       }
     }
