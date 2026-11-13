@@ -381,7 +381,7 @@ public record ComicScript(
    * 컷 속 인물 한 명의 표정·몸짓.
    *
    * @param speaker 화자 표시(A, B…)
-   * @param face 그림 모델용 영어 3단어 이내(예: wide-eyed, hands up)
+   * @param face 그림 모델용 영어 4단어 이내 표정(예: wide-eyed, mouth open). 손·팔 자세는 action에만 쓴다
    */
   public record Face(String speaker, String face) {}
 
