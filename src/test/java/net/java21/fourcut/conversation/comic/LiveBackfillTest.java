@@ -2,7 +2,9 @@ package net.java21.fourcut.conversation.comic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -10,9 +12,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import javax.imageio.ImageIO;
+import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.pipeline.ConversationInfo;
 import net.java21.fourcut.conversation.pipeline.PipelineObserver;
 import net.java21.fourcut.conversation.pipeline.Production;
@@ -36,10 +43,20 @@ class LiveBackfillTest {
   private final ContentClient content = mock(ContentClient.class);
   private final SoundMatcher sounds = mock(SoundMatcher.class);
   private final JsonMapper json = JsonMapper.builder().build();
+  private final PanelPlacement placement = mock(PanelPlacement.class);
 
   private LiveBackfill backfill(boolean enabled) {
     return new LiveBackfill(
-        production, conversations, scenarios, storage, content, sounds, json, enabled);
+        production,
+        conversations,
+        scenarios,
+        storage,
+        content,
+        sounds,
+        json,
+        placement,
+        mock(CharacterLibrary.class),
+        enabled);
   }
 
   /** 화면 효과가 생기기 전 콘티: 효과 없음, 첫 컷은 밤하늘. */
@@ -108,5 +125,59 @@ class LiveBackfillTest {
         .isNull();
     backfill(false).onReady();
     verify(production, never()).composed();
+  }
+
+  private void oldComic(String live) {
+    when(production.composed()).thenReturn(List.of(1L));
+    when(conversations.find(1L)).thenReturn(new ConversationInfo(1L, "a", "u", "ko", 1, "DAILY"));
+    when(storage.get(WorkKeys.liveJson("a")))
+        .thenReturn(Optional.of(live.getBytes(StandardCharsets.UTF_8)));
+    when(storage.exists(WorkKeys.script("a"))).thenReturn(true);
+    when(scenarios.script("a")).thenReturn(OLD);
+    when(sounds.match(any(), anyLong())).thenReturn(List.of(Optional.empty(), Optional.empty()));
+    when(sounds.effects(any())).thenReturn(List.of(Optional.empty(), Optional.empty()));
+  }
+
+  private JsonNode sent() {
+    ArgumentCaptor<JsonNode> sent = ArgumentCaptor.forClass(JsonNode.class);
+    verify(content).live(eq("a"), sent.capture());
+    return sent.getValue().path("panels");
+  }
+
+  @Test
+  @DisplayName("FR-052: 예전 재생 정보에 인물 자리가 있으면 다시 묻지 않고 그대로 옮긴다")
+  void keepsPeople() {
+    oldComic(
+        OLD_LIVE.replace(
+            "\"depth\":\"panels/1-depth.png\",",
+            "\"depth\":\"panels/1-depth.png\",\"people\":[{\"speaker\":\"민지\",\"x\":0.4,\"y\":0.3,\"size\":0.2}],"));
+
+    assertThat(backfill(true).run()).isEqualTo(1);
+
+    JsonNode panels = sent();
+    assertThat(panels.get(0).path("people").get(0).path("speaker").asString()).isEqualTo("민지");
+    verify(placement, never()).locate(any(), anyList(), anyList(), anyMap());
+  }
+
+  @Test
+  @DisplayName("FR-052: 인물 자리가 없는 넓은 그림 컷은 넓은 그림을 보여 얼굴 자리를 채운다")
+  void fillsPeople() throws Exception {
+    oldComic(OLD_LIVE);
+    BufferedImage wide = new BufferedImage(32, 18, BufferedImage.TYPE_INT_RGB);
+    ByteArrayOutputStream png = new ByteArrayOutputStream();
+    ImageIO.write(wide, "png", png);
+    when(storage.get(WorkKeys.livePanel("a", 1, false))).thenReturn(Optional.of(png.toByteArray()));
+    when(placement.locate(any(), anyList(), anyList(), anyMap()))
+        .thenReturn(
+            new PanelPlacement.Spots(
+                List.of(Map.of(), Map.of()),
+                List.of(Map.of("A", new PanelPlacement.Head(0.45, 0.3, 0.2)), Map.of())));
+
+    assertThat(backfill(true).run()).isEqualTo(1);
+
+    JsonNode people = sent().get(0).path("people");
+    assertThat(people.size()).isEqualTo(1);
+    assertThat(people.get(0).path("speaker").asString()).isEqualTo("민지");
+    assertThat(people.get(0).path("x").asDouble()).isEqualTo(0.45);
   }
 }

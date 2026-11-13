@@ -115,7 +115,7 @@ class ComposeHandler implements StepHandler {
     String thumb = WorkKeys.comicThumb(id);
     storage.put(full, result.full(), PNG);
     storage.put(thumb, result.thumb(), PNG);
-    ObjectNode live = live(id, script, panels, spots);
+    ObjectNode live = live(id, script, panels, spots, !context.conversation().manualLlm());
     String language =
         context.conversation().language() == null ? "ko" : context.conversation().language();
     ContentClient.Registered registered =
@@ -144,6 +144,16 @@ class ComposeHandler implements StepHandler {
    */
   ObjectNode live(
       String id, ComicScript script, List<BufferedImage> panels, PanelPlacement.Spots spots) {
+    return live(id, script, panels, spots, false);
+  }
+
+  /** askPeople가 true면 넓은 그림을 그림을 읽는 LLM에 보여 인물 얼굴 자리(FR-052)도 싣는다. */
+  ObjectNode live(
+      String id,
+      ComicScript script,
+      List<BufferedImage> panels,
+      PanelPlacement.Spots spots,
+      boolean askPeople) {
     try {
       boolean gray = Concept.of(script.concept()) == Concept.NEWSPAPER;
       List<Boolean> moving = new ArrayList<>();
@@ -151,8 +161,10 @@ class ComposeHandler implements StepHandler {
       List<Boolean> third = new ArrayList<>();
       List<Boolean> fourth = new ArrayList<>();
       List<Boolean> depth = new ArrayList<>();
+      List<Optional<BufferedImage>> wides = new ArrayList<>();
       for (int i = 0; i < panels.size(); i++) {
         Optional<BufferedImage> w = wide(id, i + 1, gray);
+        wides.add(w);
         wide.add(w.isPresent());
         depth.add(w.isPresent() && depth(id, i + 1, w.get()));
         if (w.isPresent()) {
@@ -204,6 +216,11 @@ class ComposeHandler implements StepHandler {
               depth,
               fourth,
               voices(id, script));
+      LivePeople.put(
+          live,
+          LivePeople.find(
+              placement, script, wides, askPeople ? references(script) : Map.of(), askPeople),
+          script.callNames());
       storage.put(
           WorkKeys.liveJson(id),
           json.writeValueAsString(live).getBytes(StandardCharsets.UTF_8),
@@ -425,14 +442,7 @@ class ComposeHandler implements StepHandler {
 
   /** 화자별 참조 그림(그림을 그릴 때 IP-Adapter에 쓴 것). 캐릭터를 못 찾은 인물은 없다. */
   Map<String, byte[]> references(ComicScript script) {
-    Map<String, byte[]> out = new LinkedHashMap<>();
-    if (script.characters() == null) {
-      return out;
-    }
-    for (ComicScript.Character c : script.characters()) {
-      characters.referenceImage(c.lookId()).ifPresent(png -> out.put(c.speaker(), png));
-    }
-    return out;
+    return LivePeople.references(characters, script);
   }
 
   /** 만화 아래 등장인물 소개: 호칭, 캐릭터 이름, 캐릭터 모습. */
