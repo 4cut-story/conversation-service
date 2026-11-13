@@ -351,6 +351,40 @@ public record LookHead(String animal, String gender, String age) {
     return true;
   }
 
+  /**
+   * 캐릭터 모습의 머리 길이가 성별과 어울리는지. 일상 캐릭터 참조 그림은 성별과 상관없이 머리 모양을 골라 그려서, 긴 머리 남자(long black hair)는 여자처럼,
+   * 짧은 머리 여자(short brown hair)는 남자처럼 보인다. 그림 모델은 참조 그림을 따라 그려서 콘티의 남자 안내원이 여자로 그려지고, 목소리는 콘티 성별대로
+   * 남자 목소리가 나왔다. 콘티가 같은 머리 길이를 말했을 때만 받는다.
+   *
+   * @param wantedLook 콘티 외모 문구
+   * @param characterLook 캐릭터 DB 모습 문구
+   * @param gender 캐릭터 성별 F, M (모르면 null)
+   */
+  static boolean fitsHair(String wantedLook, String characterLook, String gender) {
+    if (characterLook == null || gender == null) {
+      return true;
+    }
+    String length = "M".equals(gender) ? "long" : "F".equals(gender) ? "short" : null;
+    if (length == null || !hasHairLength(characterLook, length)) {
+      return true;
+    }
+    return hasHairLength(wantedLook, length);
+  }
+
+  /** 외모 문구의 한 마디에 머리 길이 낱말과 hair가 함께 있는지("long black hair"). */
+  private static boolean hasHairLength(String look, String length) {
+    if (look == null) {
+      return false;
+    }
+    for (String part : look.toLowerCase(Locale.ROOT).split(",")) {
+      List<String> words = Arrays.asList(part.strip().split("[^\\p{L}\\p{N}-]+"));
+      if (words.contains(length) && words.contains("hair")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** 머리·얼굴·옷을 말하는 낱말. 이런 마디는 캐릭터 모습(참조 그림)을 따른다. */
   private static final Set<String> APPEARANCE =
       Set.of(
