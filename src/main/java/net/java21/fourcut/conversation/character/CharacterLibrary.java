@@ -153,6 +153,7 @@ public class CharacterLibrary {
           && !used.contains(l.character().publicId())
           && LookHead.of(w.look()).acceptsKnown(head(l))
           && LookHead.fitsOutfit(w.look(), l.look())
+          && LookHead.fitsHair(w.look(), l.look(), head(l).gender())
           && agesWithDb(l)
           && hasReference(l)) {
         used.add(l.character().publicId());
@@ -202,6 +203,7 @@ public class CharacterLibrary {
         if (l.isPresent()
             && (strict ? wanted.acceptsKnown(head(l.get())) : wanted.accepts(head(l.get())))
             && LookHead.fitsOutfit(look, l.get().look())
+            && LookHead.fitsHair(look, l.get().look(), head(l.get()).gender())
             && agesWithDb(l.get())
             && !used.contains(l.get().character().publicId())
             && seen.add(l.get().character().publicId())

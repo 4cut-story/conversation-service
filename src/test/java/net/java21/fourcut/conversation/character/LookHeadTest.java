@@ -140,7 +140,8 @@ class LookHeadTest {
                 "old man, white hair, brown checkered shirt, gray trousers, black rubber boots",
                 false))
         .isEqualTo(
-            "old man, white beard, straw hat, brown checkered shirt, gray trousers, black rubber boots");
+            "old man, white beard, straw hat, brown checkered shirt, gray trousers, black rubber"
+                + " boots");
     assertThat(
             CharacterLibrary.drawLook(
                 "old man, white beard, straw hat",
@@ -251,6 +252,33 @@ class LookHeadTest {
         .isTrue();
     assertThat(LookHead.fitsOutfit("boy, yellow hoodie", "bear, fire helmet")).isFalse();
     assertThat(LookHead.fitsOutfit("boy", null)).isTrue();
+  }
+
+  @Test
+  @DisplayName("REQ-018: 긴 머리 남자·짧은 머리 여자 모습은 콘티가 그 머리를 말할 때만 어울린다")
+  void fitsHair() {
+    // 남자 안내원에 긴 머리 남자 캐릭터가 붙어 여자로 그려지고 남자 목소리가 나왔다
+    assertThat(
+            LookHead.fitsHair(
+                "young man, navy vest", "young man, long black hair, olive overalls", "M"))
+        .isFalse();
+    assertThat(
+            LookHead.fitsHair(
+                "young woman, gray blazer", "young woman, short brown hair, red shirt", "F"))
+        .isFalse();
+    assertThat(
+            LookHead.fitsHair(
+                "young man, long hair, band t-shirt",
+                "young man, long black hair, black shirt",
+                "M"))
+        .isTrue();
+    assertThat(LookHead.fitsHair("young woman", "young woman, long black hair", "F")).isTrue();
+    assertThat(LookHead.fitsHair("young woman", "young woman, short red bob hair", "F")).isTrue();
+    assertThat(LookHead.fitsHair("young man", "young man, short black hair", "M")).isTrue();
+    assertThat(LookHead.fitsHair("young man", "young man, long scarf, black hair", "M")).isTrue();
+    assertThat(LookHead.fitsHair("young man", "long black hair", null)).isTrue();
+    assertThat(LookHead.fitsHair("young man", null, "M")).isTrue();
+    assertThat(LookHead.fitsHair(null, "young man, long black hair", "M")).isFalse();
   }
 
   @Test
