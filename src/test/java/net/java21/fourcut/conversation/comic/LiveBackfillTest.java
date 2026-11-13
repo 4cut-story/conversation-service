@@ -145,7 +145,7 @@ class LiveBackfillTest {
   }
 
   @Test
-  @DisplayName("FR-052: 예전 재생 정보에 인물 자리가 있으면 다시 묻지 않고 그대로 옮긴다")
+  @DisplayName("FR-052: 얼굴 자리를 새로 받지 못하면 예전 재생 정보의 인물 자리를 그대로 옮긴다")
   void keepsPeople() {
     oldComic(
         OLD_LIVE.replace(
@@ -156,7 +156,6 @@ class LiveBackfillTest {
 
     JsonNode panels = sent();
     assertThat(panels.get(0).path("people").get(0).path("speaker").asString()).isEqualTo("민지");
-    verify(placement, never()).locate(any(), anyList(), anyList(), anyMap());
   }
 
   @Test
