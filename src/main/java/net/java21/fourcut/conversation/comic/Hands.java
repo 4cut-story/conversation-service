@@ -55,7 +55,7 @@ final class Hands {
     boolean changed = false;
     for (ComicScript.Panel p : script.panels()) {
       ComicScript.Panel next = spare(p);
-      changed |= next != p;
+      changed |= !java.util.Objects.equals(next, p);
       out.add(next);
     }
     return changed
@@ -85,7 +85,7 @@ final class Hands {
       }
       faces = kept.equals(faces) ? faces : kept;
     }
-    if (scene.equals(p.scene()) && faces == p.faces()) {
+    if (scene.equals(p.scene()) && java.util.Objects.equals(faces, p.faces())) {
       return p;
     }
     return new ComicScript.Panel(
