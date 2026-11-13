@@ -86,7 +86,8 @@ class DrawHandler implements StepHandler {
       // 다시 그릴 때는 이 이름으로 같은 캐릭터를 찾는다
       scenarios.saveScript(id, named);
     }
-    ComicScript script = adults(withLooks(named, cast));
+    // 한 인물의 손 동작을 하나로 줄인다(타자 치며 턱 괴기 → 손이 셋)
+    ComicScript script = Hands.spare(adults(withLooks(named, cast)));
     List<Map<String, Staging.Side>> stages = Staging.panels(script);
     long seed = Math.floorMod(seedOf(written), 1_000_000_000L) + context.attempt() * 10L;
     ObjectNode payload = json.createObjectNode();

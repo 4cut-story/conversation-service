@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-13.35";
+  static final String VERSION = "2026-11-13.36";
 
   private Prompts() {}
 
@@ -277,6 +277,8 @@ final class Prompts {
         · 손바닥 펴기(손 흔들기, 손바닥 내밀기, 손가락 펴기) → 손가락 수가 틀린다. 주먹이나 물건 쥔 동작으로.
         · 손이 물건에서 떨어진 동작(멀리 가리키기, 문 밀기, 이불 당기기) → 빈손 자세가 된다. 물건을 쥔 동작으로.
         · 두 팔이 다른 일(팔짱 끼고 가리키기, 한 손으로 들고 다른 손으로 가리키기) → 팔이 셋.
+        · 손을 쓰는 동작(타자 치기, 물건 들기, 버튼 누르기)에 쉬는 손 자세(턱 괴기, 머리 긁기, 허리에 손)를 덧붙이기 → 손이 셋.
+          둘 중 하나만 쓴다(예: "{A} types on {노트북}, chin resting on a hand" 대신 "{A} types on {노트북}, frowning at the screen").
         · 작고 미묘한 동작(귓속말, 윙크, 끄덕이기, 소매 당기기)이나 감정·말만 쓰기("happy", "talks") → 그냥 서 있는 그림.
         · 문·창을 지나가는 동작 → 문 안팎에 같은 사람이 둘. 문 앞에 선 모습으로.
         · 가구 밑·뒤·안을 들여다보거나 손을 넣는 동작("looks under the sofa", 낀 물건 꺼내기) → 보는 사람과 들어가는 사람이
@@ -303,9 +305,10 @@ final class Prompts {
         · 실내(방, 부엌, 가게, 현관, 지붕 아래) setting에는 rain·snow·raindrops를 쓰지 않는다(방 안에 비가 그려진다). 비 오는
           날 실내는 "rain streaks on the window glass, dim room". 야외에서 비를 맞으면 action에 젖은 모습을 쓴다(예: "{A} stands in
           the rain, soaked hair and clothes", 우산이 있으면 "holding {우산} by its handle over the head").
-      - faces: 그 컷 주인공 하나. face는 그 순간의 표정과 몸짓 하나를 영어 4단어 이내로 쓴다(예: "wide-eyed, hands on
-        cheeks", "teary smile"). 두 표정을 잇는 말("then", "turns into")은 쓰지 않는다. 컷마다 대사에 맞게 바꾼다. 성격·외모와
-        안경·모자·머리, 귀·꼬리는 쓰지 않는다.
+      - faces: 그 컷 주인공 하나. face는 그 순간의 표정 하나를 영어 4단어 이내로 쓴다(예: "wide-eyed, mouth open",
+        "teary smile", "narrowed eyes, smirk"). 두 표정을 잇는 말("then", "turns into")은 쓰지 않는다. 컷마다 대사에 맞게 바꾼다.
+        성격·외모와 안경·모자·머리, 귀·꼬리는 쓰지 않는다. 손·팔 자세(hand on chin, hands on cheeks, arms crossed)는 쓰지
+        않는다: 몸동작은 action 하나에만 쓴다. 두 곳에 쓰면 손이 셋으로 그려진다.
         lookAt은 그 인물이 보는 곳이다: 말을 거는 상대의 자리표({B}), 대사가 가리키는 물건의 자리표({휴대폰}), 또는 영어 한
         낱말 "viewer", "sky", "down", "away". 무엇을 가리키거나 그쪽으로 팔을 뻗는 동작이면 lookAt도 그 대상이다.
       - lines: 컷당 1~2개(대사 없는 컷은 없다), 한 문장 30자 이내. 그 컷의 순간에 해당하는 말을 [장면 대화]에서만 골라 시간
