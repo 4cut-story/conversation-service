@@ -378,7 +378,8 @@ public record LookHead(String animal, String gender, String age) {
     }
     for (String part : look.toLowerCase(Locale.ROOT).split(",")) {
       List<String> words = Arrays.asList(part.strip().split("[^\\p{L}\\p{N}-]+"));
-      if (words.contains(length) && words.contains("hair")) {
+      // 단발(short bob)은 여자로 그려진다
+      if (words.contains(length) && words.contains("hair") && !words.contains("bob")) {
         return true;
       }
     }

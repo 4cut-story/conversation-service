@@ -273,6 +273,7 @@ class LookHeadTest {
                 "M"))
         .isTrue();
     assertThat(LookHead.fitsHair("young woman", "young woman, long black hair", "F")).isTrue();
+    assertThat(LookHead.fitsHair("young woman", "young woman, short red bob hair", "F")).isTrue();
     assertThat(LookHead.fitsHair("young man", "young man, short black hair", "M")).isTrue();
     assertThat(LookHead.fitsHair("young man", "young man, long scarf, black hair", "M")).isTrue();
     assertThat(LookHead.fitsHair("young man", "long black hair", null)).isTrue();
