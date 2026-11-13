@@ -29,7 +29,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 예전 만화의 라이브 재생 정보를 지금 규칙으로 다시 만든다(FR-047). 그림은 그대로 두고 화면 효과(빈 컷 채우기)와 배경음만 다시 고른다. 그래픽 카드를 쓰지 않는다.
- * 넓은 그림 컷 인물 얼굴 자리(FR-052)가 없으면 넓은 그림을 그림을 읽는 LLM에 한 번 보여 채운다(있으면 그대로 옮긴다). 서버가 뜰 때 한 번 뒤에서 돈다. 콘티가
+ * 넓은 그림 컷 인물 얼굴 자리(FR-052)는 넓은 그림을 그림을 읽는 LLM에 한 번 보여 채운다(못 받으면 예전 자리를 옮긴다). 콘티가
  * 남아 있는(7일) 만화만 할 수 있다. 규칙이 바뀌면 {@link #ROUND}를 올려 다시 돌린다.
  */
 @Component
@@ -38,7 +38,7 @@ class LiveBackfill {
   private static final Logger log = LoggerFactory.getLogger(LiveBackfill.class);
 
   /** 다시 만드는 차례. 올리면 모든 만화를 한 번 더 다시 만든다. */
-  static final int ROUND = 3;
+  static final int ROUND = 4;
 
   private final Production production;
   private final PipelineObserver conversations;
@@ -105,13 +105,16 @@ class LiveBackfill {
     if (live == null) {
       return false;
     }
-    JsonNode before = json.readTree(old.get());
-    if (!LivePeople.copy(before, live) && LivePeople.hasWide(live)) {
-      LivePeople.put(
-          live,
-          LivePeople.find(
-              placement, script, wides(id, live), LivePeople.references(characters, script), true),
-          script.callNames());
+    // 넓은 그림 컷은 얼굴 자리를 다시 묻는다(ROUND 4: 넓은 그림을 비율대로 보내 가로 위치가 맞아졌다). 못 받으면 예전 자리를 옮긴다
+    List<Map<String, PanelPlacement.Head>> people =
+        LivePeople.hasWide(live)
+            ? LivePeople.find(
+                placement, script, wides(id, live), LivePeople.references(characters, script), true)
+            : List.of();
+    if (people.stream().allMatch(Map::isEmpty)) {
+      LivePeople.copy(json.readTree(old.get()), live);
+    } else {
+      LivePeople.put(live, people, script.callNames());
     }
     storage.put(
         WorkKeys.liveJson(id),

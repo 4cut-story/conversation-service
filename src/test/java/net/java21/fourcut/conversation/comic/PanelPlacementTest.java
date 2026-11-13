@@ -1,5 +1,6 @@
 package net.java21.fourcut.conversation.comic;
 
+import static java.awt.image.BufferedImage.TYPE_INT_RGB;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -10,9 +11,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.imageio.ImageIO;
 import net.java21.fourcut.conversation.comic.Staging.Side;
 import net.java21.fourcut.conversation.pipeline.DirectLlm;
 import net.java21.fourcut.conversation.scenario.ComicScript;
@@ -255,5 +259,20 @@ class PanelPlacementTest {
                     + "{\"speaker\":\"B\",\"side\":\"center\",\"x\":52,\"y\":40,\"size\":30}]}]}"));
     PanelPlacement.Spots spots = placement.locate(s, images(), Staging.panels(s));
     assertThat(spots.heads().get(0)).containsOnlyKeys(PanelPlacement.UNKNOWN);
+  }
+
+  @Test
+  @DisplayName("FR-052: 넓은 그림은 비율을 지켜 보내고, 정사각형 컷은 한 변 384로 보낸다")
+  void shownKeepsAspect() throws Exception {
+    BufferedImage a = read(PanelPlacement.shown(new BufferedImage(1024, 576, TYPE_INT_RGB)));
+    BufferedImage b = read(PanelPlacement.shown(new BufferedImage(752, 752, TYPE_INT_RGB)));
+    assertThat(a.getWidth()).isEqualTo(576);
+    assertThat(a.getHeight()).isEqualTo(324);
+    assertThat(b.getWidth()).isEqualTo(384);
+    assertThat(b.getHeight()).isEqualTo(384);
+  }
+
+  private static BufferedImage read(byte[] png) throws IOException {
+    return ImageIO.read(new ByteArrayInputStream(png));
   }
 }

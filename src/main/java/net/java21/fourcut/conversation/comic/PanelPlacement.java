@@ -190,7 +190,7 @@ class PanelPlacement {
     }
     Map<String, byte[]> shown = shown(refs, planned, asked);
     List<byte[]> images = new ArrayList<>(shown.values());
-    asked.forEach(i -> images.add(png(panels.get(i), SIZE)));
+    asked.forEach(i -> images.add(shown(panels.get(i))));
     return Optional.of(
         new Question(
             SYSTEM,
@@ -497,11 +497,31 @@ class PanelPlacement {
     };
   }
 
+  /**
+   * 확인할 컷 그림. 정사각형 컷은 한 변 {@link #SIZE}, 라이브 넓은 그림(16:9)은 비율을 지켜 폭 {@link #WIDE_WIDTH}로 보낸다. 넓은 그림을
+   * 정사각형으로 눌러 보내면 얼굴 가로 위치가 그림 폭의 7%쯤 어긋났다.
+   */
+  static byte[] shown(BufferedImage image) {
+    if (image.getWidth() > image.getHeight() * 1.2) {
+      int height =
+          Math.max(1, (int) Math.round(WIDE_WIDTH * image.getHeight() / (double) image.getWidth()));
+      return png(image, WIDE_WIDTH, height);
+    }
+    return png(image, SIZE);
+  }
+
+  /** 넓은 그림을 보낼 폭(픽셀). */
+  static final int WIDE_WIDTH = 576;
+
   private static byte[] png(BufferedImage image, int size) {
-    BufferedImage small = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+    return png(image, size, size);
+  }
+
+  private static byte[] png(BufferedImage image, int width, int height) {
+    BufferedImage small = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = small.createGraphics();
     try {
-      g.drawImage(image.getScaledInstance(size, size, Image.SCALE_SMOOTH), 0, 0, null);
+      g.drawImage(image.getScaledInstance(width, height, Image.SCALE_SMOOTH), 0, 0, null);
     } finally {
       g.dispose();
     }
