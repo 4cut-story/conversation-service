@@ -19,6 +19,7 @@ class SoundController {
 
   static final String KINDS = "AMBIENCE|EFFECT|MUSIC";
   static final String CODE = "[A-Z_]{1,30}";
+  static final String SOURCE = "[A-Za-z0-9]{1,30}";
 
   private final SoundLibrary library;
 
@@ -33,18 +34,24 @@ class SoundController {
       @RequestParam(required = false) @Pattern(regexp = CODE) String mood,
       @RequestParam(required = false) @Size(max = 50) String q,
       @RequestParam(required = false) String cursor,
-      @RequestParam(required = false) Integer size) {
-    return library.list(new SoundLibrary.Filter(kind, category, mood, q), cursor, size);
+      @RequestParam(required = false) Integer size,
+      @RequestParam(required = false) @Pattern(regexp = SOURCE) String excludeSource) {
+    return library.list(
+        new SoundLibrary.Filter(kind, category, mood, q, excludeSource), cursor, size);
   }
 
+  /** {@code excludeSource}: 뺄 출처. web 소리 검색 API가 Freesound API로 받은 소리를 뺄 때 쓴다. */
   @GetMapping("/facets")
-  SoundLibrary.Facets facets() {
-    return library.facets();
+  SoundLibrary.Facets facets(
+      @RequestParam(required = false) @Pattern(regexp = SOURCE) String excludeSource) {
+    return library.facets(excludeSource);
   }
 
   @GetMapping("/{id}")
-  SoundLibrary.Detail get(@PathVariable String id) {
-    return library.get(id);
+  SoundLibrary.Detail get(
+      @PathVariable String id,
+      @RequestParam(required = false) @Pattern(regexp = SOURCE) String excludeSource) {
+    return library.get(id, excludeSource);
   }
 
   @GetMapping("/{id}/audio")

@@ -163,4 +163,29 @@ class SoundLibraryIntegrationTest {
     mvc.perform(get("/api/v1/sounds/" + off + "/audio")).andExpect(status().isNotFound());
     mvc.perform(get("/api/v1/sounds/bad-id")).andExpect(status().isNotFound());
   }
+
+  @Test
+  @DisplayName("소리 검색 API용 excludeSource는 그 출처의 소리를 목록·검색·분류 수·상세·비슷한 소리에서 뺀다")
+  void excludeSource() throws Exception {
+    jdbc.sql("update background_sounds set source = 'Freesound' where public_id = :id")
+        .param("id", rain)
+        .update();
+    mvc.perform(get("/api/v1/sounds").param("kind", "AMBIENCE").param("excludeSource", "Freesound"))
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(wave));
+    when(embedder.embed(anyString())).thenReturn(Optional.of(axisVector(1024, 1)));
+    mvc.perform(get("/api/v1/sounds").param("q", "비").param("excludeSource", "Freesound"))
+        .andExpect(jsonPath("$.items[?(@.id=='" + rain + "')]").isEmpty());
+    mvc.perform(get("/api/v1/sounds/facets").param("excludeSource", "Freesound"))
+        .andExpect(jsonPath("$.categories[?(@.category=='RAIN')]").isEmpty())
+        .andExpect(jsonPath("$.moods[?(@.mood=='SAD')]").isEmpty());
+    mvc.perform(get("/api/v1/sounds/" + rain).param("excludeSource", "Freesound"))
+        .andExpect(status().isNotFound());
+    mvc.perform(get("/api/v1/sounds/" + wave).param("excludeSource", "Freesound"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.similar[?(@.id=='" + rain + "')]").isEmpty());
+    mvc.perform(get("/api/v1/sounds/" + rain)).andExpect(status().isOk());
+    mvc.perform(get("/api/v1/sounds").param("excludeSource", "Free sound!"))
+        .andExpect(status().isBadRequest());
+  }
 }

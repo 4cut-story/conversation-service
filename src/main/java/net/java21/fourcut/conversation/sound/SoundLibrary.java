@@ -79,7 +79,15 @@ class SoundLibrary {
 
   record Facets(List<CategoryCount> categories, List<MoodCount> moods) {}
 
-  record Filter(String kind, String category, String mood, String q) {}
+  /**
+   * 목록·검색 조건. {@code excludeSource}는 뺄 출처(예: 소리 검색 API는 Freesound API로 받은 소리를 빼야 해서 {@code
+   * Freesound}).
+   */
+  record Filter(String kind, String category, String mood, String q, String excludeSource) {
+    Filter(String kind, String category, String mood, String q) {
+      this(kind, category, mood, q, null);
+    }
+  }
 
   private record Row(long id, Sound sound) {}
 
@@ -133,10 +141,19 @@ class SoundLibrary {
 
   private static final String WHERE =
       "s.active and (:kind = '' or s.kind = :kind) and (:category = '' or s.category ="
-          + " :category) and (:mood = '' or (',' || s.moods || ',') like '%,' || :mood || ',%')";
+          + " :category) and (:mood = '' or (',' || s.moods || ',') like '%,' || :mood || ',%')"
+          + " and (:excludeSource = '' or s.source <> :excludeSource)";
 
   private static Map<String, Object> filterParams(Filter f) {
-    return Map.of("kind", text(f.kind()), "category", text(f.category()), "mood", text(f.mood()));
+    return Map.of(
+        "kind",
+        text(f.kind()),
+        "category",
+        text(f.category()),
+        "mood",
+        text(f.mood()),
+        "excludeSource",
+        text(f.excludeSource()));
   }
 
   /** 검색어와 가까운 소리 n개. 임베딩 서버나 pgvector가 없으면 글자로 찾는다. */
@@ -233,24 +250,34 @@ class SoundLibrary {
   }
 
   /** 종류·카테고리별 수와 분위기별 수. 둘러보기 필터에 쓴다. */
-  Facets facets() {
+  Facets facets(String excludeSource) {
+    String ex = text(excludeSource);
     List<CategoryCount> categories =
         jdbc.sql(
-                "select kind, category, count(*) from background_sounds where active group by"
-                    + " kind, category order by kind, count(*) desc, category")
+                "select kind, category, count(*) from background_sounds where active and (:ex = ''"
+                    + " or source <> :ex) group by kind, category order by kind, count(*) desc,"
+                    + " category")
+            .param("ex", ex)
             .query((rs, n) -> new CategoryCount(rs.getString(1), rs.getString(2), rs.getLong(3)))
             .list();
     List<MoodCount> moods =
         jdbc.sql(
                 "select m, count(*) from background_sounds, unnest(string_to_array(moods, ',')) m"
-                    + " where active and m <> '' group by m order by count(*) desc, m")
+                    + " where active and (:ex = '' or source <> :ex) and m <> '' group by m order by"
+                    + " count(*) desc, m")
+            .param("ex", ex)
             .query((rs, n) -> new MoodCount(rs.getString(1), rs.getLong(2)))
             .list();
     return new Facets(categories, moods);
   }
 
-  Detail get(String publicId) {
+  /** 상세. 뺄 출처의 소리는 없는 소리처럼 404이고, 비슷한 소리에서도 뺀다. */
+  Detail get(String publicId, String excludeSource) {
+    String ex = text(excludeSource);
     Row row = find(publicId);
+    if (!ex.isEmpty() && ex.equals(row.sound().credit().source())) {
+      throw notFound();
+    }
     List<Sound> similar =
         schema()
             .map(
@@ -260,13 +287,15 @@ class SoundLibrary {
                             "select "
                                 + COLUMNS
                                 + " from background_sounds s, background_sounds o where o.id ="
-                                + " :id and s.active and s.id <> o.id and s.audio_embedding is not"
+                                + " :id and s.active and s.id <> o.id and (:ex = '' or s.source <>"
+                                + " :ex) and s.audio_embedding is not"
                                 + " null and o.audio_embedding is not null order by"
                                 + " s.audio_embedding operator("
                                 + Vectors.quote(s)
                                 + ".<=>) o.audio_embedding limit "
                                 + SIMILAR)
                         .param("id", row.id())
+                        .param("ex", ex)
                         .query(ROW)
                         .list()
                         .stream()
