@@ -1,10 +1,15 @@
 package net.java21.fourcut.conversation.comic;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import javax.imageio.ImageIO;
+import net.java21.fourcut.conversation.character.CharacterLibrary;
 import net.java21.fourcut.conversation.pipeline.PipelineObserver;
 import net.java21.fourcut.conversation.pipeline.Production;
 import net.java21.fourcut.conversation.scenario.ComicScript;
@@ -24,7 +29,8 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 예전 만화의 라이브 재생 정보를 지금 규칙으로 다시 만든다(FR-047). 그림은 그대로 두고 화면 효과(빈 컷 채우기)와 배경음만 다시 고른다. 그래픽 카드를 쓰지 않는다.
- * 서버가 뜰 때 한 번 뒤에서 돈다. 콘티가 남아 있는(7일) 만화만 할 수 있다. 규칙이 바뀌면 {@link #ROUND}를 올려 다시 돌린다.
+ * 넓은 그림 컷 인물 얼굴 자리(FR-052)가 없으면 넓은 그림을 그림을 읽는 LLM에 한 번 보여 채운다(있으면 그대로 옮긴다). 서버가 뜰 때 한 번 뒤에서 돈다. 콘티가
+ * 남아 있는(7일) 만화만 할 수 있다. 규칙이 바뀌면 {@link #ROUND}를 올려 다시 돌린다.
  */
 @Component
 class LiveBackfill {
@@ -32,7 +38,7 @@ class LiveBackfill {
   private static final Logger log = LoggerFactory.getLogger(LiveBackfill.class);
 
   /** 다시 만드는 차례. 올리면 모든 만화를 한 번 더 다시 만든다. */
-  static final int ROUND = 2;
+  static final int ROUND = 3;
 
   private final Production production;
   private final PipelineObserver conversations;
@@ -41,6 +47,8 @@ class LiveBackfill {
   private final ContentClient content;
   private final SoundMatcher sounds;
   private final JsonMapper json;
+  private final PanelPlacement placement;
+  private final CharacterLibrary characters;
   private final boolean enabled;
 
   LiveBackfill(
@@ -51,7 +59,11 @@ class LiveBackfill {
       ContentClient content,
       SoundMatcher sounds,
       JsonMapper json,
+      PanelPlacement placement,
+      CharacterLibrary characters,
       @Value("${comic.live-backfill:false}") boolean enabled) {
+    this.placement = placement;
+    this.characters = characters;
     this.production = production;
     this.conversations = conversations;
     this.scenarios = scenarios;
@@ -92,6 +104,14 @@ class LiveBackfill {
     ObjectNode live = rebuild(script, json.readTree(old.get()));
     if (live == null) {
       return false;
+    }
+    JsonNode before = json.readTree(old.get());
+    if (!LivePeople.copy(before, live) && LivePeople.hasWide(live)) {
+      LivePeople.put(
+          live,
+          LivePeople.find(
+              placement, script, wides(id, live), LivePeople.references(characters, script), true),
+          script.callNames());
     }
     storage.put(
         WorkKeys.liveJson(id),
@@ -150,6 +170,30 @@ class LiveBackfill {
           out.put(SpeechCast.key(i + 1, k + 1), ms);
         }
       }
+    }
+    return out;
+  }
+
+  /** 만화 폴더에 둔 넓은 그림(컷 그림 자리). 1:1 컷이거나 읽지 못하면 빈 값. */
+  List<Optional<BufferedImage>> wides(String id, JsonNode live) {
+    List<Optional<BufferedImage>> out = new ArrayList<>();
+    JsonNode panels = live.path("panels");
+    for (int i = 0; i < panels.size(); i++) {
+      Optional<BufferedImage> image = Optional.empty();
+      if ("16:9".equals(panels.get(i).path("aspect").asString(""))) {
+        image =
+            storage
+                .get(WorkKeys.livePanel(id, i + 1, false))
+                .flatMap(
+                    bytes -> {
+                      try {
+                        return Optional.ofNullable(ImageIO.read(new ByteArrayInputStream(bytes)));
+                      } catch (IOException e) {
+                        return Optional.empty();
+                      }
+                    });
+      }
+      out.add(image);
     }
     return out;
   }
