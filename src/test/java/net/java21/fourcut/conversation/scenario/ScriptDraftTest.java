@@ -39,6 +39,33 @@ class ScriptDraftTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 역할 옷(costume) 칸은 남기고, look에 없으면 윗옷 뒤에 붙인다. 빈 칸은 지운다")
+  void costume() {
+    JsonNode draft =
+        json.readTree(
+            """
+            {"characters":[
+              {"speaker":"A","look":"young man, short black hair","costume":"olive military uniform",
+               "bottom":"olive cargo pants","shoes":"black boots"},
+              {"speaker":"B","look":"young woman, white doctor coat","costume":"white doctor coat",
+               "bottom":"blue jeans","shoes":""},
+              {"speaker":"C","look":"girl, pink hoodie","costume":" ","bottom":"","shoes":""}],
+             "panels":[]}
+            """);
+    JsonNode out = ScriptDraft.flatten(draft).path("characters");
+    assertThat(out.get(0).path("look").asString())
+        .isEqualTo(
+            "young man, short black hair, olive military uniform, olive cargo pants, black boots");
+    assertThat(out.get(0).path("costume").asString()).isEqualTo("olive military uniform");
+    assertThat(out.get(1).path("look").asString())
+        .isEqualTo("young woman, white doctor coat, blue jeans");
+    assertThat(out.get(2).has("costume")).isFalse();
+    ComicScript.Character c = json.treeToValue(out.get(0), ComicScript.Character.class);
+    assertThat(c.costume()).isEqualTo("olive military uniform");
+    assertThat(c.withLook("x").costume()).isEqualTo("olive military uniform");
+  }
+
+  @Test
   @DisplayName("FR-006: 컷의 action·장소 key·시선은 장면 문장, 장소 정의가 앞선 배경, 시선 붙은 표정으로 펼친다")
   void structuredPanel() {
     JsonNode draft =

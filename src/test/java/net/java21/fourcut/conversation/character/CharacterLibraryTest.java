@@ -329,6 +329,67 @@ class CharacterLibraryTest {
   }
 
   @Test
+  @DisplayName("REQ-018: 역할 옷을 입은 캐릭터가 거리 안에 있으면 더 가까운 평상복 캐릭터보다 먼저 쓴다")
+  void prefersCostume() {
+    CharacterLook casual =
+        new CharacterLook(
+            haesol, "DAILY", NEUTRAL, "young man, short black hair, cream sweater", "m");
+    CharacterLook cop =
+        new CharacterLook(haneul, "DAILY", NEUTRAL, "young man, police cap, police uniform", "p");
+    for (CharacterLook l : List.of(casual, cop)) {
+      when(looks.findByPublicId(l.publicId())).thenReturn(Optional.of(l));
+    }
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of());
+    when(vectors.nearest(any(), any()))
+        .thenReturn(
+            List.of(
+                new CharacterVectors.Nearest(casual.publicId(), 0.10, casual.look()),
+                new CharacterVectors.Nearest(cop.publicId(), 0.20, cop.look())));
+    Map<String, CharacterRef> cast =
+        library.match(
+            List.of(
+                new CharacterLibrary.Wanted(
+                    "A",
+                    null,
+                    "young man, short hair, navy police uniform",
+                    "navy police uniform, police cap")),
+            "DAILY");
+    assertThat(cast.get("A").publicId()).isEqualTo(cop.publicId());
+    assertThat(cast.get("A").costumed()).isFalse();
+  }
+
+  @Test
+  @DisplayName("REQ-018: 역할 옷을 입은 캐릭터가 없으면 가장 가까운 캐릭터에 콘티의 역할 옷을 입힌다(상병이 스웨터 차림으로 나왔다)")
+  void dressesCostume() {
+    CharacterLook casual =
+        new CharacterLook(
+            haesol, "DAILY", NEUTRAL, "young man, short black hair, cream sweater", "m");
+    when(looks.findByPublicId(casual.publicId())).thenReturn(Optional.of(casual));
+    when(repository.findByActiveTrueAndNameIn(any())).thenReturn(List.of(haesol));
+    when(looks.findByCharacterInAndConceptAndExpression(any(), eq("DAILY"), eq(NEUTRAL)))
+        .thenReturn(List.of(casual));
+    when(vectors.nearest(any(), any()))
+        .thenReturn(List.of(new CharacterVectors.Nearest(casual.publicId(), 0.1, casual.look())));
+    String look = "young man, short black hair, olive green military uniform, combat helmet";
+    Map<String, CharacterRef> byVector =
+        library.match(List.of(new CharacterLibrary.Wanted("A", null, look)), "DAILY");
+    assertThat(byVector.get("A").costume())
+        .isEqualTo("olive green military uniform, combat helmet");
+    Map<String, CharacterRef> byName =
+        library.match(
+            List.of(new CharacterLibrary.Wanted("A", "해솔", look, "olive military uniform")),
+            "DAILY");
+    assertThat(byName.get("A").publicId()).isEqualTo(casual.publicId());
+    assertThat(byName.get("A").costume()).isEqualTo("olive military uniform");
+    assertThat(
+            CharacterLibrary.drawLook(
+                byName.get("A").look(), look, true, byName.get("A").costume()))
+        .contains("olive military uniform")
+        .contains("short black hair")
+        .doesNotContain("sweater");
+  }
+
+  @Test
   @DisplayName("REQ-018: 거리가 사실상 같은 후보는 대화 시드로 고르고, 차이가 크면 늘 가장 가까운 후보다")
   void tieBreak() {
     var a = new CharacterLibrary.Candidate(null, 0.10);

@@ -30,12 +30,26 @@ final class ScriptDraft {
     ObjectNode out = node.deepCopy();
     for (JsonNode c : out.path("characters")) {
       if (c instanceof ObjectNode character) {
+        String costume = character.path("costume").asString("").strip();
+        String top = character.path("look").asString("").strip();
+        if (!costume.isEmpty()
+            && !top.toLowerCase(Locale.ROOT).contains(costume.toLowerCase(Locale.ROOT))) {
+          // 역할 옷이 look에 없으면 look 뒤(아래옷 앞)에 붙인다
+          top = top.isEmpty() ? costume : top + ", " + costume;
+        }
+        String finalTop = top;
         String look =
-            Stream.of("look", "bottom", "shoes")
-                .map(k -> character.path(k).asString("").strip())
+            Stream.concat(
+                    Stream.of(finalTop),
+                    Stream.of("bottom", "shoes").map(k -> character.path(k).asString("").strip()))
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.joining(", "));
         character.put("look", look);
+        if (costume.isEmpty()) {
+          character.remove("costume");
+        } else {
+          character.put("costume", costume);
+        }
         character.remove("bottom");
         character.remove("shoes");
       }

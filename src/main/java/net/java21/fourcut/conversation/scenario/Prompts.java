@@ -8,7 +8,7 @@ package net.java21.fourcut.conversation.scenario;
  */
 final class Prompts {
 
-  static final String VERSION = "2026-11-11.34";
+  static final String VERSION = "2026-11-13.35";
 
   private Prompts() {}
 
@@ -148,6 +148,12 @@ final class Prompts {
       - look: %LOOK%
         look에는 몸통을 덮는 윗옷(셔츠, 스웨터, 조끼, 도포, 저고리) 하나를 색과 함께 꼭 쓴다. 모자·안경·목도리·머리띠처럼
         몸에 쓰거나 두르는 것도 look에만 쓴다. 직업 옷(가운, 제복, 승복)은 그 일을 하는 장면이 나올 때만 쓴다.
+      - costume: 호칭·대사·이야기로 보아 이 인물이 이 장면에서 맡은 역할·직업·신분 때문에 꼭 보여야 하는 옷과 모자·장비를 그림용
+        영어 8단어 이내로, 그 역할을 가리키는 낱말과 색까지 쓴다(예: 근무 중인 군인 "olive green military uniform, combat
+        helmet", 경찰 "navy police uniform, police cap", 의사 "white doctor coat", 스님 "gray monk robe", 기사
+        "silver knight armor", 교복 입은 학생 "navy school uniform blazer"). 이 옷이 있으면 look의 윗옷·모자도 같은 옷으로
+        쓴다. 계급·직책이 대화에 나오면(상병, 경비병, 간호사, 요리사) 그 옷을 쓴다. 일상복이면 빈 문자열("")이다. 인물은
+        캐릭터 그림을 따라 그려지는데, costume을 쓰면 그 옷으로 바꿔 그린다.
       - bottom: 아래옷을 그림용 영어 4단어 이내로 색과 함께 쓴다(예: "blue jeans", "long navy skirt", "straight-leg white
         trousers"). 바지는 "straight-leg"·"jeans"처럼 두 다리가 따로 보이는 말로 쓴다("wide trousers"는 치마로 그려진다).
         한 벌 옷(dress, robe, overalls)이면 그 아래 보이는 것을, 바지를 입지 않은 동물은 "bare fur legs"를 쓴다.
@@ -410,8 +416,9 @@ final class Prompts {
        "title":{"type":"string"},"summary":{"type":"string"},
        "mood":{"type":"string","enum":["PEACEFUL","JOYFUL","COMIC","EXCITING","PARTY","ROMANTIC","NOSTALGIC","LONELY","SAD","SOLEMN","TENSE","MYSTERIOUS","SCARY","EPIC"]},
        "characters":{"type":"array","minItems":1,"items":{"type":"object",
-        "required":["speaker","name","role","persona","look","bottom","shoes"],"properties":{"speaker":{"type":"string"},
+        "required":["speaker","name","role","persona","look","costume","bottom","shoes"],"properties":{"speaker":{"type":"string"},
          "name":{"type":"string"},"role":{"type":"string"},"persona":{"type":"string"},"look":{"type":"string"},
+         "costume":{"type":"string"},
          "bottom":{"type":"string"},"shoes":{"type":"string"}}}},
        "props":{"type":"array","maxItems":4,"items":{"type":"object","required":["key","draw"],
         "properties":{"key":{"type":"string"},"draw":{"type":"string"}}}},

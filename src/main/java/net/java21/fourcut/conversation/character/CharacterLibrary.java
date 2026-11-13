@@ -82,7 +82,18 @@ public class CharacterLibrary {
    * @param hasImage 참조 그림이 있는지
    */
   public static String drawLook(String characterLook, String scriptLook, boolean hasImage) {
-    String look = characterLook == null ? "" : characterLook.strip();
+    return drawLook(characterLook, scriptLook, hasImage, null);
+  }
+
+  /**
+   * {@link #drawLook(String, String, boolean)}와 같되, 역할 옷({@code costume})이 있으면 캐릭터 모습의 옷·모자를 빼고 그
+   * 옷을 입힌다.
+   *
+   * @param costume 캐릭터가 입지 않은 콘티 역할 옷 (없으면 null)
+   */
+  public static String drawLook(
+      String characterLook, String scriptLook, boolean hasImage, String costume) {
+    String look = LookHead.dressed(characterLook, costume);
     if (scriptLook == null || scriptLook.isBlank()) {
       return look;
     }
@@ -102,8 +113,21 @@ public class CharacterLibrary {
     return LookHead.personWord(look);
   }
 
-  /** 콘티 인물 하나. key는 화자 표시(A, B…), look은 그림용 영어 외모. */
-  public record Wanted(String key, String name, String look) {}
+  /**
+   * 콘티 인물 하나. key는 화자 표시(A, B…), look은 그림용 영어 외모, costume은 역할 옷(콘티 costume 칸, 없으면 look에서 찾은 역할 옷
+   * 마디, 없으면 빈 문자열).
+   */
+  public record Wanted(String key, String name, String look, String costume) {
+
+    public Wanted(String key, String name, String look) {
+      this(key, name, look, LookHead.costumeOf(null, look));
+    }
+
+    /** 역할 옷. null이면 빈 문자열. */
+    String outfit() {
+      return costume == null ? "" : costume.strip();
+    }
+  }
 
   /**
    * 인물 key → 캐릭터 모습. 찾지 못한 인물은 빠진다. 참조 그림이 아직 올라오지 않은 모습은 쓰지 않는다.
@@ -157,14 +181,14 @@ public class CharacterLibrary {
           && agesWithDb(l)
           && hasReference(l)) {
         used.add(l.character().publicId());
-        found.put(w.key(), ref(l, 0));
+        found.put(w.key(), dress(ref(l, 0), l, w.outfit()));
       } else {
         rest.add(w);
       }
     }
     if (!rest.isEmpty() && vectors.available()) {
       for (Wanted w : rest) {
-        nearest(w.look(), c, used, seed == 0 ? 0 : seed + w.key().hashCode())
+        nearest(w.look(), w.outfit(), c, used, seed == 0 ? 0 : seed + w.key().hashCode())
             .ifPresent(r -> found.put(w.key(), r));
       }
     }
@@ -179,7 +203,13 @@ public class CharacterLibrary {
     return "WUXIA".equals(concept) || "JOSEON".equals(concept);
   }
 
-  private Optional<CharacterRef> nearest(String look, String concept, Set<String> used, long seed) {
+  /** 캐릭터가 콘티의 역할 옷을 입지 않았으면 그 옷을 입힌다. 그림은 캐릭터 옷 대신 역할 옷으로 그리고 참조 그림은 머리만 쓴다. */
+  private static CharacterRef dress(CharacterRef ref, CharacterLook l, String costume) {
+    return LookHead.wears(costume, l.look()) ? ref : ref.withCostume(costume);
+  }
+
+  private Optional<CharacterRef> nearest(
+      String look, String costume, String concept, Set<String> used, long seed) {
     Optional<float[]> query = embedder.embed(look);
     if (query.isEmpty()) {
       return Optional.empty();
@@ -211,10 +241,15 @@ public class CharacterLibrary {
           fits.add(new Candidate(l.get(), n.distance()));
         }
       }
-      Optional<Candidate> pick = tieBreak(fits, properties.tieMargin(), seed);
+      // 역할 옷(경찰복, 의사 가운…)을 이미 입은 캐릭터가 거리 안에 있으면 그 캐릭터를 먼저 쓴다. 없으면 가장 가까운 캐릭터에 역할 옷을 입힌다
+      List<Candidate> wearing =
+          fits.stream().filter(f -> LookHead.wears(costume, f.look().look())).toList();
+      Optional<Candidate> pick =
+          tieBreak(wearing.isEmpty() ? fits : wearing, properties.tieMargin(), seed);
       if (pick.isPresent()) {
         used.add(pick.get().look().character().publicId());
-        return Optional.of(ref(pick.get().look(), pick.get().distance()));
+        CharacterLook l = pick.get().look();
+        return Optional.of(dress(ref(l, pick.get().distance()), l, costume));
       }
     }
     return Optional.empty();

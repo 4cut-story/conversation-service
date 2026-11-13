@@ -351,6 +351,182 @@ public record LookHead(String animal, String gender, String age) {
     return true;
   }
 
+  /** 역할 옷을 가리키는 옷 낱말. 일상복에는 잘 쓰지 않아, 예전 콘티(costume 칸이 없던 때)의 look에서 이 낱말이 든 마디를 역할 옷으로 본다. */
+  private static final Set<String> ROLE_GARMENTS =
+      Set.of(
+          "uniform",
+          "uniforms",
+          "fatigues",
+          "camouflage",
+          "camo",
+          "scrubs",
+          "armor",
+          "armour",
+          "cassock",
+          "vestments",
+          "habit",
+          "coverall",
+          "coveralls",
+          "jumpsuit",
+          "gown",
+          "robe",
+          "beret",
+          "helmet",
+          "spacesuit");
+
+  /** 역할을 가리키지 않는 낱말(색·재질·크기·관사). 캐릭터가 같은 역할 옷을 입었는지 볼 때 뺀다. */
+  private static final Set<String> PLAIN =
+      Set.of(
+          "a",
+          "an",
+          "the",
+          "with",
+          "and",
+          "of",
+          "on",
+          "in",
+          "dark",
+          "light",
+          "pale",
+          "bright",
+          "deep",
+          "white",
+          "black",
+          "gray",
+          "grey",
+          "silver",
+          "red",
+          "blue",
+          "navy",
+          "green",
+          "olive",
+          "khaki",
+          "beige",
+          "brown",
+          "tan",
+          "yellow",
+          "orange",
+          "pink",
+          "purple",
+          "cream",
+          "gold",
+          "golden",
+          "crisp",
+          "neat",
+          "long",
+          "short",
+          "big",
+          "small",
+          "plain",
+          "striped",
+          "pressed",
+          "formal",
+          "full",
+          "dress",
+          "sleeve",
+          "sleeves",
+          "long-sleeve");
+
+  /**
+   * 콘티 인물의 역할 옷. 콘티의 costume 칸이 있으면 그것, 없으면(예전 콘티) look에서 역할 옷 낱말({@link #ROLE_GARMENTS})이나 직업
+   * 옷({@link #COSTUMES})이 든 마디를 모은다. 없으면 빈 문자열.
+   *
+   * @param costume 콘티 costume 칸 (없으면 null)
+   * @param look 콘티 외모 문구
+   */
+  public static String costumeOf(String costume, String look) {
+    if (costume != null && !costume.isBlank()) {
+      return costume.strip();
+    }
+    if (look == null) {
+      return "";
+    }
+    String[] parts = look.split(",");
+    List<String> out = new java.util.ArrayList<>();
+    for (int i = 1; i < parts.length; i++) {
+      String p = parts[i].strip();
+      String lower = p.toLowerCase(Locale.ROOT);
+      boolean role =
+          Arrays.stream(words(lower)).anyMatch(ROLE_GARMENTS::contains)
+              || COSTUMES.stream().anyMatch(lower::contains);
+      if (!p.isEmpty() && role) {
+        out.add(p);
+      }
+    }
+    return String.join(", ", out);
+  }
+
+  /**
+   * 캐릭터 모습이 그 역할 옷을 이미 입었는지. 역할 옷에서 색·재질 같은 흔한 낱말을 뺀 역할 낱말(police, military, doctor…)이 캐릭터 모습에 있으면
+   * 입은 것으로 본다. 역할 낱말이 없는 옷("white coat")은 옷 낱말이 모두 있어야 한다. 역할 옷이 없으면 true.
+   */
+  static boolean wears(String costume, String characterLook) {
+    if (costume == null || costume.isBlank()) {
+      return true;
+    }
+    if (characterLook == null) {
+      return false;
+    }
+    Set<String> own = Set.copyOf(Arrays.asList(words(characterLook.toLowerCase(Locale.ROOT))));
+    List<String> want =
+        Arrays.stream(words(costume.toLowerCase(Locale.ROOT)))
+            .filter(w -> !w.isEmpty() && !PLAIN.contains(w))
+            .toList();
+    List<String> marks =
+        want.stream()
+            .filter(w -> !GENERIC_WEAR.contains(w) && !ROLE_GARMENTS.contains(w))
+            .filter(w -> !APPEARANCE.contains(w))
+            .toList();
+    if (!marks.isEmpty()) {
+      return marks.stream().anyMatch(own::contains);
+    }
+    return !want.isEmpty() && own.containsAll(want);
+  }
+
+  /** 머리에 쓰는 것. 역할 옷으로 갈아입힐 때 캐릭터 모습의 모자도 뺀다. */
+  private static final Set<String> HEADWEAR =
+      Set.of("hat", "cap", "beanie", "helmet", "beret", "headband", "hood", "gat", "bandana");
+
+  /**
+   * 캐릭터 모습에서 옷·모자 마디를 빼고 역할 옷을 입힌 모습. 머리·얼굴·안경 마디는 남긴다. 상병 경비병에 크림색 스웨터 캐릭터가 붙자 캐릭터 모습("young man,
+   * short black hair, cream sweater")이 콘티의 군복을 덮어 군인이 스웨터 차림으로 그려졌다.
+   *
+   * @param characterLook 캐릭터 DB 모습 문구
+   * @param costume 역할 옷 (비면 캐릭터 모습 그대로)
+   */
+  public static String dressed(String characterLook, String costume) {
+    String look = characterLook == null ? "" : characterLook.strip();
+    if (costume == null || costume.isBlank()) {
+      return look;
+    }
+    String[] parts = look.split(",");
+    List<String> keep = new java.util.ArrayList<>();
+    for (int i = 0; i < parts.length; i++) {
+      String p = parts[i].strip();
+      if (p.isEmpty()) {
+        continue;
+      }
+      List<String> w = Arrays.asList(words(p.toLowerCase(Locale.ROOT)));
+      boolean wear =
+          w.stream()
+              .anyMatch(
+                  x ->
+                      TOP.contains(x)
+                          || ONE_PIECE.contains(x)
+                          || HEADWEAR.contains(x)
+                          || ROLE_GARMENTS.contains(x));
+      if (i == 0) {
+        // 첫 마디("young man in hanbok")는 사람 말만 남긴다(in 뒤는 옷이다)
+        int in = p.toLowerCase(Locale.ROOT).indexOf(" in ");
+        keep.add(in >= 0 ? p.substring(0, in) : p);
+      } else if (!wear) {
+        keep.add(p);
+      }
+    }
+    keep.add(costume.strip());
+    return String.join(", ", keep);
+  }
+
   /**
    * 캐릭터 모습의 머리 길이가 성별과 어울리는지. 일상 캐릭터 참조 그림은 성별과 상관없이 머리 모양을 골라 그려서, 긴 머리 남자(long black hair)는 여자처럼,
    * 짧은 머리 여자(short brown hair)는 남자처럼 보인다. 그림 모델은 참조 그림을 따라 그려서 콘티의 남자 안내원이 여자로 그려지고, 목소리는 콘티 성별대로
